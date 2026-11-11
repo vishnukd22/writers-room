@@ -96,7 +96,10 @@ window.AV = (() => {
       current.el = el; current.gain = gain;
     } else if (synthMood !== mood) startSynth(mood);
   }
-  function duck(on) { if (!ctx) return; musicBus.gain.cancelScheduledValues(ctx.currentTime); musicBus.gain.setValueAtTime(musicBus.gain.value, ctx.currentTime); musicBus.gain.linearRampToValueAtTime(on ? 0.16 : 0.55, ctx.currentTime + (on ? 0.25 : 0.9)); }
+  // bed: the music level when nobody is talking (lower while friends perform, so they can be heard)
+  let bed = 0.55; let ducked = false;
+  function duck(on) { ducked = on; if (!ctx) return; musicBus.gain.cancelScheduledValues(ctx.currentTime); musicBus.gain.setValueAtTime(musicBus.gain.value, ctx.currentTime); musicBus.gain.linearRampToValueAtTime(on ? Math.min(0.16, bed * 0.6) : bed, ctx.currentTime + (on ? 0.25 : 0.9)); }
+  function setBed(v) { if (bed === v) return; bed = v; if (!ducked) duck(false); }
 
   // ---------------------------------------------------------------- sound effects
   const synthFx = {
@@ -160,7 +163,7 @@ window.AV = (() => {
   function stopVoice() { if (voiceEl) { voiceEl.onended = null; voiceEl.pause(); voiceEl = null; } if ('speechSynthesis' in window) speechSynthesis.cancel(); if (speaking) { speaking = null; duck(false); } }
 
   return {
-    init, music, fx, speak, stopVoice, duck,
+    init, music, fx, speak, stopVoice, duck, setBed,
     toggleMusic() { musicOn = !musicOn; if (!musicOn) { if (current.el) current.el.pause(); stopSynth(); current = { key: null }; } return musicOn; },
     toggleSfx() { sfxOn = !sfxOn; return sfxOn; },
     toggleVoice() { voiceVol = voiceVol ? 0 : 1; if (voiceEl) voiceEl.volume = voiceVol; return voiceVol > 0; },

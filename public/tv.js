@@ -29,6 +29,7 @@
 
   // ---------------------------------------------------------------- helpers
   const T = () => { if (!S.endsAt) return ''; if (!totals[S.endsAt]) totals[S.endsAt] = Math.max(1, S.endsAt - W.now()); return `data-ends="${S.endsAt}" data-total="${totals[S.endsAt]}"`; };
+  const totalFor = (e) => { if (!totals[e]) totals[e] = Math.max(1, e - W.now()); return totals[e]; };
   const timer = () => (S.endsAt ? `<div class="timer" ${T()}></div>` : '');
   const tbar = () => (S.endsAt ? `<div class="tbar"><i data-kind="bar" ${T()}></i></div>` : '');
   const host = () => { try { return new URL(S.joinUrl).host; } catch (e) { return location.host; } };
@@ -39,188 +40,148 @@
   const genreArt = () => (S.genre ? W.img(`genre-${S.genre.art}`) : null);
 
   // [look, picture, ambience]: the ambience names the light and weather drawn over the picture.
-  function sceneryFor(s) {
-    const ph = s.phase; const st = s.step; const gfx = s.genre ? `genre:${s.genre.art}` : 'room-writers';
-    if (ph === 'TABLE_READ' || ph === 'FINALE' || ph === 'REVEALS' || ph === 'FINAL') return ['stage', W.img('room-stage'), 'room-stage'];
-    if (ph === 'RATINGS' && st === 'cliffhanger') return ['dark', genreArt(), gfx];
-    if (ph === 'RATINGS' || ph === 'CRITIC') return ['office', W.img('room-network'), 'room-network'];
-    if ((ph === 'INTRO' && st === 'reveal') || (ph === 'EP_INTRO' && st === 'title')) return ['room', genreArt() || W.img('room-writers'), genreArt() ? gfx : 'room-writers'];
+  const artOf = (g) => (g ? W.img(`genre-${g.art}`) : null);
+  const curGenre = () => S.x.scene?.genre || S.x.fin?.genre || null;
+  function sceneryFor() {
+    const ph = S.phase; const g = curGenre(); const ga = artOf(g); const gfx = g ? `genre:${g.art}` : 'room-writers';
+    if (ph === 'SCENE_INTRO' || ph === 'SCENE' || ph === 'CUT_INTRO' || ph === 'CUT') return ga ? ['room', ga, gfx] : ['stage', W.img('room-stage'), 'room-stage'];
+    if (ph === 'SCENE_END' || ph === 'FINAL') return ['stage', W.img('room-stage'), 'room-stage'];
     return ['room', W.img('room-writers'), 'room-writers'];
   }
   let lastScenery = '';
   function setScenery() {
-    const [cls, art, amb] = sceneryFor(S); const key = `${cls}|${art}|${amb}`;
+    const [cls, art, amb] = sceneryFor(); const key = `${cls}|${art}|${amb}`;
+    document.body.classList.toggle('showart', (S.phase === 'SCENE_INTRO' && S.step === 'genre') || S.phase === 'CUT_INTRO');
+    document.body.classList.toggle('blurart', S.phase === 'SCENE' || (S.phase === 'SCENE_INTRO' && S.step === 'cast') || (S.phase === 'CUT' && S.step !== 'play'));
     if (key === lastScenery) return; lastScenery = key;
     scenery.className = `${cls}${art ? ' has-art' : ''}`;
-    document.body.classList.toggle('showart', (S.phase === 'EP_INTRO' && S.step === 'title' && !!genreArt()) || (S.phase === 'RATINGS' && S.step === 'cliffhanger' && !!genreArt()));
-    document.body.classList.toggle('blurart', S.phase === 'INTRO' && S.step === 'reveal' && !!genreArt());
     scenery.querySelector('.art').style.backgroundImage = art ? `url(${art})` : '';
-    // A new camera move for every new picture.
     const cam = scenery.querySelector('.cam'); const n = (art || cls).length;
     cam.style.setProperty('--ox', `${[20, 80, 50, 30, 70][n % 5]}%`); cam.style.setProperty('--oy', `${[30, 60, 40, 70][n % 4]}%`);
     cam.style.animation = 'none'; void cam.offsetWidth; cam.style.animation = '';
-    AMB.set(art || amb.startsWith('genre:') ? amb : null);
+    AMB.set(art || (amb && amb.startsWith('genre:')) ? amb : null);
   }
 
   function topbar() {
     if (S.phase === 'LOBBY') return '';
-    const steps = ['CASTING', 'E1', 'E2', 'FINALE'];
-    const cur = ['INTRO', 'CASTING', 'CAST_INTRO', 'SECRETS'].includes(S.phase) ? 0 : S.ep ? S.ep.n : 3;
-    const at = ['LAST_WORDS', 'FINALE', 'CRITIC', 'MOLE_VOTE', 'REVEALS', 'FINAL'].includes(S.phase) ? 3 : cur;
-    const prog = steps.map((k, i) => `<i class="${i < at ? 'done' : i === at ? 'now' : ''}"></i><span>${['Pilot', 'Episode 1', 'Episode 2', 'Finale'][i]}</span>`).join('');
-    return `<div class="showname">${S.show ? esc(S.show.title) : "Writers' Room"}<small>${S.genre && S.show ? esc(S.genre.name) : ''}${S.ep ? ` · ${esc(S.ep.title)}` : ''}</small></div><div class="progress">${prog}</div><div class="joinbox"><b>${esc(S.code)}</b><span>${esc(host())}</span></div>`;
+    const sc = S.x.scene; const f = S.x.fin;
+    const left = sc ? `<div class="showname">${esc(sc.title)}<small>${esc(sc.genre.name)}</small></div>` : f ? `<div class="showname">${esc(f.title)}<small>The finale · ${esc(f.genre.name)}</small></div>` : `<div class="showname">Writers' Room<small>&nbsp;</small></div>`;
+    const total = (S.x.scene?.count || 0) + 1; const at = sc ? sc.i : f || S.phase === 'FINAL' ? total - 1 : -1;
+    const prog = Array.from({ length: total }, (_, i) => `<i class="${i < at ? 'done' : i === at ? 'now' : ''}"></i>`).join('') ;
+    return `${left}<div class="progress">${total > 1 ? prog : ''}</div><div class="joinbox"><b>${esc(S.code)}</b><span>${esc(host())}</span></div>`;
   }
   function dockbar() {
     if (S.phase === 'LOBBY') return '';
-    let on = [];
-    if (S.phase === 'TABLE_READ' && S.x.line) on = [S.x.line.char];
-    return S.players.map((p) => `<span class="tag ${p.connected ? '' : 'off'} ${on.includes(p.id) ? 'on' : ''}" style="--c:${p.color}"><span class="dot">${esc(W.initials(p.name))}</span>${esc(p.name)}</span>`).join('');
+    const on = S.phase === 'SCENE' && S.x.cur ? [S.x.cur.speaker] : S.phase === 'CUT' && S.x.fin?.line ? [S.x.fin.line.speaker.id] : [];
+    return [...S.players].sort((a, b) => b.score - a.score).map((p) => `<span class="tag ${p.connected ? '' : 'off'} ${on.includes(p.id) ? 'on' : ''}" style="--c:${p.color}"><span class="dot">${esc(W.initials(p.name))}</span>${esc(p.name)}<b>${p.score}</b></span>`).join('');
   }
+  const dotsTyping = '<span class="typing"><i></i><i></i><i></i></span>';
 
   // ---------------------------------------------------------------- screens
   const R = {
     LOBBY() {
       const t = W.img('title');
-      const seats = S.players.map((p, i) => `<div class="index" style="--r:${rot(i)};--c:${p.color}"><div class="hand">${esc(p.name)}</div><small>${p.act ? 'Will act out their lines' : 'The narrator reads their lines'}</small></div>`).join('') + Array.from({ length: Math.max(0, 6 - S.players.length) }, () => '<div class="empty"></div>').join('');
+      const seats = S.players.map((p, i) => `<div class="index" style="--r:${rot(i)};--c:${p.color}"><div class="hand">${esc(p.name)}</div><small>ready</small></div>`).join('') + Array.from({ length: Math.max(0, 6 - S.players.length) }, () => '<div class="empty"></div>').join('');
       return `<div class="lobby">
-        <div>${t ? `<img class="titleimg" src="${t}" alt="Writers' Room">` : '<div class="titlecard">Writers\'<br>Room<span class="hand">Save the show.</span></div>'}
+        <div>${t ? `<img class="titleimg" src="${t}" alt="Writers' Room">` : '<div class="titlecard">Writers\'<br>Room</div>'}
           <div class="join">${S.qr ? `<img src="${S.qr}" alt="QR code to join">` : ''}<div><div class="count">Scan, or go to</div><div class="url">${esc(host())}</div><div class="count">and enter</div><div class="code">${esc(S.code)}</div></div></div></div>
         <div><div class="roster ${S.players.length > 6 ? 'many' : ''}">${seats}</div>
-          <p class="startnote">4 to 12 players. About 30 minutes. ${S.players.length >= 4 ? `${esc(P_(S.vipId)?.name || 'The first player')} starts the game from their phone.` : `Waiting for ${4 - S.players.length} more.`}</p>
-          ${S.aiOn ? '' : '<p class="startnote">The AI writer is offline, so the show uses its backup scripts.</p>'}</div></div>`;
+          <p class="startnote">Everyone writes. Everyone acts. 4 to 12 players, about 20 minutes. ${S.players.length >= 4 ? `${esc(P_(S.vipId)?.name || 'The first player')} starts the game from their phone.` : `Waiting for ${4 - S.players.length} more.`}</p>
+          ${S.aiOn ? '' : '<p class="startnote">The AI writer is offline, so scenes come from the backup scripts.</p>'}</div></div>`;
     },
     INTRO() {
-      if (S.step === 'spin') return `<div class="center"><div class="kicker">Tonight the network wants</div><div class="reel"><div>${S.x.genres.map((g) => `<div>${esc(g)}</div>`).join('')}</div></div></div>`;
-      if (S.step === 'reveal') {
-        const a = genreArt();
-        return `<div class="genrecard">${a ? `<div class="art" style="background-image:url(${a})"></div>` : `<div class="art drawn">${esc(S.genre.name)}</div>`}<div><div class="kicker">${esc(S.genre.name)}</div><div class="big">${esc(S.show?.title || '')}</div><p class="lede" style="margin:1.2rem 0 0;text-align:left">${esc(S.show?.logline || '')}</p></div></div>`;
-      }
-      return `<div class="center"><div class="huge">Two episodes<br>to save the show.</div><p class="lede">If the ratings don't climb, everyone in this room is cancelled.</p></div>`;
+      if (S.step === 'how') return `<div class="center"><div class="howrow">
+        <div class="howcard" style="--r:-2deg"><b>✍️</b>The room writes the next line, live</div>
+        <div class="howcard" style="--r:1.5deg"><b>🎭</b>Two of you perform it. Cold.</div>
+        <div class="howcard" style="--r:-1deg"><b>😂</b>Laughs and cracks score points</div></div>
+        <p class="lede">Finale: <b>CUT!</b> Grab the pen from the narrator.</p></div>`;
+      return '<div class="center"><div class="huge">You write it.<br>They perform it.</div></div>';
     },
-    CASTING() {
-      const cards = S.players.map((p, i) => `<div class="index" style="--r:${rot(i)}"><div class="pin"></div><div class="hand">A character for ${esc(S.players[(i + 1) % S.players.length].name)}</div></div>`).join('');
-      return `<div class="center"><div class="kicker">Casting</div><div class="big">Write the character your neighbour will play</div><p class="lede">Name and job, a dark secret, a weakness and a catchphrase. Be cruel. Be specific.</p><div class="board">${cards}</div><div class="count">${S.x.done} of ${S.players.length} done</div>${tbar()}</div>`;
+    SCENE_INTRO() {
+      const sc = S.x.scene;
+      if (S.step === 'cast') return `<div class="center"><div class="kicker">Starring</div><div class="castrow">${sc.actors.map((a, i) => `<div class="castbig" style="--r:${i % 2 ? 2 : -2}deg">${W.bust(a, 'xl')}<div class="nm">${esc(a.name)}</div><div class="role">${esc(a.role)}</div></div>`).join('')}</div><span class="stamp standup">Stand up!</span></div>`;
+      return `<div class="center epcard"><div class="n">Scene ${sc.i + 1} of ${sc.count} · ${esc(sc.genre.name)}</div><div class="t">${esc(sc.title)}</div><div class="setting">${esc(sc.setting)}</div></div>`;
     },
-    CAST_INTRO() {
-      if (S.step !== 'card') return `<div class="center"><div class="big">The casting director is reading your notes</div><p class="lede hand" style="font-size:2rem;color:var(--mustard)">She looks worried.</p></div>`;
-      const c = S.x.card;
-      return `<div class="castcard">${W.bust(c, 'xl')}<div><div class="who">Played by ${esc(c.player)} · written by ${esc(c.writer?.name || 'someone')} · ${S.x.idx + 1} of ${S.x.total}</div><h2>${esc(c.name)}</h2><div class="job">${esc(c.job)}</div><div class="intro">${esc(c.intro)}</div><div class="catch">"${esc(c.catchphrase)}"</div></div></div>`;
+    SCENE() {
+      const x = S.x; const sc = x.scene; const cur = x.cur;
+      const flash = x.flash ? x.flash.id : null;
+      const actors = sc.actors.map((a) => `<div class="actor ${cur && cur.speaker === a.id ? 'talk' : ''} ${flash === a.id ? 'cracked' : ''}">${W.bust(a, 'lg')}<div class="nm">${esc(a.name)}</div><div class="role">${esc(a.role)}</div>${flash === a.id ? '<span class="stamp crackstamp">Cracked!</span>' : ''}</div>`).join('');
+      const speaker = cur ? sc.actors.find((a) => a.id === cur.speaker) : null;
+      const line = cur ? `<div class="lineboard" data-k="${cur.k}">${cur.dir ? `<span class="dirstamp">${esc(cur.dir)}</span>` : ''}<div class="who">${esc(speaker?.name || '')}</div><div class="words">${esc(cur.text)}</div><div class="by">${cur.by ? `written by ${esc(cur.by.name)}` : cur.k === 0 ? 'the opening line' : ''}${cur.auto && cur.by ? ' (too slow, so we helped)' : ''}</div></div>` : '';
+      const w = x.writing ? `<div class="writingnow">${W.bust(x.writing.writer, 'sm')}<span><b>${esc(x.writing.writer.name)}</b> is writing ${esc(x.writing.speaker.name)}'s next line</span>${dotsTyping}<div class="tbar mini"><i data-kind="bar" data-ends="${x.writing.endsAt}" data-total="${totalFor(x.writing.endsAt)}"></i></div></div>` : '<div class="writingnow"><span>Last line of the scene</span></div>';
+      return `<div class="scene"><div class="actors n${sc.actors.length}" id="scActors">${actors}</div>${line}<div class="scenefoot" id="scFoot">${w}<div class="laughs">😂 <b>${x.laughs}</b><small>line ${x.lineNo} of ${x.lineCount}</small></div></div></div>`;
     },
-    SECRETS() { return `<div class="center"><div class="envelope"></div><div class="big">Check your phone. Tell no one.</div><p class="lede">Everyone has a secret agenda to sneak into the show. Someone might be working for a rival network.</p><div class="count">${S.x.acked} of ${S.players.length} have read their secret</div></div>`; },
-    EP_INTRO() {
-      const e = S.ep;
-      if (S.step === 'title') return `<div class="center epcard"><div class="n">${esc(S.show.title)}</div><div class="t">Episode ${e.n}</div></div>`;
-      if (S.step === 'previously') return `<div class="center epcard"><div class="n">Previously on</div><div class="t" style="font-size:4.5rem">${esc(S.show.title)}</div></div>`;
-      if (S.step === 'twist') return `<div class="center"><div class="memo paper"><div class="head"><b class="twist">MID-SEASON TWIST</b><span>Episode ${e.n}</span></div><div class="body">${esc(e.twist)}</div><span class="stamp">Mandatory</span></div></div>`;
-      return `<div class="center"><div class="memo paper"><div class="head"><b>NOTE FROM THE NETWORK</b><span>Re: Episode ${e.n}</span></div><div class="body">${esc(e.note)}</div>${e.physical ? `<div class="phys">${esc(e.physical)}</div>` : ''}<span class="stamp">Not optional</span></div></div>`;
-    },
-    PITCH() {
-      const cards = Array.from({ length: S.x.done }, (_, i) => `<i style="--r:${rot(i)}"></i>`).join('');
-      return `<div class="center"><div class="kicker">Episode ${S.ep.n}${S.ep.twist ? ' · with the twist' : ''}</div><div class="big">What happens this episode?</div><p class="lede">One sentence, on your phone. The room votes on the best one.</p><div class="facedown">${cards}</div><div class="count">${S.x.done} of ${S.players.length} pitched</div>${tbar()}</div>`;
-    },
-    VOTE() {
-      const cards = S.x.pitches.map((p, i) => `<div class="index" style="--r:${rot(i)}"><span class="letter">${String.fromCharCode(65 + i)}</span><div class="hand">${esc(p.text)}</div></div>`).join('');
-      return `<div class="center"><div class="kicker">Vote on your phone. Not for your own.</div><div class="pitchgrid">${cards}</div><div class="count">${S.x.done} voted</div>${tbar()}</div>`;
-    },
-    PITCH_RESULT() { return `<div class="center winner"><div class="kicker">This episode's plot${S.x.by ? `, pitched by ${esc(S.x.by.name)}` : ''}</div><div class="index"><div class="pin"></div><div class="hand">${esc(S.x.plot)}</div></div></div>`; },
-    TEAMS() { return R.WRITING(); },
-    WRITING() {
-      const teams = S.x.scenes.map((sc) => {
-        const pct = Math.round((sc.filled / sc.total) * 100);
-        return `<div class="team"><div class="slug">${esc(sc.slug || `Scene ${sc.i + 1}`)}</div><div class="w">${sc.writers.map((w) => esc(w.name)).join(' & ')}</div><div class="for">writing for ${sc.chars.map((c) => `${W.bust(c, 'sm')} ${esc(c.name)}`).join(' and ')}</div><div class="meter"><i style="width:${S.phase === 'TEAMS' ? 0 : pct}%"></i></div><div class="ready">${sc.done === sc.writers.length && S.phase === 'WRITING' ? 'Script ready' : ''}</div></div>`;
-      }).join('');
-      const sr = S.x.showrunner ? `<p class="lede">${esc(S.x.showrunner.name)} is this episode's Showrunner, and will review every script.</p>` : '';
-      return `<div class="center"><div class="kicker">${S.phase === 'TEAMS' ? 'Writing teams' : 'The writers\' room'}</div><div class="big" style="font-size:3.6rem">${esc(S.ep.plot || '')}</div><div class="teams">${teams}</div>${sr}${S.phase === 'WRITING' ? tbar() : ''}</div>`;
-    },
-    PUNCHUP() { return `<div class="center"><div class="big">The Showrunner is reviewing the scripts</div><p class="lede">${esc(S.x.showrunner?.name || 'The Showrunner')} may quietly change one line. Any line. Nobody will know which.</p>${tbar()}</div>`; },
-    TABLE_READ() {
+    SCENE_END() {
       const x = S.x; const sc = x.scene;
-      if (!sc || S.step === 'intro') return `<div class="center"><div class="kicker">${esc(S.show.title)} · Episode ${S.ep.n}</div><div class="big">Table read</div><p class="lede">Audience: laugh, gasp and boo from your phones. If a line sounds planted, object.</p></div>`;
-      const side = `<div class="side"><div class="dial"><div class="arc"></div><div class="needle" style="transform:translateX(-50%) rotate(${(x.season / 10) * 180 - 90}deg)"></div><div class="hub"></div></div><div class="val">${x.season.toFixed(1)}m<small>viewers this season. Renewal at 5.0m</small></div><div class="cast">${sc.chars.map((c) => `<div class="${S.step === 'line' && x.line?.char === c.id ? 'talk' : ''}">${W.bust(c, 'md')}<span>${esc(c.name)}<small>${esc(c.player)}${c.acts ? ' · acting' : ''}</small></span></div>`).join('')}</div></div>`;
-      if (S.step === 'title') return `<div class="center"><div class="slate"><div class="clap"></div><div class="rows"><div class="full">SCENE<b>${sc.i + 1} of ${x.sceneCount} · ${esc(sc.slug)}</b></div><div>WRITTEN BY<b>${sc.writers.map((w) => esc(w.name)).join(' & ')}</b></div><div>STARRING<b>${sc.chars.map((c) => esc(c.name)).join(', ')}</b></div></div></div></div>`;
-      if (S.step === 'objection') {
-        const o = x.objection;
-        return `<div class="center objection"><span class="stamp ${o.sustained ? 'ok' : ''}">${o.sustained ? 'Sustained' : 'Overruled'}</span><div class="big" style="font-size:3.4rem">${esc(o.by?.name || '')} objected</div>${o.sustained ? o.busted.map((b) => `<p class="lede">That was <b>${esc(b.owner.name)}</b>'s secret agenda: ${esc(b.label)}</p>`).join('') : '<p class="lede">That line was just badly written.</p>'}</div>`;
+      if (S.step === 'line') return `<div class="center"><div class="kicker">Line of the scene</div><div class="index big" style="--r:-1.5deg"><div class="pin"></div><div class="hand">"${esc(x.line.text)}"</div></div><div class="lede">Written by <b>${esc(x.line.by?.name || '')}</b>, said by ${esc(x.line.speakerName || '')}. ${x.line.total} laughs. +200</div></div>`;
+      if (S.step === 'vote' || S.step === 'result') {
+        const max = Math.max(1, ...Object.values(x.counts || {}));
+        const win = (x.winners || []).map((w) => w.id);
+        const cards = sc.actors.map((a) => `<div class="votecard ${win.includes(a.id) ? 'won' : ''}">${W.bust(a, 'xl')}<div class="nm">${esc(a.name)}</div><div class="vbar" id="vb-${a.id}"><i style="width:${((x.counts?.[a.id] || 0) / max) * 100}%"></i></div><div class="vn" id="vn-${a.id}">${x.counts?.[a.id] || 0}</div>${win.includes(a.id) ? '<span class="stamp ok">Best actor</span>' : ''}</div>`).join('');
+        const top = S.step === 'result' ? `<div class="mini-board">${(x.top || []).map((r, i) => `<span>${i + 1}. ${esc(r.name)} <b>${r.score}</b></span>`).join('')}</div>` : '';
+        return `<div class="center"><div class="kicker">${S.step === 'vote' ? 'Vote on your phone' : 'The room has spoken'}</div><div class="big">Best actor?</div><div class="castrow">${cards}</div>${S.step === 'vote' ? tbar() : top}</div>`;
       }
-      if (S.step === 'end') return `<div class="center"><div class="kicker">${esc(sc.slug)}</div><div class="huge">${x.rating.toFixed(1)}m</div><p class="lede">viewers for this scene, written by ${sc.writers.map((w) => esc(w.name)).join(' & ')}</p></div>`;
-      const cur = S.step === 'direction' ? -1 : x.line.idx;
-      const lines = sc.lines.slice(Math.max(0, cur - 2), cur + 1).map((l) => {
-        const c = charOf(l.char); const now = l.id === x.line?.id;
-        return `<div class="say ${now ? 'now' : ''} ${l.empty ? 'silent' : ''}"><span class="who">${esc(c?.name || '')}</span>${now && c ? `<span class="by">${esc(c.player)}</span>` : ''}<span class="words">${l.empty ? '(a long, meaningful silence)' : esc(l.text)}</span></div>`;
-      }).join('');
-      const conf = S.genre?.fx === 'confessional' && S.step === 'line' ? '<span class="confessional">Confessional cam</span>' : '';
-      return `<div class="read"><div class="page paper" id="page">${conf}<div class="slugline">${esc(sc.slug)}</div><div class="action">${esc(sc.direction)}</div>${lines}</div>${side}</div>`;
+      return '<div class="center"><div class="slate wrapslate"><div class="clap"></div><div class="rows"><div class="full">SCENE!<b>That\'s a wrap on scene ' + (sc.i + 1) + '</b></div></div></div></div>';
     },
-    RATINGS() {
-      const x = S.x;
-      if (S.step === 'cliffhanger') return `<div class="center"><div class="tbc">To be continued...</div></div>`;
-      if (S.step === 'awards') {
-        const best = x.scenes[x.best];
-        return `<div class="center"><div class="kicker">Episode ${S.ep.n} awards</div><div class="awards"><div class="award"><div class="k">Best scene</div><div class="v">${esc(best?.writers.map((w) => w.name).join(' & ') || '')}</div><div class="count">${esc(best?.slug || '')}</div></div>${x.bestPerf ? `<div class="award"><div class="k">Best performance</div><div class="v">${esc(x.bestPerf.player)}</div><div class="count">as ${esc(x.bestPerf.name)}</div></div>` : ''}</div><div class="target">Season so far: ${x.season.toFixed(1)}m viewers. The network renews at ${x.target.toFixed(1)}m.</div></div>`;
-      }
-      const max = Math.max(10, ...x.scenes.map((s) => s.rating));
-      return `<div class="center"><div class="kicker">Overnight ratings · Episode ${S.ep.n}</div><div class="ratings">${x.scenes.map((s, i) => `<div class="rrow ${i === x.best ? 'best' : ''}"><div><div class="slug">${esc(s.slug)}</div>${s.writers.map((w) => esc(w.name)).join(' & ')}</div><div class="bar"><i style="width:${(s.rating / max) * 100}%;animation-delay:${i * 0.3}s"></i></div><div class="num">${s.rating.toFixed(1)}m</div></div>`).join('')}</div><div class="target">Renewal needs ${x.target.toFixed(1)}m across the season. Right now: ${x.season.toFixed(1)}m.</div></div>`;
+    CUT_INTRO() {
+      const f = S.x.fin;
+      return `<div class="center epcard"><div class="n">The finale · ${esc(f.genre.name)}</div><div class="t">CUT!</div><div class="setting">Everyone is in this one. Hit CUT on your phone and you write the next line.</div></div>`;
     },
-    LAST_WORDS() { return `<div class="center"><div class="kicker">The finale</div><div class="big">Last words</div><p class="lede">For the first time tonight, write for your own character. Their final line of the series.</p><div class="count">${S.x.done} of ${S.players.length} written</div>${tbar()}</div>`; },
-    FINALE() {
-      if (S.step === 'last') return `<div class="lastline">${W.bust(S.x.char, 'xl')}<div><div class="name">${esc(S.x.char.name)}</div><div class="words">${esc(S.x.text)}</div><div class="count">${esc(S.x.char.player)}</div></div></div>`;
-      return `<div class="center"><div class="kicker">${esc(S.show.title)}</div><div class="huge">The series finale</div><div class="cast" style="display:flex;gap:1rem;justify-content:center">${(S.x.cast || []).map((c) => W.bust(c, 'lg')).join('')}</div></div>`;
-    },
-    CRITIC() {
-      if (S.step !== 'review') return `<div class="center"><div class="big">The reviews are in</div></div>`;
-      const c = S.x.critic;
-      return `<div class="center"><div class="review paper"><div class="masthead"><span>${esc(c.outlet)}</span><span>TV review</span></div><div class="stars">${'★'.repeat(c.stars)}${'☆'.repeat(5 - c.stars)}</div><div class="text">${esc(c.review)}</div><div class="by">${esc(c.name)}</div></div></div>`;
-    },
-    MOLE_VOTE() { return `<div class="center"><div class="huge">Who was the Mole?</div><p class="lede">Somebody may have been working for a rival network all night, trying to sink the show. Maybe two people. Maybe nobody.</p><div class="count">${S.x.done} of ${S.players.length} voted</div>${tbar()}</div>`; },
-    REVEALS() {
-      const x = S.x;
-      if (x.step === 'agenda') { const word = { done: 'Done', busted: 'Busted', active: 'Failed' }[x.status]; return `<div class="reveal">${W.bust(x.char, 'xl')}<div><div class="kicker">${esc(x.who.name)}'s secret agenda</div><div class="label">${esc(x.label)}</div><span class="stamp st-${x.status}">${word}</span></div></div>`; }
-      if (x.step === 'mole') return `<div class="center"><div class="kicker">The Mole</div><div class="big">${x.moles.length ? x.moles.map((m) => esc(m.name)).join(' and ') : 'There was no Mole'}</div><div class="votes">${x.tally.filter((t) => t.votes).map((t) => `<div>${esc(t.name)}: ${t.votes}</div>`).join('')}${x.none ? `<div>No Mole: ${x.none}</div>` : ''}</div>${x.moles.length ? `<p class="lede">${x.caught.length === x.moles.length ? 'Caught.' : x.caught.length ? 'One of them was caught.' : 'Nobody caught them.'}</p>` : ''}</div>`;
-      if (x.step === 'renewal') return `<div class="center verdict"><div class="kicker">Season rating: ${x.rating.toFixed(1)}m viewers (needed ${x.target.toFixed(1)}m)</div><span class="stamp" style="color:${x.renewed ? 'var(--green)' : 'var(--red)'}">${x.renewed ? 'Renewed' : 'Cancelled'}</span></div>`;
-      return `<div class="center"><div class="huge">Opening the envelopes</div></div>`;
+    CUT() {
+      const f = S.x.fin; const l = f.line;
+      if (S.step === 'write') return `<div class="center cutnow"><div class="cutclap">CUT!</div><div class="big">${esc(f.cutter?.name || '')} has the pen</div><p class="lede">Writing ${esc(f.target?.name || '')}'s next line. Heckle freely.</p><div class="timer" ${T()}></div></div>`;
+      if (S.step === 'rewrite') return `<div class="center"><div class="huge rewriting">Rewriting${dotsTyping}</div><p class="lede">The story has to follow that line now.</p></div>`;
+      if (S.step === 'end') return '<div class="center"><div class="huge">That\'s a wrap!</div></div>';
+      if (!l) return '<div class="center"><div class="big">Rolling...</div></div>';
+      return `<div class="finline ${l.kind}"><div class="sp">${W.bust(l.speaker, 'xl')}<div class="nm">${esc(l.speaker.name)}</div></div><div class="lineboard" data-k="${f.lineNo}">${l.kind === 'cut' ? `<span class="dirstamp">✂️ Written by ${esc(l.by?.name || '')}</span>` : ''}<div class="words">${esc(l.text)}</div></div></div>
+        <div id="cutStatus"><div class="cutstatus ${f.locked ? 'locked' : 'open'}">${f.locked ? 'CUT is locked for a moment' : 'CUT is open. Grab it!'}</div></div>`;
     },
     FINAL() {
-      const rows = S.x.rows;
-      return `<div class="center"><div class="kicker">Head writer of ${esc(S.show.title)}</div><div class="big">${esc(rows[0].name)}</div><div class="board2">${rows.map((r, i) => `<div class="srow ${i === 0 ? 'first' : ''}" style="animation-delay:${(rows.length - i) * 0.25}s"><span class="rk">${r.rank}</span><span class="nm">${esc(r.name)}${r.isMole ? ' (the Mole)' : ''}<small>${esc(r.char || '')}</small></span><span class="sub">${esc(summary(r.ledger))}</span><span class="pts">${r.score}</span></div>`).join('')}</div><p class="count">${esc(P_(S.vipId)?.name || 'The first player')} can start a new show from their phone.</p></div>`;
+      const x = S.x;
+      if (x.step === 'laugh') return `<div class="center"><div class="kicker">The biggest laugh of the night</div><div class="index big" style="--r:1.5deg"><div class="pin"></div><div class="hand">"${esc(x.line.text)}"</div></div><div class="lede">Written by <b>${esc(x.line.by?.name || '')}</b>. ${x.line.total} laughs.</div></div>`;
+      if (x.step === 'actor') return `<div class="lastline">${W.bust(x.who, 'xl')}<div><div class="name">Best actor of the night</div><div class="big">${esc(x.who.name)}</div><div class="lede" style="text-align:left">${x.who.actorPts} acting points</div></div></div>`;
+      const rows = x.rows || [];
+      if (x.step === 'winner') return `<div class="lastline">${W.bust(rows[0], 'xl')}<div><div class="name">Tonight's head writer</div><div class="huge">${esc(rows[0]?.name || '')}</div></div></div>`;
+      return `<div class="center"><div class="kicker">Final scores</div><div class="board2">${rows.map((r, i) => `<div class="srow ${i === 0 ? 'first' : ''}" style="animation-delay:${(rows.length - i) * 0.2}s"><span class="rk">${r.rank}</span><span class="nm">${esc(r.name)}</span><span class="sub">writing ${r.writerPts} · acting ${r.actorPts}</span><span class="pts">${r.score}</span></div>`).join('')}</div><p class="count">${esc(P_(S.vipId)?.name || 'The first player')} can start another game from their phone.</p></div>`;
     },
   };
-  function summary(ledger) {
-    const g = {}; ledger.forEach((l) => { g[l.why] = (g[l.why] || 0) + l.pts; });
-    return Object.entries(g).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 3).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(' · ');
-  }
 
   // ---------------------------------------------------------------- render
+  let stageKey = ''; let enterTimer = null;
+  const tpl = document.createElement('template');
+  function patch(html) {
+    const live = stage.querySelectorAll('[id]'); if (!live.length) return mount(stage, html) || true;
+    tpl.innerHTML = html;
+    for (const el of live) { const fresh = tpl.content.getElementById(el.id); if (fresh) mount(el, fresh.innerHTML); }
+    return true;
+  }
   function render() {
     setScenery();
     mount(top, topbar());
     mount(dock, dockbar());
-    const key = `${S.phase}|${S.step}|${S.x.line?.id || ''}`;
-    const prevKey = P ? `${P.phase}|${P.step}|${P.x?.line?.id || ''}` : '';
-    if (key !== prevKey) { stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter'); }
+    // Same screen as before: update only the live parts, so nothing re-animates on every laugh or vote.
+    const key = `${S.phase}|${S.step}|${S.x.cur?.k ?? ''}|${S.x.scene?.i ?? ''}|${S.x.fin?.lineNo ?? ''}|${S.x.fin?.line?.text ?? ''}|${S.players.length}`;
     const fn = R[S.phase];
-    mount(stage, fn ? fn() : `<div class="center"><div class="big">${esc(S.phase)}</div></div>`);
+    const html = fn ? fn() : `<div class="center"><div class="big">${esc(S.phase)}</div></div>`;
+    if (key === stageKey && patch(html)) { music(); return; }
+    stageKey = key;
+    stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter');
+    clearTimeout(enterTimer); enterTimer = setTimeout(() => stage.classList.remove('enter'), 2200);
+    mount(stage, html);
+    stage.querySelectorAll('[id]').forEach((el) => { el.__html = el.innerHTML; });
     music();
   }
 
   // ---------------------------------------------------------------- music per phase
   let lastMusic = null;
   function music() {
-    const g = S.genre; const ph = S.phase;
-    let key; let mood;
-    const genreTrack = () => { key = g?.music; mood = g?.mood || 'tense'; };
-    switch (ph) {
-      case 'LOBBY': key = 'lobby'; mood = 'lobby'; break;
-      case 'INTRO': if (S.step === 'reveal') genreTrack(); else { key = 'lobby'; mood = 'lobby'; } break;
-      case 'CASTING': case 'CAST_INTRO': case 'SECRETS': key = 'casting'; mood = 'casting'; break;
-      case 'EP_INTRO': genreTrack(); break;
-      case 'PITCH': case 'VOTE': case 'PITCH_RESULT': case 'MOLE_VOTE': key = 'pitch'; mood = 'pitch'; break;
-      case 'TEAMS': case 'WRITING': case 'PUNCHUP': case 'LAST_WORDS': key = 'writing'; mood = 'writing'; break;
-      case 'TABLE_READ': case 'FINALE': genreTrack(); break;
-      case 'RATINGS': if (S.step === 'cliffhanger') genreTrack(); else { key = 'ratings'; mood = 'ratings'; } break;
-      case 'CRITIC': key = 'ratings'; mood = 'ratings'; break;
-      case 'REVEALS': case 'FINAL': key = 'finale'; mood = 'finale'; break;
-      default: key = 'lobby'; mood = 'lobby';
-    }
+    const ph = S.phase; const g = curGenre();
+    let key = 'lobby'; let mood = 'lobby';
+    if (['SCENE_INTRO', 'SCENE', 'CUT_INTRO', 'CUT'].includes(ph) && g) { key = g.music; mood = g.mood || 'tense'; }
+    else if (ph === 'SCENE_END') { key = 'ratings'; mood = 'ratings'; }
+    else if (ph === 'FINAL') { key = 'finale'; mood = 'finale'; }
+    else if (ph === 'INTRO') { key = 'casting'; mood = 'casting'; }
+    AV.setBed(ph === 'SCENE' ? 0.2 : 0.55);
     const id = `${key}|${mood}`;
     if (id !== lastMusic) { lastMusic = id; AV.music(key, mood); }
   }
@@ -242,23 +203,23 @@
     // joins
     if (S.phase === 'LOBBY' && S.players.length > lastPlayers && P) AV.fx('join');
     lastPlayers = S.players.length;
-    if (S.phase === 'TABLE_READ' && S.step === 'objection' && P?.step !== 'objection') burst('⚖️', 1);
   }
   function onFx(name) {
-    if (name === 'laugh') { AV.fx('laugh', { gap: 900 }); burst('😂', 2); AMB.react('laugh'); return; }
-    if (name === 'gasp') {
-      AV.fx('gasp', { gap: 900 }); burst('😱', 2); AMB.react('gasp');
-      if (S.genre?.fx === 'triplezoom') { const pg = document.getElementById('page'); if (pg && !pg.classList.contains('zoom')) { pg.classList.add('zoom'); AV.fx('sting', { gap: 1500 }); AV.fx('thunder', { gap: 1500 }); setTimeout(() => pg.classList.remove('zoom'), 1300); } }
+    if (name === 'laugh') { AV.fx('laugh', { gap: 700 }); burst('😂', 1); AMB.react('laugh'); return; }
+    if (name === 'trombone') {
+      AV.fx('trombone', { gap: 600 }); burst('💥', 3); AMB.react('gasp');
+      const g = curGenre(); const pg = stage.querySelector('.lineboard');
+      if (g?.fx === 'triplezoom' && pg) { pg.classList.add('zoom'); AV.fx('sting', { gap: 1500 }); AV.fx('thunder', { gap: 1500 }); setTimeout(() => pg.classList.remove('zoom'), 1300); }
       return;
     }
-    if (name === 'boo') { AV.fx('boo', { gap: 900 }); burst('🍅', 2); AMB.react('boo'); return; }
+    if (name === 'scratch') { AV.fx('scratch'); burst('✂️', 2); return; }
     AV.fx(name, { gap: 300 });
   }
   function burst(emoji, n) {
     const box = $('#burst');
     for (let i = 0; i < n && box.childElementCount < 12; i++) {
       const s = document.createElement('span'); s.textContent = emoji;
-      s.style.left = `${10 + Math.random() * 80}%`; s.style.setProperty('--dx', `${(Math.random() - 0.5) * 20}vw`); s.style.setProperty('--rot', `${(Math.random() - 0.5) * 60}deg`);
+      s.style.left = `${Math.random() < 0.5 ? 1 + Math.random() * 13 : 86 + Math.random() * 12}%`; s.style.setProperty('--dx', `${(Math.random() - 0.5) * 20}vw`); s.style.setProperty('--rot', `${(Math.random() - 0.5) * 60}deg`);
       box.appendChild(s); setTimeout(() => s.remove(), 2500);
     }
   }

@@ -23,9 +23,9 @@ const MAX = 400;
 const stripTags = (t) => String(t || '').replace(/\[[^\]]*\]\s*/g, '').replace(/\s+/g, ' ').trim();
 
 // queue so we never hit the plan's concurrency limit
-const CONC = Number(process.env.ELEVENLABS_CONCURRENCY || 2);
+const CONC = Number(process.env.ELEVENLABS_CONCURRENCY || 3);
 let active = 0; const waiting = [];
-function slot() { return new Promise((r) => { if (active < CONC) { active++; r(); } else waiting.push(r); }); }
+function slot(urgent) { return new Promise((r) => { if (active < CONC) { active++; r(); } else if (urgent) waiting.unshift(r); else waiting.push(r); }); }
 function release() { active--; const n = waiting.shift(); if (n) { active++; n(); } }
 
 async function request(text, voice, model) {
@@ -42,8 +42,8 @@ async function request(text, voice, model) {
   } catch (e) { return { error: e.name === 'AbortError' ? 'timeout' : e.message }; } finally { clearTimeout(t); }
 }
 
-async function synth(text, voice) {
-  await slot();
+async function synth(text, voice, urgent) {
+  await slot(urgent);
   try {
     let model = v3Broken ? 'eleven_multilingual_v2' : MODEL();
     let input = model === 'eleven_v3' ? text : stripTags(text);
@@ -59,17 +59,17 @@ async function synth(text, voice) {
 }
 
 // Returns a promise of an audio id (or null when there is no voice available).
-function get(text, voice) {
+function get(text, voice, urgent = false) {
   if (!enabled() || !stripTags(text)) return Promise.resolve(null);
   voice = voice || NARRATOR();
   if (badVoices.has(voice)) voice = NARRATOR();
   const key = `${voice}|${text}`;
   if (byKey.has(key)) return byKey.get(key);
   const p = (async () => {
-    let r = await synth(text, voice);
+    let r = await synth(text, voice, urgent);
     if (r.error && voice !== NARRATOR() && (r.error === 404 || r.error === 400 || r.error === 422)) {
       badVoices.add(voice);
-      r = await synth(text, NARRATOR());
+      r = await synth(text, NARRATOR(), urgent);
     }
     if (!r.buf) { byKey.delete(key); return null; }
     const id = crypto.randomBytes(8).toString('hex');

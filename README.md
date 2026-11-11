@@ -1,6 +1,6 @@
 # Writers' Room
 
-A party game for 4 to 12 people, about 30 minutes a show. The TV is the writers' room of a failing TV show. Everyone's phone is their controller. The characters are each other.
+A party game for 4 to 12 people, about 20 minutes. You write it, they perform it: in every scene two friends stand up and act out lines the rest of the room is writing live, with silly stage directions. Laughs and cracks score points. The finale is CUT!, where the narrator performs a scene starring everyone and anyone can grab the pen.
 
 ## Put it online (Render, free)
 

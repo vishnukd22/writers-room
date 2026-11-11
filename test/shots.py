@@ -27,16 +27,16 @@ with sync_playwright() as p:
         phones.append((pl['name'], pg))
     seen = {}; last = None; t0 = time.time()
     while time.time() - t0 < 1500:
-        try: st = tv.evaluate('window.__S && (window.__S.phase + "|" + (window.__S.step||""))')
+        try: st = tv.evaluate('window.__S && (window.__S.phase + "|" + (window.__S.step||"") + (window.__S.x.cur ? "|L" + window.__S.x.cur.k : "") + (window.__S.x.fin && window.__S.x.fin.step==="play" ? "|F" + window.__S.x.fin.lineNo : ""))')
         except Exception: st = None
         if st and st != last:
             last = st; n = seen.get(st, 0); seen[st] = n + 1
-            if n < 2:
-                time.sleep(0.9)
+            if n < 2 and __import__('re').search(os.environ.get('ONLY', '.'), st):
+                time.sleep(float(os.environ.get('SHOT_WAIT', '0.9')))
                 tag = f"{len(seen):02d}_{st.replace('|','-')}_{n}"
                 tv.screenshot(path=f"{OUT}/{tag}_tv.png")
                 for name, pg in phones: pg.screenshot(path=f"{OUT}/{tag}_{name}.png")
-            if st.startswith('FINAL'):
+            if st.startswith('FINAL|board'):
                 time.sleep(2); tv.screenshot(path=f"{OUT}/99_final_tv.png")
                 for name, pg in phones: pg.screenshot(path=f"{OUT}/99_final_{name}.png")
                 break

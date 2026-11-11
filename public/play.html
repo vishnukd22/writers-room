@@ -10,13 +10,11 @@
 </head>
 <body>
 <section id="join">
-  <div class="jtitle">Writers'<br>Room<span class="hand">Save the show.</span></div>
+  <div class="jtitle">Writers'<br>Room<span class="hand">You write it. They perform it.</span></div>
   <form id="jform" autocomplete="off">
     <label>Room code<input id="jcode" maxlength="4" autocapitalize="characters" spellcheck="false" placeholder="ABCD" required></label>
     <label>Your name<input id="jname" maxlength="14" placeholder="Arun" required></label>
     <label>How do you say it? <span class="opt">Optional, for the narrator</span><input id="jpron" maxlength="30" placeholder="AH-roon"></label>
-    <label class="switch"><input type="checkbox" id="jact"><span>I'll act out my character's lines</span></label>
-    <p class="hint">Leave it off and the narrator reads your lines for you. You can change this in the lobby.</p>
     <button class="btn primary big" type="submit">Join the room</button>
     <p id="jerr" class="err" role="alert"></p>
   </form>
@@ -24,9 +22,7 @@
 <section id="app" hidden>
   <header id="hud"></header>
   <main id="main"></main>
-  <nav id="tabs"><button id="tChar">My character</button><button id="tSecret">My secret</button></nav>
 </section>
-<div id="sheetWrap" hidden><div class="scrim"></div><div id="sheet" role="dialog" aria-modal="true"></div></div>
 <div id="toasts" aria-live="polite"></div>
 <script src="/socket.io/socket.io.js"></script>
 <script src="/shared.js"></script>

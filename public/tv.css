@@ -290,3 +290,89 @@ body.showart #stage .epcard, body.showart #stage .tbc { padding: 1.1rem 3.2rem 1
 body.showart #stage .epcard .t { font-size: 4.6rem; }
 body.blurart #scenery .art { filter: blur(14px) brightness(.55) saturate(1.2); transform: scale(1.08); }
 #scenery .art { transition: opacity 1.2s, filter 1s; }
+
+/* ================= Cold Read + CUT! ================= */
+.tag b { margin-left: .3rem; color: var(--mustard); font-weight: 800; }
+.howrow { display: flex; gap: 2rem; justify-content: center; }
+.howcard { width: 19rem; background: var(--paper); color: var(--ink); border-radius: 10px; padding: 1.6rem 1.4rem; font-size: 1.7rem; font-weight: 800; line-height: 1.2; transform: rotate(var(--r)); box-shadow: 0 20px 50px rgba(0,0,0,.45); }
+.howcard b { display: block; font-size: 4rem; margin-bottom: .6rem; }
+#stage.enter .howcard { animation: dealin .6s cubic-bezier(.2, 1.3, .4, 1) both; }
+#stage.enter .howcard:nth-child(2) { animation-delay: .25s; } #stage.enter .howcard:nth-child(3) { animation-delay: .5s; }
+@keyframes dealin { from { transform: translateY(40px) rotate(-12deg) scale(.8); opacity: 0; } }
+.epcard .setting { font-size: 1.6rem; max-width: 46rem; margin: .8rem auto 0; line-height: 1.35; }
+body.showart #stage .epcard .t { font-size: 5.2rem; }
+
+.castrow { display: flex; gap: 4rem; justify-content: center; align-items: flex-start; }
+.castbig { display: grid; justify-items: center; gap: .5rem; width: 22rem; transform: rotate(var(--r)); }
+.castbig .nm, .votecard .nm { font-size: 2.6rem; font-weight: 800; line-height: 1; margin-top: .4rem; }
+.castbig .role { font-family: var(--hand); font-size: 1.9rem; color: var(--mustard); line-height: 1.15; text-align: center; }
+#stage.enter .castbig { animation: popin .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+#stage.enter .castbig:nth-child(2) { animation-delay: .35s; } #stage.enter .castbig:nth-child(3) { animation-delay: .7s; }
+.stamp.standup { color: var(--red); font-size: 3rem; transform: rotate(-6deg); margin-top: 1rem; background: rgba(246,234,212,.92); }
+#stage.enter .stamp.standup { animation: stampin .5s 1.1s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes stampin { from { transform: scale(3) rotate(-6deg); opacity: 0; } }
+
+/* the live scene */
+.scene { display: grid; grid-template-rows: auto 1fr auto; gap: 1.2rem; height: 100%; min-height: 0; width: min(90rem, 100%); margin: 0 auto; }
+.actors { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 2rem; }
+.actors.n3 { justify-content: space-around; }
+.actor { position: relative; display: grid; justify-items: center; gap: .2rem; transition: transform .35s cubic-bezier(.2, 1.3, .4, 1), opacity .35s; opacity: .55; transform: scale(.85); }
+.actor .nm { font-size: 1.6rem; font-weight: 800; }
+.actor .role { font-family: var(--hand); color: var(--mustard); font-size: 1.15rem; max-width: 16rem; text-align: center; line-height: 1.1; }
+.actor.talk { opacity: 1; transform: scale(1.12); }
+.actor.talk .bust { box-shadow: 0 0 0 4px var(--mustard), 0 0 40px rgba(226,169,59,.6); animation: talk .5s ease-in-out infinite alternate; }
+.actor.cracked .bust { animation: shudder .5s 3; filter: saturate(1.4); }
+.crackstamp { position: absolute; top: 30%; color: var(--red); background: rgba(246,234,212,.95); font-size: 2rem; transform: rotate(-10deg); animation: stampin .4s cubic-bezier(.2, 1.6, .4, 1); }
+.lineboard { position: relative; align-self: center; justify-self: center; width: min(68rem, 100%); background: var(--paper); color: var(--ink); border-radius: 14px; padding: 2.4rem 3rem 1.6rem; box-shadow: 0 30px 80px rgba(0,0,0,.5); text-align: center; }
+#stage.enter .lineboard { animation: slamin .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes slamin { from { transform: scale(1.25) rotate(1deg); opacity: 0; } }
+.lineboard .dirstamp { position: absolute; top: -1.4rem; left: 50%; transform: translateX(-50%) rotate(-3deg); background: var(--red); color: #fff; font-weight: 800; font-size: 1.7rem; padding: .3rem 1.2rem; border-radius: 10px; white-space: nowrap; box-shadow: 0 8px 20px rgba(0,0,0,.35); }
+.lineboard .who { font-family: var(--script); font-weight: 700; text-transform: uppercase; color: var(--orange); font-size: 1.3rem; letter-spacing: .05em; }
+.lineboard .words { font-family: var(--script); font-size: 3.1rem; line-height: 1.25; margin-top: .4rem; }
+.lineboard .by { font-size: 1.05rem; color: #7A6E5D; margin-top: .9rem; min-height: 1.2em; }
+.lineboard.zoom { animation: zoom3 1.2s steps(1) both; }
+.scenefoot { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.writingnow { display: flex; align-items: center; gap: .8rem; font-size: 1.35rem; background: rgba(18,26,38,.7); padding: .6rem 1.2rem .6rem .6rem; border-radius: 99px; position: relative; overflow: hidden; }
+.writingnow .tbar.mini { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; width: 100%; border-radius: 0; }
+.typing { display: inline-flex; gap: .25rem; }
+.typing i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--mustard); animation: blip 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes blip { 0%, 60%, 100% { opacity: .25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+.laughs { font-size: 2.2rem; font-weight: 800; display: flex; align-items: baseline; gap: .6rem; background: rgba(18,26,38,.7); padding: .3rem 1.2rem; border-radius: 99px; }
+.laughs small { font-size: 1rem; color: var(--muted); font-weight: 600; }
+
+/* scene end */
+.index.big { width: min(60rem, 100%); padding: 2rem 2.4rem 1.6rem; transform: rotate(var(--r)); }
+.index.big .hand { font-size: 2.6rem; line-height: 3.1rem; }
+.votecard { position: relative; display: grid; justify-items: center; gap: .5rem; width: 20rem; }
+.votecard.won .bust { box-shadow: 0 0 0 5px var(--mustard), 0 0 60px rgba(226,169,59,.7); }
+.vbar { width: 100%; height: .8rem; background: rgba(246,234,212,.18); border-radius: 99px; overflow: hidden; }
+.vbar i { display: block; height: 100%; background: var(--mustard); transition: width .5s; }
+.vn { font-size: 2rem; font-weight: 800; color: var(--mustard); }
+.votecard .stamp { position: absolute; top: 25%; color: var(--green, #6E9E4F); background: rgba(246,234,212,.95); transform: rotate(-8deg); font-size: 1.6rem; animation: stampin .4s cubic-bezier(.2, 1.6, .4, 1); }
+.mini-board { display: flex; gap: 2rem; justify-content: center; font-size: 1.5rem; }
+.mini-board b { color: var(--mustard); }
+.wrapslate .rows b { font-size: 2.4rem; }
+.wrapslate .full { font-size: 1.4rem !important; }
+
+/* CUT! */
+.cutclap { display: inline-block; font-size: 9rem; font-weight: 800; line-height: 1; padding: .5rem 3rem; color: #fff; background: repeating-linear-gradient(-45deg, #1A1A1A 0 40px, #333 40px 80px); border: .5rem solid var(--red); border-radius: 20px; transform: rotate(-4deg); text-shadow: 0 6px 0 #000; }
+#stage.enter .cutclap { animation: stampin .45s cubic-bezier(.2, 1.6, .4, 1); }
+.rewriting { display: inline-flex; align-items: center; gap: 1.5rem; }
+.rewriting .typing i { width: 1.2rem; height: 1.2rem; }
+.finline { display: grid; grid-template-columns: auto 1fr; gap: 3rem; align-items: center; width: min(84rem, 100%); margin: auto; }
+.finline .sp { display: grid; justify-items: center; gap: .5rem; }
+.finline .sp .nm { font-size: 2.2rem; font-weight: 800; }
+.finline .sp .bust { animation: talk .5s ease-in-out infinite alternate; }
+.finline .lineboard { text-align: left; }
+.finline.cut .lineboard { box-shadow: 0 0 0 6px var(--red), 0 30px 80px rgba(0,0,0,.5); }
+.cutstatus { position: absolute; right: 0; bottom: 0; font-size: 1.3rem; font-weight: 800; padding: .5rem 1.2rem; border-radius: 99px; }
+.cutstatus.open { background: var(--red); color: #fff; animation: throb 1.2s ease-in-out infinite; }
+.cutstatus.locked { background: rgba(18,26,38,.7); color: var(--muted); }
+@keyframes throb { 50% { transform: scale(1.06); } }
+@keyframes talk { from { transform: scale(1); } to { transform: scale(1.04) translateY(-3px) rotate(-1.5deg); } }
+#caption.char { display: none; }
+.scene .lineboard .words, .scene .lineboard .by { animation: reveal .35s 1.1s both; }
+@keyframes reveal { from { opacity: 0; transform: translateY(6px); } }
+#burst span { animation: floatside 2.2s ease-out forwards; }
+@keyframes floatside { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; transform: translateY(-8vh) scale(1.1); } 100% { transform: translate(var(--dx), -55vh) rotate(var(--rot)) scale(.9); opacity: 0; } }

@@ -120,3 +120,64 @@ p.lead { font-size: 1.05rem; line-height: 1.45; margin: 0; color: var(--muted); 
 .rank { font-size: 4.2rem; font-weight: 800; color: var(--mustard); line-height: 1; }
 .ledger { display: grid; gap: .3rem; font-size: .95rem; }
 .ledger div { display: flex; justify-content: space-between; }
+
+/* ---------------- Cold Read + CUT! ---------------- */
+#main { padding: 1rem 1rem 2.5rem; }
+#hud .me small { margin-left: .4rem; font-weight: 800; color: var(--mustard); }
+.center { text-align: center; }
+.hint.center { margin: 0; }
+.skip { justify-self: center; margin-top: .4rem; }
+.how { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+.how div { background: var(--navy-2); border: 1px solid var(--line); border-radius: 14px; padding: .8rem .4rem; text-align: center; font-weight: 800; font-size: .9rem; line-height: 1.2; }
+.how b { display: block; font-size: 1.9rem; margin-bottom: .3rem; }
+.pills { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pill { border: 2px solid var(--c); border-radius: 99px; padding: .35rem .8rem; font-weight: 800; }
+.rolecard { background: var(--paper); color: var(--ink); border-radius: 14px; padding: .9rem 1.1rem; font-size: .95rem; transform: rotate(-1.5deg); box-shadow: 0 10px 26px rgba(0,0,0,.35); }
+.rolecard b { display: block; font-family: var(--hand); font-size: 1.6rem; line-height: 1.2; color: var(--orange); }
+
+.prompter { padding: 1.6rem 1.2rem 1.8rem; border-radius: 20px; animation: slam .35s cubic-bezier(.2, 1.5, .4, 1); }
+.prompter .dir { display: inline-block; background: var(--red); color: #fff; font-family: var(--ui); font-weight: 800; font-size: 1.15rem; padding: .35rem .9rem; border-radius: 8px; transform: rotate(-2deg); margin-bottom: .8rem; }
+.prompter .words { font-size: 2rem; line-height: 1.3; margin-top: 0; }
+@keyframes slam { from { transform: scale(1.15); opacity: 0; } }
+.btn.done { font-size: 1.5rem; padding: 1.2rem; }
+
+.laughbtn { width: 100%; border: 0; border-radius: 26px; padding: 1.6rem 1rem 1.2rem; font-size: 4.2rem; line-height: 1; display: grid; gap: .5rem; place-items: center; background: var(--teal); color: #fff; box-shadow: inset 0 -8px 0 rgba(0,0,0,.25); touch-action: manipulation; }
+.laughbtn span { font-size: 1.4rem; font-weight: 800; letter-spacing: .06em; }
+.laughbtn.small { font-size: 2.6rem; padding: 1rem; border-radius: 20px; }
+.laughbtn.small span { font-size: 1.1rem; }
+.laughbtn.off { background: var(--navy-2); opacity: .7; }
+.laughbtn.pop { animation: pop .25s; }
+@keyframes pop { 50% { transform: scale(.94); } }
+.dots { display: flex; gap: .35rem; }
+.dots i { width: .7rem; height: .7rem; border-radius: 50%; background: rgba(255,255,255,.3); }
+.dots i.on { background: var(--mustard); }
+.cracks, .dirs { display: grid; gap: .5rem; }
+.cracks { grid-template-columns: auto 1fr 1fr; align-items: center; }
+.cracks:has(button:nth-of-type(3)) { grid-template-columns: 1fr 1fr 1fr; }
+.cracks span, .dirs span { font-weight: 800; color: var(--muted); font-size: .9rem; }
+.cracks:has(button:nth-of-type(3)) span { grid-column: 1 / -1; }
+.cracks button { border: 2px solid var(--red); background: transparent; color: var(--cream); border-radius: 12px; padding: .6rem; font-weight: 800; }
+.cracks button.on { background: rgba(200,70,59,.35); }
+.cracks button.done { background: var(--red); }
+.dirs button { border: 2px solid var(--line); background: var(--navy-2); border-radius: 12px; padding: .75rem; font-weight: 800; font-size: 1.05rem; text-align: left; }
+.dirs button.on { border-color: var(--mustard); background: rgba(226,169,59,.2); }
+.soon { background: var(--mustard); color: var(--navy); font-weight: 800; border-radius: 12px; padding: .7rem 1rem; text-align: center; animation: shake .5s; }
+
+.writer { display: grid; gap: .8rem; }
+.wtop { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
+.t.big { font-size: 2rem; font-weight: 800; color: var(--mustard); min-width: 2.6rem; text-align: right; }
+.prevline { background: var(--paper); color: var(--ink); border-radius: 12px; padding: .7rem .9rem; font-family: var(--script); font-size: 1.05rem; line-height: 1.4; }
+.prevline b { display: block; font-family: var(--ui); font-size: .8rem; color: var(--orange); }
+.writer textarea { font-family: var(--script); font-size: 1.2rem; background: var(--paper); color: var(--ink); border-color: var(--mustard); }
+
+.actorvote { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .8rem; }
+.actorvote button { display: grid; justify-items: center; gap: .5rem; border: 3px solid var(--line); background: var(--navy-2); border-radius: 20px; padding: 1rem .5rem; font-size: 1.2rem; }
+.actorvote button.on { border-color: var(--mustard); background: rgba(226,169,59,.2); }
+
+.cutbtn { width: 100%; aspect-ratio: 1.3; border: 0; border-radius: 30px; background: repeating-linear-gradient(-45deg, #1A1A1A 0 26px, #F6EAD4 26px 52px); color: #fff; font-size: 4.4rem; font-weight: 800; letter-spacing: .04em; display: grid; place-items: center; align-content: center; gap: .2rem; text-shadow: 0 4px 0 #000, 0 0 20px #000; box-shadow: inset 0 -10px 0 rgba(0,0,0,.35), 0 0 0 5px var(--red); touch-action: manipulation; }
+.cutbtn span { font-size: 1.1rem; background: var(--red); padding: .2rem .8rem; border-radius: 99px; text-shadow: none; }
+.cutbtn:not(:disabled) { animation: throb 1.2s ease-in-out infinite; }
+.cutbtn:disabled { opacity: .35; animation: none; }
+@keyframes throb { 50% { transform: scale(1.03); box-shadow: inset 0 -10px 0 rgba(0,0,0,.35), 0 0 0 9px var(--red); } }
+.rankcard { text-align: center; display: grid; gap: .3rem; }
+.rankcard .ledger { margin-top: .6rem; }
