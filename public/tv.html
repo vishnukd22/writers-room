@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Writers' Room</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/tv.css">
+</head>
+<body>
+<div id="scenery" class="room" aria-hidden="true"><div class="cam">
+  <div class="art"></div>
+  <div class="drawn">
+    <div class="window"><canvas id="rain"></canvas><div class="city"></div></div>
+    <div class="lamp"></div>
+    <div class="desk"></div>
+    <div class="spot l"></div><div class="spot r"></div>
+  </div>
+  <div class="veil"></div>
+  <canvas id="amb"></canvas>
+</div></div>
+<div id="app">
+  <header id="top"></header>
+  <main id="stage"></main>
+  <footer id="dock"></footer>
+</div>
+<div id="caption" aria-live="polite"></div>
+<div id="burst" aria-hidden="true"></div>
+<div id="controls">
+  <button id="bMusic">Music on</button>
+  <button id="bSfx">Sounds on</button>
+  <button id="bVoice">Narrator on</button>
+  <button id="bSkip" title="Space bar">Skip</button>
+  <button id="bFull">Full screen</button>
+</div>
+<div id="gate">
+  <div class="gate-in">
+    <div class="gate-title">Writers' Room</div>
+    <p class="hand">Save the show.</p>
+    <p>This screen is the TV. Everyone else plays on their phone. Turn the volume up: there is a narrator, music and a live studio audience.</p>
+    <button id="bOpen">Open the writers' room</button>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/audio.js"></script>
+<script src="/ambience.js"></script>
+<script src="/tv.js"></script>
+</body>
+</html>

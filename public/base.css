@@ -1,0 +1,46 @@
+@import url('/fonts/baloo/index.css');
+@import url('/fonts/courier/400.css');
+@import url('/fonts/courier/700.css');
+@import url('/fonts/courier/400-italic.css');
+@import url('/fonts/kalam/400.css');
+@import url('/fonts/kalam/700.css');
+
+:root {
+  --navy: #1E2A3A;
+  --navy-2: #26364A;
+  --navy-3: #33465E;
+  --cream: #F6EAD4;
+  --paper: #FBF4E6;
+  --ink: #2A2420;
+  --mustard: #E2A93B;
+  --orange: #E07A3F;
+  --teal: #2F8F86;
+  --rose: #D98C8C;
+  --plum: #6C4A6E;
+  --red: #C8463B;
+  --green: #5FA36A;
+  --muted: #A9B4C2;
+  --line: rgba(246, 234, 212, .16);
+  --ui: 'Baloo 2 Variable', 'Baloo 2', system-ui, sans-serif;
+  --script: 'Courier Prime', 'Courier New', monospace;
+  --hand: 'Kalam', 'Comic Sans MS', cursive;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--navy); color: var(--cream); font-family: var(--ui); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
+.hand { font-family: var(--hand); }
+.script { font-family: var(--script); }
+.muted { color: var(--muted); }
+
+/* portraits */
+.bust { --c: var(--orange); position: relative; display: inline-grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; overflow: hidden; background: var(--c); flex: none; box-shadow: 0 0 0 3px rgba(246,234,212,.85); }
+.bust img { width: 100%; height: 100%; object-fit: cover; }
+.bust.drawn svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bust.drawn b { position: relative; margin-top: -8%; font-weight: 800; color: var(--c); font-size: .9em; filter: brightness(.6); }
+.bust.lg { width: 8rem; height: 8rem; font-size: 2rem; }
+.bust.xl { width: 14rem; height: 14rem; font-size: 3.4rem; border-radius: 22px; }
+.bust.sm { width: 2rem; height: 2rem; font-size: .7rem; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

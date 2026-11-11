@@ -1,0 +1,26 @@
+{
+  "name": "writers-room",
+  "version": "1.0.0",
+  "description": "Writers Room: a party game. The TV is the writers room, phones are the controllers.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "bots": "node test/bots.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@fontsource-variable/baloo-2": "^5.3.0",
+    "@fontsource/courier-prime": "^5.3.0",
+    "@fontsource/kalam": "^5.3.0",
+    "express": "^4.22.3",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}
