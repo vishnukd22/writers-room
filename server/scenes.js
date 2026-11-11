@@ -198,7 +198,32 @@ const LINES = {
   biggestLaugh: '[warmly] The biggest laugh of the night came from this line. Written by {name}.',
   headWriter: '[dramatically] Tonight\'s head writer is... {name}!',
   goodnight: "[warmly] Thank you, writers. Same time next week?",
+  dateWelcome: "[warmly] Good evening, and welcome to Writers' Room: Date Night. [beat] Tonight, you two write each other's lines. And then you have to say them. Out loud. To each other.",
+  dateHow: '[mischievously] Say your line, then write your partner\'s reply, and pick how they have to say it. Make them crack, you score. And watch out. I might barge in.',
+  dateStarring: 'Starring {cast}. [whispers] Try not to laugh. Action!',
+  criticWatching: '[curious] The critic has been watching.',
+  critic: '[dry] {name}, {outlet}. {stars} stars. {review}',
+  coin: '[dramatically] A disputed crack! The coin will decide...',
+  coinCracked: '[laughs] Heads. You cracked. Points stand.',
+  coinClean: '[surprised] Tails. Straight face confirmed. Points cancelled.',
+  lineOfNight: '[warmly] The line of the night was written by {name}.',
 };
+
+// Date Night: when the AI is offline, the third character barges in with one of these.
+const NPC_FALLBACK = [
+  'Sorry to interrupt. Who ordered the divorce?', 'I heard everything. And I am telling your mother.', 'Should I come back later? I feel like I should come back later.',
+  'Not to be dramatic, but the house is on fire.', 'Is this a bad time? I brought samosas.', 'I have been standing here the whole time. The whole time.',
+  'Plot twist. I am in love with both of you.', 'The neighbours can hear you. They are taking notes.', 'Quick question. Whose shoes are these?',
+];
+// Date Night: canned critic reviews. {a} and {b} are the two players.
+const REVIEW_FALLBACK = [
+  '{a} committed to every line like rent was due. {b} looked like they were reading a hostage note.',
+  'I laughed twice. Once at {b}, and once at the idea that {a} rehearsed.',
+  'Chemistry so strong I had to open a window. Writing so weak I had to close it again.',
+  '{b} gave a performance. {a} gave a performance review. Neither was asked for.',
+  'Bold, confusing, and at one point, legally concerning. I will be watching again.',
+  'If marriage is a partnership, this scene was a hostile takeover. Magnificent.',
+];
 
 // Fallback CUT! finale. Speakers are indexes into the cast; the game fills in names.
 const FINALE_FALLBACK = [
@@ -218,4 +243,4 @@ const FINALE_FALLBACK = [
   [1, 'Then there is only one thing left to do. Group hug. Then lawsuit.'],
 ];
 
-module.exports = { SETUPS, DIRECTIONS, FALLBACK_LINES, IDEAS, QUIPS, LINES, FINALE_FALLBACK };
+module.exports = { SETUPS, DIRECTIONS, FALLBACK_LINES, IDEAS, QUIPS, LINES, FINALE_FALLBACK, NPC_FALLBACK, REVIEW_FALLBACK };

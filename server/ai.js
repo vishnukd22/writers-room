@@ -85,4 +85,25 @@ Return {"lines": [{"speaker": "<name>", "text": "..."}]}.`, 700, 9000);
   return lines.length ? lines.slice(0, count) : null;
 }
 
-module.exports = { enabled, sceneSetups, finaleScript, continueFinale };
+// Date Night: a third character barges into a two-person scene with one line.
+async function interject(genre, role, sofar) {
+  const r = await ask(`A two-person ${genre.name} scene (${genre.tone}) is being performed by a couple at home. Scene so far:
+${sofar.map((l) => `${l.speaker}: ${l.text}`).join('\n')}
+
+You are ${role}, a third character who barges in. Write ONE line (under 16 words) that reacts to the last line, makes it more awkward or absurd, and gives the couple something new to fight about. Return {"text": "..."}.`, 300, 7000);
+  return clean(r?.text, 160) || null;
+}
+
+// Date Night: a critic reviews the scene the couple just performed.
+async function critique(genre, critic, lines) {
+  const r = await ask(`You are ${critic.name} of ${critic.outlet}: ${critic.style}. You just watched a couple improvise this ${genre.name} scene, each writing the other's lines:
+${lines.map((l, i) => `${i + 1}. ${l.speaker}: ${l.text}`).join('\n')}
+
+Review it in two short, funny sentences, in character, naming at least one of them. Give stars out of 5. Pick the single funniest line by its number.
+Return {"stars": 4, "review": "...", "best": 3}.`, 400, 9000);
+  if (!r) return null;
+  const best = Math.round(Number(r.best)) - 1;
+  return { stars: Math.max(1, Math.min(5, Math.round(Number(r.stars)) || 3)), review: clean(r.review, 300), best: best >= 0 && best < lines.length ? best : null };
+}
+
+module.exports = { enabled, sceneSetups, finaleScript, continueFinale, interject, critique };

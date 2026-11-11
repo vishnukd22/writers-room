@@ -51,6 +51,13 @@ async function think(bot) {
   switch (s2.phase) {
     case 'SCENE': {
       const sc = `${x2.scene.i}`;
+      if (x2.mode === 'date') {
+        if (x2.myLine && once(`act${sc}:${x2.myLine.k}`)) { await sleep(60 + DELAY); await bot.act('done'); break; }
+        if (x2.write && once(`w${sc}:${x2.write.k}`)) { if (Math.random() < 0.9) { stats.lines++; await bot.act('line', { text: pick(LINES), dir: Math.floor(Math.random() * 3) }); } break; }
+        if (x2.watch?.canCrack && once(`c${sc}:${x2.watch.k}`) && Math.random() < 0.35) await bot.act('crack');
+        if (x2.dispute && once(`dp${sc}:${x2.dispute.until}`) && Math.random() < 0.6) { stats.disputes = (stats.disputes || 0) + 1; await bot.act('dispute'); }
+        break;
+      }
       if (x2.myLine && once(`act${sc}:${x2.myLine.k}`)) { await sleep(60 + DELAY); await bot.act('done'); break; }
       if (x2.write && once(`w${sc}:${x2.write.k}`)) { if (Math.random() < 0.9) { stats.lines++; await bot.act('line', { text: pick(LINES) }); } break; }
       if (x2.dirs && once(`d${sc}:${x2.writing?.k}`)) await bot.act('dir', { i: Math.floor(Math.random() * 3) });

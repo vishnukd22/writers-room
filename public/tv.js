@@ -86,16 +86,21 @@
         <div>${t ? `<img class="titleimg" src="${t}" alt="Writers' Room">` : '<div class="titlecard">Writers\'<br>Room</div>'}
           <div class="join">${S.qr ? `<img src="${S.qr}" alt="QR code to join">` : ''}<div><div class="count">Scan, or go to</div><div class="url">${esc(host())}</div><div class="count">and enter</div><div class="code">${esc(S.code)}</div></div></div></div>
         <div><div class="roster ${S.players.length > 6 ? 'many' : ''}">${seats}</div>
-          <p class="startnote">Everyone writes. Everyone acts. 4 to 12 players, about 20 minutes. ${S.players.length >= 4 ? `${esc(P_(S.vipId)?.name || 'The first player')} starts the game from their phone.` : `Waiting for ${4 - S.players.length} more.`}</p>
+          <p class="startnote">Everyone writes. Everyone acts. Two of you: Date Night. Four to twelve: the party game. ${S.players.length === 2 || S.players.length >= 4 ? `${esc(P_(S.vipId)?.name || 'The first player')} starts from their phone.` : 'Waiting for players.'}</p>
           ${S.aiOn ? '' : '<p class="startnote">The AI writer is offline, so scenes come from the backup scripts.</p>'}</div></div>`;
     },
     INTRO() {
+      if (S.step === 'how' && S.mode === 'date') return `<div class="center"><div class="howrow">
+        <div class="howcard" style="--r:-2deg"><b>🎭</b>Say your line out loud</div>
+        <div class="howcard" style="--r:1.5deg"><b>✍️</b>Write your partner's reply, and how they must say it</div>
+        <div class="howcard" style="--r:-1deg"><b>😂</b>Make them crack to score</div></div>
+        <p class="lede">I might barge in. A critic reviews every scene. Finale: <b>CUT!</b></p></div>`;
       if (S.step === 'how') return `<div class="center"><div class="howrow">
         <div class="howcard" style="--r:-2deg"><b>✍️</b>The room writes the next line, live</div>
         <div class="howcard" style="--r:1.5deg"><b>🎭</b>Two of you perform it. Cold.</div>
         <div class="howcard" style="--r:-1deg"><b>😂</b>Laughs and cracks score points</div></div>
         <p class="lede">Finale: <b>CUT!</b> Grab the pen from the narrator.</p></div>`;
-      return '<div class="center"><div class="huge">You write it.<br>They perform it.</div></div>';
+      return S.mode === 'date' ? '<div class="center"><div class="kicker">Writers\' Room</div><div class="huge">Date Night</div><p class="lede">You write each other\'s lines.</p></div>' : '<div class="center"><div class="huge">You write it.<br>They perform it.</div></div>';
     },
     SCENE_INTRO() {
       const sc = S.x.scene;
@@ -105,14 +110,20 @@
     SCENE() {
       const x = S.x; const sc = x.scene; const cur = x.cur;
       const flash = x.flash ? x.flash.id : null;
-      const actors = sc.actors.map((a) => `<div class="actor ${cur && cur.speaker === a.id ? 'talk' : ''} ${flash === a.id ? 'cracked' : ''}">${W.bust(a, 'lg')}<div class="nm">${esc(a.name)}</div><div class="role">${esc(a.role)}</div>${flash === a.id ? '<span class="stamp crackstamp">Cracked!</span>' : ''}</div>`).join('');
+      const fk = x.flash?.kind; const stampFor = { crack: '<span class="stamp crackstamp">Cracked!</span>', coin: '<span class="stamp crackstamp coin">Disputed!</span>', clean: '<span class="stamp crackstamp clean">Straight face!</span>' };
+      const actors = sc.actors.map((a) => `<div class="actor ${cur && cur.speaker === a.id ? 'talk' : ''} ${flash === a.id && fk === 'crack' ? 'cracked' : ''}">${W.bust(a, 'lg')}<div class="nm">${esc(a.name)}</div><div class="role">${esc(a.role)}</div>${flash === a.id ? stampFor[fk] || '' : ''}</div>`).join('');
       const speaker = cur ? sc.actors.find((a) => a.id === cur.speaker) : null;
-      const line = cur ? `<div class="lineboard" data-k="${cur.k}">${cur.dir ? `<span class="dirstamp">${esc(cur.dir)}</span>` : ''}<div class="who">${esc(speaker?.name || '')}</div><div class="words">${esc(cur.text)}</div><div class="by">${cur.by ? `written by ${esc(cur.by.name)}` : cur.k === 0 ? 'the opening line' : ''}${cur.auto && cur.by ? ' (too slow, so we helped)' : ''}</div></div>` : '';
-      const w = x.writing ? `<div class="writingnow">${W.bust(x.writing.writer, 'sm')}<span><b>${esc(x.writing.writer.name)}</b> is writing ${esc(x.writing.speaker.name)}'s next line</span>${dotsTyping}<div class="tbar mini"><i data-kind="bar" data-ends="${x.writing.endsAt}" data-total="${totalFor(x.writing.endsAt)}"></i></div></div>` : '<div class="writingnow"><span>Last line of the scene</span></div>';
-      return `<div class="scene"><div class="actors n${sc.actors.length}" id="scActors">${actors}</div>${line}<div class="scenefoot" id="scFoot">${w}<div class="laughs">😂 <b>${x.laughs}</b><small>line ${x.lineNo} of ${x.lineCount}</small></div></div></div>`;
+      const line = cur && cur.kind === 'npc' ? `<div class="lineboard npc" data-k="${cur.k}"><span class="dirstamp">🚪 Barging in</span><div class="who">${esc(cur.role || '')}</div><div class="words">${esc(cur.text)}</div><div class="by">the narrator</div></div>` : cur ? `<div class="lineboard" data-k="${cur.k}">${cur.dir ? `<span class="dirstamp">${esc(cur.dir)}</span>` : ''}<div class="who">${esc(speaker?.name || '')}</div><div class="words">${esc(cur.text)}</div><div class="by">${cur.by ? `written by ${esc(cur.by.name)}` : cur.k === 0 ? 'the opening line' : ''}${cur.auto && cur.by ? ' (too slow, so we helped)' : ''}</div></div>` : '';
+      const w = x.writing ? `<div class="writingnow">${W.bust(x.writing.writer, 'sm')}<span><b>${esc(x.writing.writer.name)}</b> is writing ${esc(x.writing.speaker.name)}'s next line</span>${dotsTyping}<div class="tbar mini"><i data-kind="bar" data-ends="${x.writing.endsAt}" data-total="${totalFor(x.writing.endsAt)}"></i></div></div>` : x.mode === 'date' ? `<div class="writingnow"><span>🎭 ${esc(sc.actors.find((a) => a.id === cur?.speaker)?.name || 'Someone')} is performing</span></div>` : '<div class="writingnow"><span>Last line of the scene</span></div>';
+      return `<div class="scene"><div class="actors n${sc.actors.length}" id="scActors">${actors}</div>${line}<div class="scenefoot" id="scFoot">${w}<div class="laughs">${x.mode === 'date' ? `💥 <b>${x.crackCount}</b><small>cracks</small>` : `😂 <b>${x.laughs}</b><small>line ${x.lineNo} of ${x.lineCount}</small>`}</div></div></div>`;
     },
     SCENE_END() {
       const x = S.x; const sc = x.scene;
+      if (S.step === 'critic') return `<div class="center"><div class="kicker">The critic has been watching</div><div class="huge rewriting">Writing the review${dotsTyping}</div></div>`;
+      if (S.step === 'review' && x.review) {
+        const r = x.review;
+        return `<div class="center"><div class="review paper"><div class="masthead"><span>${esc(r.outlet)}</span><span>${esc(sc.title)}</span></div><div class="stars">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</div><div class="text">${esc(r.text)}</div><div class="by">${esc(r.name)}</div></div>${r.best ? `<div class="bestline"><b>Line of the scene, by ${esc(r.best.by?.name || '')}</b>"${esc(r.best.text)}"</div>` : ''}</div>`;
+      }
       if (S.step === 'line') return `<div class="center"><div class="kicker">Line of the scene</div><div class="index big" style="--r:-1.5deg"><div class="pin"></div><div class="hand">"${esc(x.line.text)}"</div></div><div class="lede">Written by <b>${esc(x.line.by?.name || '')}</b>, said by ${esc(x.line.speakerName || '')}. ${x.line.total} laughs. +200</div></div>`;
       if (S.step === 'vote' || S.step === 'result') {
         const max = Math.max(1, ...Object.values(x.counts || {}));

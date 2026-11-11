@@ -56,32 +56,52 @@
   const tv = (title, sub = '', ico = '📺') => `<div class="tv"><div class="ico">${ico}</div><h2 class="h">${title}</h2>${sub ? `<p class="lead">${sub}</p>` : ''}${skipBtn()}</div>`;
   const d = (id, fallback = '') => (id in drafts ? drafts[id] : fallback);
   const dots = (n, cap) => `<span class="dots">${Array.from({ length: cap }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
-  const writeBox = (id, title, sub, prev, ideas, ends, action) => `<div class="writer">
+  const writeBox = (id, title, sub, prev, ideas, ends, action, extra = '') => `<div class="writer">
       <div class="wtop"><h2 class="h">${title}</h2><div class="t big" data-ends="${ends}"></div></div>
       ${sub ? `<p class="lead">${sub}</p>` : ''}
       ${prev ? `<div class="prevline"><b>${esc(prev.name)} just said</b>${esc(prev.text)}</div>` : ''}
       <textarea rows="3" maxlength="140" data-draft="${id}" placeholder="Type their line...">${esc(d(id))}</textarea>
       <div class="chips">${(ideas || []).map((t) => `<button data-a="idea" data-t="${esc(t)}" data-for="${id}">${esc(t)}</button>`).join('')}</div>
-      <button class="btn primary big" data-a="${action}" data-for="${id}">Send it</button></div>`;
+      ${extra}<button class="btn primary big" data-a="${action}" data-for="${id}">Send it</button></div>`;
 
   // ---------------------------------------------------------------- screens: each returns [key, html]
   const R = {
     LOBBY() {
       const me = S.me;
       const list = S.players.map((p) => `<span class="pill" style="--c:${p.color}">${esc(p.name)}${p.id === me.id ? ' (you)' : ''}</span>`).join('');
-      const start = me.vip ? `<button class="btn primary big" data-a="start" ${S.players.length < 4 ? 'disabled' : ''}>Start the show</button><p class="hint">${S.players.length < 4 ? `Need ${4 - S.players.length} more.` : 'Start when everyone is in.'}</p>` : `<p class="lead">Waiting for ${esc(vipName())} to start.</p>`;
+      const n = S.players.length; const ok = n === 2 || n >= 4;
+      const hint = n === 1 ? 'One more for Date Night, or three more for the party game.' : n === 2 ? 'Two of you: this is Date Night.' : n === 3 ? 'Add one more for the party game.' : 'Start when everyone is in.';
+      const start = me.vip ? `<button class="btn primary big" data-a="start" ${ok ? '' : 'disabled'}>${n === 2 ? 'Start Date Night' : 'Start the show'}</button><p class="hint">${hint}</p>` : `<p class="lead">Waiting for ${esc(vipName())} to start.</p>`;
       return [`LOBBY|${S.players.length}|${me.vip}`, `<h2 class="h">You're in, ${esc(me.name)}.</h2>
         <div class="how"><div><b>✍️</b>Write lines</div><div><b>🎭</b>Act them out</div><div><b>😂</b>Laughs = points</div></div>
         <div class="pills">${list}</div>${start}`];
     },
-    INTRO() { return [`INTRO|${S.step}`, `${tv('Eyes on the TV', 'The show is starting.', '🎬')}<div class="how"><div><b>✍️</b>Write lines</div><div><b>🎭</b>Act them out</div><div><b>😂</b>Laughs = points</div></div>`]; },
+    INTRO() {
+      const how = S.mode === 'date' ? '<div class="how"><div><b>✍️</b>Write their lines</div><div><b>🎭</b>Say yours</div><div><b>😂</b>Make them crack</div></div>' : '<div class="how"><div><b>✍️</b>Write lines</div><div><b>🎭</b>Act them out</div><div><b>😂</b>Laughs = points</div></div>';
+      return [`INTRO|${S.step}`, `${tv('Eyes on the TV', 'The show is starting.', '🎬')}${how}`];
+    },
     SCENE_INTRO() {
       const sc = S.x.scene;
+      if (S.mode === 'date') return [`SI|${sc.i}|d|${S.step}`, `<div class="tv"><div class="ico">🎭</div><h2 class="h">You're in this one</h2><div class="rolecard">You are<b>${esc(S.me.role)}</b></div><p class="lead">Say your line out loud. Then write your partner's reply, and pick how they have to say it. Make them crack.</p></div>`];
       if (S.me.actor) return [`SI|${sc.i}|a|${S.step}`, `<div class="tv"><div class="ico">🎭</div><h2 class="h">You're acting!</h2><div class="rolecard">You are<b>${esc(S.me.role)}</b></div><p class="lead">Stand up. Your lines appear here. Say them out loud straight away. Don't laugh.</p></div>`];
       return [`SI|${sc.i}|w|${S.step}`, tv("You're writing", `Starring ${sc.actors.map((a) => esc(a.name)).join(' and ')}. When it's your turn, you write their next line. Fast.`, '✍️')];
     },
     SCENE() {
       const x = S.x; const sc = x.scene;
+      if (x.mode === 'date') {
+        if (x.dispute) return [`SD|dispute|${x.dispute.until}`, `<div class="tv"><div class="ico">😤</div><h2 class="h">${esc(x.partner?.name || 'They')} says you cracked</h2></div><button class="cutbtn dispute" data-a="dispute">DID NOT!<span>the coin decides</span></button>`];
+        if (x.myLine) return [`SD|act|${sc.i}|${x.myLine.k}`, `<div class="prompter"><div class="dir">${esc(x.myLine.dir || '')}</div><div class="words">${esc(x.myLine.text)}</div></div>
+          <button class="btn primary big done" data-a="done">Said it ▶</button><p class="hint center">Say it to ${esc(x.partner?.name || 'them')}, with the direction, then tap.</p>`];
+        if (x.write) {
+          const id = `w${sc.i}_${x.write.k}`; const di = d(`dir_${id}`, '0');
+          const dirs = `<div class="dirs"><span>How must they say it?</span>${x.write.dirs.map((t, i) => `<button data-a="pickdir" data-for="${id}" data-i="${i}" class="${String(i) === String(di) ? 'on' : ''}">${esc(t)}</button>`).join('')}</div>`;
+          return [`SD|write|${sc.i}|${x.write.k}`, writeBox(id, `Write ${esc(x.write.speaker.name)}'s reply`, `They're playing ${esc(x.write.speaker.role)}. Make it hard to say with a straight face.`, x.write.prev, x.write.ideas, x.write.endsAt, 'sendLine', dirs)];
+        }
+        if (x.watch) return [`SD|watch|${sc.i}|${x.watch.k}|${x.watch.canCrack}`, `<p class="lead center">Watch ${esc(x.partner?.name || 'them')} say your line.</p><button class="laughbtn crackbtn" data-a="crack" ${x.watch.canCrack ? '' : 'disabled'}>😂<span>${x.watch.canCrack ? 'THEY CRACKED!' : 'Crack called!'}</span></button><p class="hint center">Only if they really laughed. They can dispute it.</p>`];
+        if (x.npc) return [`SD|npc|${sc.i}|${x.npc}`, tv('Someone just barged in', `It's ${esc(x.npc)}.`, '🚪')];
+        if (x.partnerWriting) return [`SD|pw|${sc.i}`, tv(`${esc(x.partner?.name || 'They')} is writing your next line`, 'Be very afraid.', '😬')];
+        return [`SD|listen|${sc.i}|${x.cur?.k}`, tv('Listen', '', '👂')];
+      }
       if (S.me.actor) {
         if (x.myLine) return [`SC|act|${sc.i}|${x.myLine.k}`, `<div class="prompter"><div class="dir">${esc(x.myLine.dir || '')}</div><div class="words">${esc(x.myLine.text)}</div></div>
           <button class="btn primary big done" data-a="done">Said it ▶</button><p class="hint center">Say it out loud, with the direction, then tap.</p>`];
@@ -96,6 +116,11 @@
     },
     SCENE_END() {
       const x = S.x; const sc = x.scene;
+      if (S.mode === 'date') {
+        if (S.step === 'review' && x.review) { const mine = x.review.best?.by?.id === S.me.id; return [`SE|rev|${mine}`, tv(`${'★'.repeat(x.review.stars)}${'☆'.repeat(5 - x.review.stars)}`, mine ? `The critic loved your line. +200` : 'Eyes on the TV.', mine ? '🏅' : '📰')]; }
+        if (S.step === 'critic') return ['SE|critic', tv('The critic is writing', 'Nervous?', '📰')];
+        return [`SE|${S.step}`, tv('Scene!', 'Eyes on the TV.', '👏')];
+      }
       if (S.step === 'vote') {
         if (!x.canVote) return [`SE|vote|a`, tv('The room is judging you', 'Best actor gets 300 points. Smile.', '🫣')];
         return [`SE|vote|${x.myVote}`, `<h2 class="h">Best actor?</h2><div class="actorvote">${sc.actors.map((a) => `<button data-a="vote" data-id="${a.id}" class="${x.myVote === a.id ? 'on' : ''}">${W.bust(a, 'lg')}<b>${esc(a.name)}</b></button>`).join('')}</div>`];
@@ -153,12 +178,14 @@
       case 'sendLine': case 'sendCut': {
         const id = b.dataset.for; const text = (main.querySelector(`[data-draft="${id}"]`)?.value || d(id)).trim();
         if (!text) { toast('Write something first!', 'bad'); break; }
-        b.disabled = true; send(a === 'sendLine' ? 'line' : 'cutLine', { text }, (r) => { if (r?.ok) { delete drafts[id]; buzz(20); } else b.disabled = false; });
+        b.disabled = true; send(a === 'sendLine' ? 'line' : 'cutLine', { text, dir: Number(d(`dir_${id}`, '0')) }, (r) => { if (r?.ok) { delete drafts[id]; buzz(20); } else b.disabled = false; });
         break;
       }
       case 'done': send('done'); buzz(15); b.disabled = true; break;
       case 'laugh': send('laugh', {}, (r) => { if (r?.capped) toast('Max laughs for this line.', 'info'); }); buzz(12); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); break;
       case 'crack': send('crack', { id: b.dataset.id }); buzz([40, 30, 40]); break;
+      case 'dispute': send('dispute'); buzz([80, 40, 80]); b.disabled = true; break;
+      case 'pickdir': { const id = b.dataset.for; drafts[`dir_${id}`] = b.dataset.i; b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); buzz(10); break; }
       case 'dir': send('dir', { i: Number(b.dataset.i) }); buzz(10); break;
       case 'vote': send('vote', { id: b.dataset.id }); buzz(15); break;
       case 'cut': send('cut', {}, (r) => { if (r?.ok) buzz([150, 50, 150]); }); break;

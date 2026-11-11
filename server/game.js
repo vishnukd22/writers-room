@@ -123,7 +123,10 @@ class Game {
     if (byId && this.vip()?.id !== byId) return { error: 'Only the first player can start' };
     if (this.phase !== 'LOBBY') return {};
     this.players = this.players.filter((p) => p.connected);
-    if (this.players.length < 4) return { error: 'You need at least 4 players' };
+    const n = this.players.length;
+    if (n < 2) return { error: 'You need at least 2 players' };
+    if (n === 3) return { error: 'Play with 2 (Date Night) or with 4 or more. Find one more person!' };
+    this.mode = n === 2 ? 'date' : 'party';
     this.players.forEach((p) => this.reset(p));
     const busts = shuffle(bustPool()); this.players.forEach((p, i) => { p.bust = busts[i % busts.length]; });
     this.plan();
@@ -136,7 +139,7 @@ class Game {
   // Who acts in which scene, in which genre. Everyone acts about twice.
   plan() {
     const n = this.players.length; const k = n >= 7 ? 3 : 2;
-    const count = Math.min(7, Math.ceil((2 * n) / k));
+    const count = this.mode === 'date' ? 3 : Math.min(7, Math.ceil((2 * n) / k));
     const genres = shuffle(C.GENRES);
     const acted = Object.fromEntries(this.players.map((p) => [p.id, 0])); const last = {};
     this.scenes = [];
@@ -146,7 +149,8 @@ class Game {
       actors.forEach((id) => { acted[id]++; last[id] = i; });
       const genre = genres[i % genres.length]; const su = S.SETUPS[genre.id] || S.SETUPS.serial;
       const roles = shuffle(su.roles);
-      this.scenes.push({ i, genre, actors, title: pick(C.SHOW_TITLES[genre.id] || ['Untitled Pilot']), setting: su.setting, roles: actors.map((_, j) => roles[j % roles.length]), opener: pick(su.openers) });
+      if (this.mode === 'date' && i % 2 === 1) actors.reverse();
+      this.scenes.push({ i, genre, actors, title: pick(C.SHOW_TITLES[genre.id] || ['Untitled Pilot']), setting: su.setting, roles: actors.map((_, j) => roles[j % roles.length]), npcRole: roles[actors.length % roles.length], opener: pick(su.openers) });
     }
     this.finaleGenre = genres[count % genres.length];
     this.finOrder = shuffle(this.players).map((p) => p.id);
@@ -158,23 +162,24 @@ class Game {
     const setupsP = timeout(ai.sceneSetups(this.scenes.map((s) => ({ genre: s.genre, actors: s.actors.map((id) => this.P(id).name) }))), 16000);
     this.finaleP = timeout(ai.finaleScript(this.finaleGenre, names), 40000);
 
+    const date = this.mode === 'date';
     this.setPhase('INTRO', { step: 'welcome' }); this.sfx('whoosh');
-    await this.say(g, S.LINES.welcome);
+    await this.say(g, date ? S.LINES.dateWelcome : S.LINES.welcome);
     this.setPhase('INTRO', { step: 'how' });
-    await this.say(g, S.LINES.how);
+    await this.say(g, date ? S.LINES.dateHow : S.LINES.how);
 
     const setups = (await setupsP) || [];
     this.guard(g);
     this.scenes.forEach((s, i) => { const x = setups[i]; if (x) Object.assign(s, { title: x.title || s.title, setting: x.setting || s.setting, roles: x.roles, opener: x.opener }); });
     this.prepareVoices();
 
-    for (const sc of this.scenes) await this.scene(g, sc);
+    for (const sc of this.scenes) await (date ? this.dateScene(g, sc) : this.scene(g, sc));
     await this.finale(g);
     await this.awards(g);
   }
 
   introText(sc) { return fill(S.LINES.sceneIntro, { title: sc.title, genre: sc.genre.name, setting: sc.setting }); }
-  starringText(sc) { return fill(S.LINES.starring, { cast: sc.actors.map((id, j) => `${this.P(id).name} as ${sc.roles[j]}`).join(', and ') }); }
+  starringText(sc) { return fill(this.mode === 'date' ? S.LINES.dateStarring : S.LINES.starring, { cast: sc.actors.map((id, j) => `${this.P(id).name} as ${sc.roles[j]}`).join(', and ') }); }
   // Record everything we already know we'll say, in the order we'll need it.
   prepareVoices() {
     if (!voice.enabled()) return;
@@ -210,7 +215,7 @@ class Game {
         if (!line.text) this.submitLine(g, sc, k, null);
       }
       if (this.cue && this.cue.kind === 'narrator') this.cue = null;
-      sc.cur = k; line.startedAt = Date.now(); this.sync();
+      sc.cur = k; line.startedAt = Date.now(); this.sync(); this.later(g, 1600, () => this.sync());
       const actor = this.P(line.speaker);
       await this.wait(actor?.connected ? ms(T.act) : ms(4), () => !!line.doneAt); this.guard(g);
       line.doneAt = line.doneAt || Date.now();
@@ -343,10 +348,107 @@ class Game {
     this.setPhase('CUT', { step: 'play' });
   }
 
+  maxCuts() { return this.mode === 'date' ? 3 : 2; }
+
+  // ------------------------------------------------------------ Date Night: a scene for two
+  // You say your line, then write your partner's reply and pick how they must say it.
+  // The narrator barges in twice as a third character. A critic reviews every scene.
+  async dateScene(g, sc) {
+    this.sc = sc; this.cue = null; sc.date = true;
+    this.setPhase('SCENE_INTRO', { step: 'genre' }); this.sfx('whoosh');
+    await this.say(g, this.introText(sc));
+    this.setPhase('SCENE_INTRO', { step: 'cast' }); this.sfx('drumroll');
+    await this.say(g, this.starringText(sc));
+    const [A, B] = sc.actors; const HUMAN = 8; const NPC_AT = [3, 6];
+    const mk = (o) => ({ k: 0, speaker: null, writer: null, text: null, dir: null, auto: false, kind: 'human', laughs: {}, total: 0, crackVotes: {}, cracked: [], startedAt: null, doneAt: null, ...o });
+    sc.lines = [mk({ speaker: A, text: sc.opener, dir: pick(S.DIRECTIONS), auto: true })];
+    sc.cur = -1; sc.writing = null; sc.flash = null; sc.dispute = null; sc.npcP = null;
+    this.setPhase('SCENE', {}); this.sfx('clapper');
+    let humans = 0;
+    while (true) {
+      const k = sc.lines.length - 1; const line = sc.lines[k]; line.k = k;
+      sc.cur = k; line.startedAt = Date.now(); this.sync(); this.later(g, 1600, () => this.sync());
+      if (line.kind === 'npc') { await this.say(g, `${line.text}`, { urgent: true, maxWait: 4000 }); line.doneAt = Date.now(); }
+      else {
+        humans++;
+        const actor = this.P(line.speaker);
+        await this.wait(actor?.connected ? ms(T.act) : ms(4), () => !!line.doneAt); this.guard(g);
+        line.doneAt = line.doneAt || Date.now();
+        await this.wait(ms(1.2)); this.guard(g); // a beat for the partner to call a crack
+        if (NPC_AT.includes(humans) && humans < HUMAN) {
+          const role = sc.npcRole; const text = (await timeout(sc.npcP || Promise.resolve(null), 4000)) || pick(S.NPC_FALLBACK); this.guard(g);
+          sc.lines.push(mk({ kind: 'npc', text, role })); sc.npcP = null; continue;
+        }
+      }
+      if (humans >= HUMAN) break;
+      // the one who just spoke writes the partner's reply
+      const lastHuman = [...sc.lines].reverse().find((l) => l.kind === 'human');
+      const writer = lastHuman.speaker; const speaker = writer === A ? B : A;
+      const next = mk({ speaker, writer }); sc.lines.push(next); next.k = sc.lines.length - 1;
+      sc.writing = { k: next.k, writer, endsAt: Date.now() + ms(T.write), dirs: shuffle(S.DIRECTIONS).slice(0, 3), votes: {}, ideas: shuffle(S.IDEAS).slice(0, 3) };
+      this.sync();
+      await this.wait(ms(9), () => !!next.text); this.guard(g);
+      if (!next.text) { const w = this.P(writer); if (w?.quips?.length) this.sayOver(g, w.quips.shift()); await this.wait(Math.max(50, sc.writing.endsAt - Date.now()), () => !!next.text); this.guard(g); }
+      if (!next.text) { next.text = pick(S.FALLBACK_LINES); next.auto = true; next.dir = pick(sc.writing.dirs); this.note(this.P(writer), 'Too slow! We wrote that one for you.', 'bad'); }
+      sc.writing = null;
+      if (NPC_AT.includes(humans + 1) && humans + 1 < HUMAN && ai.enabled()) sc.npcP = ai.interject(sc.genre, sc.npcRole, this.dateSofar(sc));
+      if (humans + 1 >= HUMAN && ai.enabled()) sc.criticP = ai.critique(sc.genre, sc.critic || (sc.critic = pick(C.CRITICS)), this.dateSofar(sc));
+    }
+    sc.cur = sc.lines.length; sc.writing = null;
+    await this.dateEnd(g, sc);
+  }
+  dateSofar(sc) { return sc.lines.filter((l) => l.text).map((l) => ({ speaker: l.kind === 'npc' ? l.role : this.P(l.speaker)?.name, text: l.text })); }
+  async dateEnd(g, sc) {
+    this.cue = null;
+    this.setPhase('SCENE_END', { step: 'wrap' }); this.sfx('applause');
+    await this.say(g, S.LINES.wrap);
+    sc.critic = sc.critic || pick(C.CRITICS);
+    this.setPhase('SCENE_END', { step: 'critic' }); this.sfx('typewriter');
+    const crit = (await timeout(sc.criticP || Promise.resolve(null), ms(8))) || null; this.guard(g);
+    const humanLines = sc.lines.filter((l) => l.kind === 'human' && l.writer && !l.auto);
+    const names = sc.actors.map((id) => this.P(id).name);
+    const stars = crit?.stars || 2 + Math.floor(Math.random() * 4);
+    const review = crit?.review || fill(pick(S.REVIEW_FALLBACK), { a: names[0], b: names[1] });
+    let best = crit && crit.best !== null ? sc.lines.filter((l) => l.text)[crit.best] : null;
+    if (!best || best.kind !== 'human' || !best.writer || best.auto) best = humanLines.sort((a, b) => b.cracked.length - a.cracked.length)[0] || null;
+    sc.review = { critic: sc.critic, stars, review, best: best ? best.k : null };
+    if (best) { best.best = true; this.award(this.P(best.writer), PTS.lineOfScene, 'writer'); }
+    this.setPhase('SCENE_END', { step: 'review' }); this.sfx('bell');
+    await this.say(g, fill(S.LINES.critic, { name: sc.critic.name, outlet: sc.critic.outlet, stars, review }), { urgent: true, maxWait: 5000 });
+    if (best) await this.say(g, fill(S.LINES.lineOfScene, { name: this.P(best.writer).name }));
+    await this.wait(ms(2)); this.guard(g);
+  }
+  dateCrack(pid) {
+    const sc = this.sc; const line = this.targetLine(sc);
+    if (!line || line.kind !== 'human' || line.writer !== pid || line.cracked.length || line.claimed) return {};
+    line.claimed = true; line.cracked.push(line.speaker);
+    const actor = this.P(line.speaker); this.award(this.P(pid), PTS.crack, 'writer'); this.award(actor, PTS.cracked, 'actor');
+    sc.flash = { kind: 'crack', id: line.speaker, at: Date.now() };
+    sc.dispute = { k: line.k, actor: line.speaker, writer: pid, until: Date.now() + 6000, done: false };
+    this.sfx('trombone'); this.sayOver(this.runId, fill(S.LINES.cracked, { name: actor.name }), { maxWait: 1500 });
+    this.sync(); return { ok: true };
+  }
+  async dateDispute(pid) {
+    const sc = this.sc; const dsp = sc?.dispute;
+    if (!dsp || dsp.done || dsp.actor !== pid || Date.now() > dsp.until) return {};
+    dsp.done = true; const g = this.runId; const line = sc.lines[dsp.k];
+    sc.flash = { kind: 'coin', id: dsp.actor, at: Date.now() }; this.sfx('drumroll'); this.sync();
+    const cracked = Math.random() < 0.5;
+    this.sayOver(g, S.LINES.coin);
+    setTimeout(() => {
+      if (g !== this.runId) return;
+      if (!cracked) { this.award(this.P(dsp.writer), -PTS.crack, 'writer'); this.award(this.P(dsp.actor), -PTS.cracked, 'actor'); line.cracked = []; }
+      sc.flash = { kind: cracked ? 'crack' : 'clean', id: dsp.actor, at: Date.now() };
+      this.sfx(cracked ? 'trombone' : 'applause');
+      this.sayOver(g, cracked ? S.LINES.coinCracked : S.LINES.coinClean, { maxWait: 1500 });
+    }, ms(3.2));
+    return { ok: true };
+  }
+
   // ------------------------------------------------------------ awards
   allLines() {
     const out = [];
-    for (const sc of this.scenes || []) for (const l of sc.lines || []) if (l.writer && !l.auto) out.push({ text: l.text, by: l.writer, total: l.total });
+    for (const sc of this.scenes || []) for (const l of sc.lines || []) if (l.writer && !l.auto) out.push({ text: l.text, by: l.writer, total: sc.date ? (l.best ? 2 : 0) + l.cracked.length : l.total });
     for (const l of this.fin?.lines || []) if (l.kind === 'cut') out.push({ text: l.text, by: l.by, total: l.total });
     return out;
   }
@@ -359,13 +461,13 @@ class Game {
     if (best && best.total > 0) {
       const lineCue = this.prefetch(`[dramatically] "${best.text}"`, null, true);
       this.setPhase('FINAL', { step: 'laugh', line: best }); this.sfx('drumroll');
-      await this.say(g, fill(S.LINES.biggestLaugh, { name: this.P(best.by).name }));
+      await this.say(g, fill(this.mode === 'date' ? S.LINES.lineOfNight : S.LINES.biggestLaugh, { name: this.P(best.by).name }));
       await timeout(lineCue, 3000);
       await this.say(g, `[dramatically] "${best.text}"`);
       this.sfx('laugh'); await this.wait(ms(1.5)); this.guard(g);
     }
     const actor = [...this.players].sort((a, b) => b.actorPts - a.actorPts)[0];
-    if (actor && actor.actorPts > 0) {
+    if (actor && actor.actorPts > 0 && this.mode !== 'date') {
       this.setPhase('FINAL', { step: 'actor', who: actor.id }); this.sfx('applause');
       await this.say(g, fill(S.LINES.bestActor, { name: actor.name }));
       await this.wait(ms(1.5)); this.guard(g);
@@ -393,6 +495,7 @@ class Game {
       case 'line': {
         if (this.phase !== 'SCENE' || !sc?.writing || sc.writing.writer !== pid) return { error: 'Too late' };
         const t = clip(a.text, 140); if (!t) return { error: 'Write something first' };
+        if (sc.date) { const l = sc.lines[sc.writing.k]; const di = Number(a.dir); l.dir = sc.writing.dirs[di >= 0 && di < 3 ? di : Math.floor(Math.random() * 3)]; l.text = t; this.check(); this.sfx('typewriter'); this.sync(); return { ok: true }; }
         this.submitLine(this.runId, sc, sc.writing.k, t); this.sfx('typewriter'); return { ok: true };
       }
       case 'dir': {
@@ -419,7 +522,9 @@ class Game {
         }
         return {};
       }
+      case 'dispute': { if (this.phase === 'SCENE' && sc?.date) return this.dateDispute(pid); return {}; }
       case 'crack': {
+        if (this.phase === 'SCENE' && sc?.date) return this.dateCrack(pid);
         if (this.phase !== 'SCENE' || !sc || sc.actors.includes(pid) || !sc.actors.includes(a.id)) return {};
         const line = this.targetLine(sc); if (!line || line.cracked.includes(a.id)) return {};
         (line.crackVotes[a.id] = line.crackVotes[a.id] || {})[pid] = true;
@@ -440,7 +545,7 @@ class Game {
       case 'cut': {
         if (this.phase !== 'CUT' || this.d.step !== 'play' || !f || f.cutter || f.done) return {};
         if (f.cur < f.lockAt) return { error: 'Not yet! Let a line play first.' };
-        if (p.cuts >= 2) return { error: 'You have used both your cuts.' };
+        if (p.cuts >= this.maxCuts()) return { error: 'You have used all your cuts.' };
         p.cuts++; f.cutter = pid; this.check(); this.sync(); return { ok: true };
       }
       case 'cutLine': {
@@ -456,7 +561,7 @@ class Game {
   scenePub(sc) {
     return { i: sc.i, count: this.scenes.length, title: sc.title, setting: sc.setting, genre: { id: sc.genre.id, name: sc.genre.name, art: sc.genre.art, music: sc.genre.music, mood: sc.genre.mood, fx: sc.genre.fx || null }, actors: sc.actors.map((id, j) => ({ ...this.pub(this.P(id)), role: sc.roles[j] })) };
   }
-  linePub(sc, l) { return l ? { k: l.k, speaker: l.speaker, text: l.text, dir: l.dir, total: l.total, by: this.pub(this.P(l.writer)), auto: l.auto, cracked: l.cracked } : null; }
+  linePub(sc, l) { return l ? { k: l.k, speaker: l.speaker, text: l.text, dir: l.dir, total: l.total, by: this.pub(this.P(l.writer)), auto: l.auto, cracked: l.cracked, kind: l.kind || 'human', role: l.role || null } : null; }
   view(me) {
     const ph = this.phase; const d = this.d; const sc = this.sc; const f = this.fin;
     const v = {
@@ -464,9 +569,11 @@ class Game {
       players: this.players.map((p) => ({ ...this.pub(p), connected: p.connected, score: p.score })), fx: this.fx, x: {},
     };
     const x = v.x;
+    v.mode = this.mode || null;
     if (!me) { v.cue = this.cue; v.joinUrl = this.joinUrl; v.qr = this.qr; v.aiOn = ai.enabled(); v.voiceOn = voice.enabled(); }
     else {
       v.me = { ...this.pub(me), pron: me.pron, vip: this.vip()?.id === me.id, notes: me.notes, score: me.score };
+      v.mode = this.mode || null;
       if (sc && ['SCENE_INTRO', 'SCENE', 'SCENE_END'].includes(ph)) { const j = sc.actors.indexOf(me.id); v.me.actor = j >= 0; v.me.role = j >= 0 ? sc.roles[j] : null; }
     }
     if (['SCENE_INTRO', 'SCENE', 'SCENE_END'].includes(ph) && sc) {
@@ -478,7 +585,23 @@ class Game {
         x.writing = sc.writing ? { k: sc.writing.k, writer: this.pub(this.P(sc.writing.writer)), endsAt: sc.writing.endsAt, speaker: this.pub(this.P(sc.lines[sc.writing.k].speaker)) } : null;
         x.flash = sc.flash && Date.now() - sc.flash.at < 3500 ? { ...sc.flash, who: this.pub(this.P(sc.flash.id)) } : null;
         x.laughs = sc.lines.reduce((a, l) => a + l.total, 0);
-        if (me) {
+        if (sc.date) {
+          x.mode = 'date'; x.crackCount = sc.lines.reduce((a, l) => a + l.cracked.length, 0);
+          if (me) {
+            const cur = sc.lines[sc.cur]; const partner = this.P(sc.actors.find((id) => id !== me.id));
+            x.partner = this.pub(partner);
+            x.myLine = cur && cur.kind === 'human' && cur.speaker === me.id && !cur.doneAt ? { k: cur.k, text: cur.text, dir: cur.dir } : null;
+            if (sc.writing && sc.writing.writer === me.id) {
+              const before = [...sc.lines].slice(0, sc.writing.k).reverse().find((l) => l.text);
+              x.write = { k: sc.writing.k, endsAt: sc.writing.endsAt, speaker: { ...this.pub(partner), role: sc.roles[sc.actors.indexOf(partner.id)] }, prev: before ? { name: before.kind === 'npc' ? before.role : this.P(before.speaker)?.name, text: before.text } : null, ideas: sc.writing.ideas, dirs: sc.writing.dirs };
+            }
+            const t = this.targetLine(sc);
+            x.watch = t && t.kind === 'human' && t.writer === me.id && t.speaker !== me.id && t.text ? { k: t.k, canCrack: !t.claimed } : null;
+            x.dispute = sc.dispute && !sc.dispute.done && sc.dispute.actor === me.id && Date.now() < sc.dispute.until ? { until: sc.dispute.until } : null;
+            x.partnerWriting = !!(sc.writing && sc.writing.writer !== me.id);
+            x.npc = cur && cur.kind === 'npc' ? cur.role : null;
+          }
+        } else if (me) {
           const isActor = sc.actors.includes(me.id);
           if (isActor) {
             const cur = sc.lines[sc.cur];
@@ -496,6 +619,10 @@ class Game {
             x.myTurnIn = upcoming && sc.writing ? upcoming.k - sc.writing.k : null;
           }
         }
+      }
+      if (ph === 'SCENE_END' && sc.date && sc.review && d.step === 'review') {
+        const r = sc.review; const b = r.best !== null ? sc.lines[r.best] : null;
+        x.review = { name: r.critic.name, outlet: r.critic.outlet, stars: r.stars, text: strip(r.review), best: b ? { ...this.linePub(sc, b), speakerName: this.P(b.speaker)?.name } : null };
       }
       if (ph === 'SCENE_END') {
         if (d.step === 'line') { const l = sc.lines[d.k]; x.line = this.linePub(sc, l); x.line.speakerName = this.P(l.speaker)?.name; }
@@ -517,7 +644,7 @@ class Game {
       x.fin.locked = f.cur < f.lockAt || !!f.cutter || d.step !== 'play' || !!f.done;
       x.fin.lineNo = f.cur + 1; x.fin.lineCount = f.lines.length;
       if (me) {
-        x.fin.cutsLeft = Math.max(0, 2 - me.cuts);
+        x.fin.cutsLeft = Math.max(0, this.maxCuts() - me.cuts);
         x.fin.myLaughs = l ? (l.laughs[me.id] || 0) : 0; x.fin.laughCap = PTS.laughCap; x.fin.ownLine = l ? l.by === me.id : false;
         if (d.step === 'write' && f.cutter === me.id) {
           const prev = f.lines[f.cur];

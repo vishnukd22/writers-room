@@ -376,3 +376,13 @@ body.showart #stage .epcard .t { font-size: 5.2rem; }
 @keyframes reveal { from { opacity: 0; transform: translateY(6px); } }
 #burst span { animation: floatside 2.2s ease-out forwards; }
 @keyframes floatside { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; transform: translateY(-8vh) scale(1.1); } 100% { transform: translate(var(--dx), -55vh) rotate(var(--rot)) scale(.9); opacity: 0; } }
+.lineboard.npc { background: #2B2238; color: var(--cream); box-shadow: 0 0 0 5px var(--plum), 0 30px 80px rgba(0,0,0,.5); }
+.lineboard.npc .who { color: var(--mustard); }
+.lineboard.npc .by { color: var(--muted); }
+.lineboard.npc .dirstamp { background: var(--plum); }
+.crackstamp.coin { color: var(--orange); animation: stampin .4s cubic-bezier(.2, 1.6, .4, 1), wobble .5s .4s infinite; }
+.crackstamp.clean { color: var(--green); }
+@keyframes wobble { 50% { transform: rotate(6deg) scale(1.05); } }
+.bestline { margin-top: 1.4rem; font-family: var(--script); font-size: 1.5rem; max-width: 52rem; margin-left: auto; margin-right: auto; }
+.bestline b { display: block; font-family: var(--ui); font-size: 1.1rem; color: var(--mustard); margin-bottom: .3rem; }
+body.blurart #scenery .cam { animation-play-state: paused; }

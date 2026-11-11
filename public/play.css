@@ -181,3 +181,6 @@ p.lead { font-size: 1.05rem; line-height: 1.45; margin: 0; color: var(--muted); 
 @keyframes throb { 50% { transform: scale(1.03); box-shadow: inset 0 -10px 0 rgba(0,0,0,.35), 0 0 0 9px var(--red); } }
 .rankcard { text-align: center; display: grid; gap: .3rem; }
 .rankcard .ledger { margin-top: .6rem; }
+
+.crackbtn { background: var(--red); }
+.cutbtn.dispute { aspect-ratio: auto; padding: 2rem 1rem; font-size: 3.2rem; }
