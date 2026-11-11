@@ -150,15 +150,18 @@ window.AV = (() => {
     stopVoice();
     speaking = cue.id; duck(true);
     const finish = () => { if (speaking !== cue.id) return; speaking = null; duck(false); onDone(cue.id); };
+    // if the voice fails, still leave the words up long enough to read
+    const t0 = Date.now(); const readMs = 800 + (cue.text || '').length * 55;
+    const fail = () => setTimeout(finish, Math.max(0, readMs - (Date.now() - t0)));
     if (cue.audio) {
       voiceEl = new Audio(cue.audio); voiceEl.volume = voiceVol;
-      voiceEl.onended = finish; voiceEl.onerror = () => setTimeout(finish, 300);
-      voiceEl.play().catch(() => setTimeout(finish, 600));
+      voiceEl.onended = finish; voiceEl.onerror = fail;
+      voiceEl.play().catch(fail);
     } else if ('speechSynthesis' in window && voiceVol > 0) {
       const u = new SpeechSynthesisUtterance(cue.speak || cue.text); if (browserVoice) u.voice = browserVoice; u.rate = 1.02; u.pitch = cue.kind === 'char' ? 1.15 : 0.95;
-      u.onend = finish; u.onerror = finish; speechSynthesis.speak(u);
-      setTimeout(() => { if (speaking === cue.id && !speechSynthesis.speaking) finish(); }, 2500);
-    } else setTimeout(finish, 800 + (cue.text || '').length * 55);
+      u.onend = () => (Date.now() - t0 < 500 ? fail() : finish()); u.onerror = fail; speechSynthesis.speak(u);
+      setTimeout(() => { if (speaking === cue.id && !speechSynthesis.speaking) fail(); }, 2500);
+    } else setTimeout(finish, readMs);
   }
   function stopVoice() { if (voiceEl) { voiceEl.onended = null; voiceEl.pause(); voiceEl = null; } if ('speechSynthesis' in window) speechSynthesis.cancel(); if (speaking) { speaking = null; duck(false); } }
 

@@ -85,6 +85,52 @@ Return {"lines": [{"speaker": "<name>", "text": "..."}]}.`, 700, 9000);
   return lines.length ? lines.slice(0, count) : null;
 }
 
+// Pilot season: a title for the winning pitch.
+async function pilotTitle(genre, pitch) {
+  const r = await ask(`A ${genre.name} TV pilot (${genre.tone}) was just pitched: "${pitch}". Give it a funny but plausible TV show title, 2 to 5 words. Return {"title": "..."}.`, 120, 7000);
+  return clean(r?.title, 50) || null;
+}
+
+// Pilot season: turn the room's winning beat into a short scene for the two characters.
+// Returns { lines: [{ who: 'hero'|'rival'|'narrator', text }], noteHonoured: bool }
+async function pilotScene(o) {
+  const r = await ask(`You are writing a scene for a ${o.genre.name} TV pilot (${o.genre.tone}).
+Pitch: ${o.pitch}
+Hero: ${o.hero.name}. ${o.hero.traits.join('. ')}
+Rival: ${o.rival.name}. ${o.rival.traits.join('. ')}
+${o.prev ? `Previously: ${o.prev}\n` : ''}The writers' room chose this for the ${o.kind === 'ending' ? 'ending' : 'big problem'}: "${o.beat}"
+The Network gave this note: "${o.note}"
+
+Write a 5-line scene that dramatises exactly what the room chose, uses the characters' traits and catchphrases, and lands a big laugh on the last line. Lines are spoken by "hero", "rival", or "narrator" (a short stage direction read aloud, at most one). Each line under 18 words. Then judge honestly whether the room's chosen line honoured the Network note.
+Return {"lines": [{"who": "hero", "text": "..."}], "noteHonoured": true}.`, 900, 12000);
+  const lines = (r?.lines || []).map((l) => ({ who: ['hero', 'rival', 'narrator'].includes(l.who) ? l.who : 'narrator', text: clean(l.text, 180) })).filter((l) => l.text);
+  return lines.length >= 3 ? { lines: lines.slice(0, 6), noteHonoured: !!r.noteHonoured } : null;
+}
+
+// Pilot season: the Network exec's verdict. score 0..3
+async function pilotVerdict(o) {
+  const r = await ask(`You are a ruthless, funny TV network executive. You just watched a ${o.genre.name} pilot called "${o.title}".
+Pitch: ${o.pitch}
+Hero: ${o.hero}. Rival: ${o.rival}.
+Problem: ${o.problem}
+Ending: ${o.ending}
+Give a score from 0 to 3 for how much you'd commission it, and one funny sentence of feedback (under 22 words).
+Return {"score": 2, "line": "..."}.`, 200, 9000);
+  if (!r) return null;
+  return { score: Math.max(0, Math.min(3, Number(r.score) || 0)), line: clean(r.line, 200) };
+}
+
+// Date Night: the exec picks between two entries.
+async function pickBetween(prompt, a, b) {
+  const r = await ask(`Two writers answered "${prompt}".
+A: ${a}
+B: ${b}
+Which is funnier and more usable on TV? Reply with one funny sentence explaining your pick (under 20 words).
+Return {"pick": "A", "why": "..."}.`, 150, 7000);
+  if (!r) return null;
+  return { pick: String(r.pick).toUpperCase().startsWith('B') ? 1 : 0, why: clean(r.why, 160) };
+}
+
 // Date Night: a third character barges into a two-person scene with one line.
 async function interject(genre, role, sofar) {
   const r = await ask(`A two-person ${genre.name} scene (${genre.tone}) is being performed by a couple at home. Scene so far:
@@ -106,4 +152,4 @@ Return {"stars": 4, "review": "...", "best": 3}.`, 400, 9000);
   return { stars: Math.max(1, Math.min(5, Math.round(Number(r.stars)) || 3)), review: clean(r.review, 300), best: best >= 0 && best < lines.length ? best : null };
 }
 
-module.exports = { enabled, sceneSetups, finaleScript, continueFinale, interject, critique };
+module.exports = { enabled, sceneSetups, finaleScript, continueFinale, interject, critique, pilotTitle, pilotScene, pilotVerdict, pickBetween };

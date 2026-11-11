@@ -27,7 +27,7 @@ with sync_playwright() as p:
         phones.append((pl['name'], pg))
     seen = {}; last = None; t0 = time.time()
     while time.time() - t0 < 1500:
-        try: st = tv.evaluate('window.__S && (window.__S.phase + "|" + (window.__S.step||"") + (window.__S.x.cur ? "|L" + window.__S.x.cur.k : "") + (window.__S.x.fin && window.__S.x.fin.step==="play" ? "|F" + window.__S.x.fin.lineNo : ""))')
+        try: st = tv.evaluate('window.__S && [window.__S.phase, window.__S.step||"", window.__S.x.kind||"", (window.__S.x.pilot||{}).i ?? ""].join("|")')
         except Exception: st = None
         if st and st != last:
             last = st; n = seen.get(st, 0); seen[st] = n + 1

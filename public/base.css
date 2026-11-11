@@ -44,3 +44,5 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .bust.sm { width: 2rem; height: 2rem; font-size: .7rem; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.bust.xs { width: 1.7rem; height: 1.7rem; font-size: .6rem; box-shadow: 0 0 0 2px rgba(246,234,212,.85); }
+.bust.md { width: 4.2rem; height: 4.2rem; font-size: 1.2rem; }

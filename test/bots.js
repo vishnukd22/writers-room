@@ -25,7 +25,7 @@ const phases = []; let errors = 0; let final = null; const seen = {}; const stat
     const r = await new Promise((res) => sock.emit('player:join', { code, name: names[i], pron: i === 4 ? 'EL-doe' : '' }, res));
     if (!r.ok) throw new Error(r.error);
     const bot = { sock, name: names[i], token: r.token, done: new Set() };
-    bot.act = (type, a = {}) => new Promise((res) => sock.emit('act', { type, ...a }, (out) => { if (out?.error && !/Too late|Not yet|both your cuts/.test(out.error)) { errors++; console.log('ERR', bot.name, type, out.error); } res(out); }));
+    bot.act = (type, a = {}) => new Promise((res) => sock.emit('act', { type, ...a }, (out) => { if (out?.error && !/Too late|Not yet|cuts|catching his breath|already picked/.test(out.error)) { errors++; console.log('ERR', bot.name, type, out.error); } res(out); }));
     sock.on('state', (s) => { bot.s = s; think(bot).catch((e) => { errors++; console.error(e); }); });
     bots.push(bot);
   }
@@ -36,7 +36,7 @@ const phases = []; let errors = 0; let final = null; const seen = {}; const stat
   const t0 = Date.now();
   while (!final && Date.now() - t0 < Number(process.env.MAXMS || 300000)) await sleep(200);
   console.log('PHASES:', phases.join(' > '));
-  if (final) console.log('FINAL:\n ', final.rows.map((r) => `${r.rank}. ${r.name} ${r.score} (writer ${r.writerPts}, actor ${r.actorPts})`).join('\n  '));
+  if (final) console.log('FINAL:\n ', final.rows.map((r) => `${r.rank}. ${r.name} ${r.score} (wins ${r.wins}, laughs ${r.laughs})`).join('\n  '));
   console.log('stats:', JSON.stringify(stats), 'seconds:', Math.round((Date.now() - t0) / 1000));
   console.log('narration chars:', global.__chars, 'cues:', global.__cues);
   console.log('errors:', errors, final ? 'OK' : 'DID NOT FINISH');
@@ -44,35 +44,26 @@ const phases = []; let errors = 0; let final = null; const seen = {}; const stat
 })();
 
 async function think(bot) {
-  const s = bot.s; const x = s.x; if (!s.me) return;
+  const s = bot.s; if (!s.me) return;
   const once = (k) => { if (bot.done.has(k)) return false; bot.done.add(k); return true; };
   if (DELAY) await sleep(DELAY * (0.5 + Math.random()));
-  const s2 = bot.s; const x2 = s2.x; // state may have moved on while we slept
+  const s2 = bot.s; const x = s2.x; const pi = x.pilot ? x.pilot.i : 'L';
   switch (s2.phase) {
-    case 'SCENE': {
-      const sc = `${x2.scene.i}`;
-      if (x2.mode === 'date') {
-        if (x2.myLine && once(`act${sc}:${x2.myLine.k}`)) { await sleep(60 + DELAY); await bot.act('done'); break; }
-        if (x2.write && once(`w${sc}:${x2.write.k}`)) { if (Math.random() < 0.9) { stats.lines++; await bot.act('line', { text: pick(LINES), dir: Math.floor(Math.random() * 3) }); } break; }
-        if (x2.watch?.canCrack && once(`c${sc}:${x2.watch.k}`) && Math.random() < 0.35) await bot.act('crack');
-        if (x2.dispute && once(`dp${sc}:${x2.dispute.until}`) && Math.random() < 0.6) { stats.disputes = (stats.disputes || 0) + 1; await bot.act('dispute'); }
-        break;
-      }
-      if (x2.myLine && once(`act${sc}:${x2.myLine.k}`)) { await sleep(60 + DELAY); await bot.act('done'); break; }
-      if (x2.write && once(`w${sc}:${x2.write.k}`)) { if (Math.random() < 0.9) { stats.lines++; await bot.act('line', { text: pick(LINES) }); } break; }
-      if (x2.dirs && once(`d${sc}:${x2.writing?.k}`)) await bot.act('dir', { i: Math.floor(Math.random() * 3) });
-      if (x2.cur && !x2.ownLine && once(`l${sc}:${x2.cur.k}`) && Math.random() < 0.7) { await bot.act('laugh'); if (Math.random() < 0.5) await bot.act('laugh'); }
-      if (x2.cracks && x2.cur && once(`c${sc}:${x2.cur.k}`) && Math.random() < 0.25) await bot.act('crack', { id: pick(x2.cracks).id });
+    case 'LOBBY': if (x.busts && once('bust')) { const free = x.busts.filter((b) => !b.by); if (free.length) await bot.act('bust', { n: pick(free).n }); } break;
+    case 'GENRE': if (s2.step === 'pick' && s2.me.showrunner && x.genres && once(`g${pi}`)) await bot.act('genre', { id: pick(x.genres).id }); break;
+    case 'WRITE': {
+      if (!x.submitted && once(`w${pi}${x.kind}`)) {
+        if (Math.random() < 0.08) break; // this one never submits
+        if (x.kind === 'pitch') await bot.act('write', { fields: { a: pick(['sad accountant', 'retired pirate', 'nervous dentist']), who: pick(['hates water', 'only speaks in rhyme']), must: pick(['win a cooking show', 'save the village']), before: pick(['his mum finds out', 'Diwali']) } });
+        else if (x.kind === 'traits') await bot.act('write', { answers: (x.questions || []).map(() => pick(['Soup', 'Dentures', 'Yes chef no chef', 'Pigeons', 'He is three raccoons', 'Biryani'])) });
+        else await bot.act('write', { text: pick(LINES) });
+        stats.lines++;
+      } else if (x.submitted && Math.random() < 0.15 && once(`h${pi}${x.kind}${Math.floor(Date.now() / 3000)}`)) await bot.act('hurry');
       break;
     }
-    case 'SCENE_END': if (s2.step === 'vote' && x2.canVote && once(`v${x2.scene.i}`)) await bot.act('vote', { id: pick(x2.scene.actors).id }); break;
-    case 'CUT': {
-      const f = x2.fin;
-      if (f.write && once(`cw${f.lineNo}`)) { stats.cutLines++; await bot.act('cutLine', { text: pick(LINES) }); break; }
-      if (s2.step === 'play' && !f.locked && f.cutsLeft > 0 && Math.random() < 0.08 && once(`cut${f.lineNo}`)) { const r = await bot.act('cut'); if (r?.ok) stats.cuts++; }
-      if (f.line && f.line.kind === 'cut' && !f.ownLine && once(`fl${f.lineNo}${f.line.text}`)) await bot.act('laugh');
-      break;
-    }
+    case 'SHORTLIST': for (const c of x.cards || []) if (c.liked === null && once(`l${pi}${c.id}${x.kind}`)) await bot.act('like', { id: c.id, like: Math.random() < 0.6 }); break;
+    case 'VOTE': if (s2.step === 'vote' && once(`v${pi}${x.kind}`)) { const opts = x.finalists.filter((f) => !f.mine); if (opts.length) await bot.act('vote', { id: pick(opts).id }); } break;
+    case 'SCENE': case 'CAST': if (!x.own && Math.random() < 0.6 && once(`laugh${pi}${s2.phase}${s2.step}${x.scene?.cur}`)) { await bot.act('laugh'); stats.cracks++; } break;
     default:
   }
 }

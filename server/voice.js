@@ -5,13 +5,13 @@ const crypto = require('crypto');
 const KEY = () => process.env.ELEVENLABS_API_KEY || '';
 const enabled = () => !!KEY();
 const MODEL = () => process.env.ELEVENLABS_MODEL || 'eleven_v3';
-const NARRATOR = () => process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; // "George": warm storyteller
+const NARRATOR = () => process.env.ELEVENLABS_VOICE_ID || 'iP95p4xoKVk53GoZ742B'; // "Chris": Johnny Primetime, the host
+const EXEC = () => process.env.ELEVENLABS_EXEC_VOICE_ID || 'onwK4e9ZLuTAKqWW03F9'; // "Daniel": the Network
 // Premade voices used for characters when the narrator doesn't read them. Override with ELEVENLABS_CHARACTER_VOICES.
 const DEFAULT_CHAR_VOICES = [
-  'EXAVITQu4vr4xnSDxMaL', 'TX3LPaxmHKxFdv7VOQHJ', 'XB0fDUnXU5powFXDhCwa', 'IKne3meq5aSn9XLyUdCD',
-  'pFZP5JQG7iQjIQuC4Bku', 'nPczCjzI2devNBz1zQrb', 'Xb7hH8MSUJpSbSDYk0k2', 'onwK4e9ZLuTAKqWW03F9',
-  'cgSgspJ2msm6clMCkdW9', 'iP95p4xoKVk53GoZ742B', 'XrExE9yKIg1WjnnlVkGX', 'N2lVS1w4EtoT3dr4eOWO',
-];
+  'cgSgspJ2msm6clMCkdW9', 'nPczCjzI2devNBz1zQrb', 'IKne3meq5aSn9XLyUdCD', 'FGY2WhTYpPnrIDTdsKH5',
+  'N2lVS1w4EtoT3dr4eOWO', 'XrExE9yKIg1WjnnlVkGX', 'TX3LPaxmHKxFdv7VOQHJ', 'Xb7hH8MSUJpSbSDYk0k2',
+]; // Jessica, Brian, Charlie, Laura, Callum, Matilda, Liam, Alice
 const charVoices = () => (process.env.ELEVENLABS_CHARACTER_VOICES ? process.env.ELEVENLABS_CHARACTER_VOICES.split(',').map((s) => s.trim()).filter(Boolean) : DEFAULT_CHAR_VOICES);
 
 const store = new Map(); // id -> { buf, ts }
@@ -83,4 +83,4 @@ function get(text, voice, urgent = false) {
 
 function audio(id) { return store.get(id)?.buf || null; }
 
-module.exports = { enabled, get, audio, stripTags, NARRATOR, charVoices };
+module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, charVoices };
