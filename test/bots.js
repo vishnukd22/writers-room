@@ -47,7 +47,7 @@ async function think(bot) {
   const s = bot.s; if (!s.me) return;
   const once = (k) => { if (bot.done.has(k)) return false; bot.done.add(k); return true; };
   if (DELAY) await sleep(DELAY * (0.5 + Math.random()));
-  const s2 = bot.s; const x = s2.x; const pi = x.pilot ? x.pilot.i : 'L';
+  const s2 = bot.s; const x = s2.x; const pi = x.pilot ? `${x.pilot.i}.${x.pilot.season?.ep}` : 'L';
   switch (s2.phase) {
     case 'LOBBY': if (x.busts && once('bust')) { const free = x.busts.filter((b) => !b.by); if (free.length) await bot.act('bust', { n: pick(free).n }); } break;
     case 'GENRE': if (s2.step === 'pick' && s2.me.showrunner && x.genres && once(`g${pi}`)) await bot.act('genre', { id: pick(x.genres).id }); break;

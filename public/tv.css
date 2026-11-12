@@ -467,3 +467,40 @@ body.nocap #caption { display: none; }
 .srow { grid-template-columns: 3rem auto auto 1fr auto; }
 #stage .ticker { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; }
 .writing { padding-bottom: 3rem; }
+
+/* ---------------- one season: the production board, the rating meter, episodes ---------------- */
+#top { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 1rem; }
+.pboard { display: flex; align-items: center; gap: .3rem; background: rgba(20,28,40,.72); border: 1px solid var(--line); border-radius: 99px; padding: .3rem .7rem; }
+.pstep { display: flex; align-items: center; gap: .35rem; font-size: .9rem; font-weight: 700; color: var(--muted); padding: .15rem .45rem; border-radius: 99px; white-space: nowrap; }
+.pstep b { min-width: 1.7rem; height: 1.7rem; border-radius: 99px; display: grid; place-items: center; font-size: .8rem; background: rgba(246,234,212,.12); color: var(--cream); padding: 0 .3rem; }
+.pstep.now { color: var(--cream); background: rgba(226,169,59,.18); }
+.pstep.now b { background: var(--mustard); color: #1E2A3A; }
+.pstep.done b { background: var(--green); color: #fff; }
+.pstep.miss b { background: var(--red); color: #fff; }
+.parrow { width: .9rem; height: 2px; background: rgba(246,234,212,.25); }
+.topright { justify-self: end; display: flex; align-items: center; gap: 1.2rem; }
+.meter { display: flex; align-items: center; gap: .5rem; font-size: .85rem; font-weight: 700; color: var(--muted); }
+.meter b { font-size: 1.5rem; color: var(--cream); min-width: 2.4ch; text-align: right; }
+.meter small { font-size: .75rem; }
+.mbar { position: relative; width: 11rem; height: .9rem; border-radius: 99px; background: rgba(246,234,212,.14); display: flex; overflow: visible; }
+.mbar i { display: block; height: 100%; width: var(--w); transition: width .8s cubic-bezier(.2, 1.3, .4, 1); }
+.mbar i:first-child { border-radius: 99px 0 0 99px; }
+.mbar .ml { background: var(--mustard); } .mbar .mn { background: var(--green); } .mbar .me { background: #8FB8E8; }
+.mbar em { position: absolute; left: var(--at); top: -.35rem; bottom: -.35rem; width: 3px; background: var(--cream); border-radius: 2px; box-shadow: 0 0 6px rgba(0,0,0,.6); }
+.warnchip { color: #1E2A3A; background: var(--red); padding: 0 .4rem; border-radius: 4px; font-size: .75rem; }
+.needbar { display: inline-flex; align-items: baseline; gap: .8rem; margin-top: 1.4rem; padding: .5rem 1.4rem; border-radius: 14px; background: rgba(20,28,40,.75); border: 2px solid var(--mustard); }
+.needbar span { font-size: 1.3rem; color: var(--muted); font-weight: 700; }
+.needbar b { font-size: 3rem; color: var(--mustard); line-height: 1; }
+.needbar small { font-size: 1.2rem; color: var(--muted); }
+.acts { display: flex; gap: .7rem; justify-content: center; align-items: center; margin-top: 1.2rem; font-size: 1.3rem; font-weight: 700; }
+.acts span { background: rgba(20,28,40,.7); padding: .3rem .9rem; border-radius: 99px; }
+.acts i { font-style: normal; color: var(--mustard); }
+.prevrow { display: flex; gap: 1.6rem; justify-content: center; margin-top: 1.2rem; flex-wrap: wrap; }
+.prevcard { width: 26rem; background: #FBF4E6; color: #2A2420; border-radius: 10px; padding: 1rem 1.2rem; font-size: 1.5rem; font-weight: 700; line-height: 1.3; text-align: left; transform: rotate(var(--r)); box-shadow: 0 16px 34px rgba(0,0,0,.4); animation: dealin .6s both; text-shadow: none; }
+.prevcard small { display: block; font-size: .9rem; color: var(--red); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
+.prevcard em { display: block; font-style: normal; font-size: .95rem; color: #7A6D5E; margin-top: .5rem; }
+.notestamp { position: absolute; right: 3rem; top: 30%; font-size: 2rem; font-weight: 800; padding: .3rem 1.2rem; border: .35rem solid currentColor; border-radius: 10px; transform: rotate(-8deg); background: rgba(251,244,230,.94); animation: slam .5s cubic-bezier(.2, 1.6, .5, 1); text-transform: uppercase; z-index: 4; }
+.notestamp.yes { color: var(--green); } .notestamp.no { color: var(--red); }
+.uprow.dim { opacity: .45; }
+.uprow.dead b { color: var(--red); }
+.scene { position: relative; }

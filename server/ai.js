@@ -94,14 +94,14 @@ async function pilotTitle(genre, pitch) {
 // Pilot season: turn the room's winning beat into a short scene for the two characters.
 // Returns { lines: [{ who: 'hero'|'rival'|'narrator', text }], noteHonoured: bool }
 async function pilotScene(o) {
-  const r = await ask(`You are writing a scene for a ${o.genre.name} TV pilot (${o.genre.tone}).
+  const r = await ask(`You are writing a scene for ${o.episode ? `"${o.episode}" of` : ''} a ${o.genre.name} TV show (${o.genre.tone}).
 Pitch: ${o.pitch}
 Hero: ${o.hero.name}. ${o.hero.traits.join('. ')}
 Rival: ${o.rival.name}. ${o.rival.traits.join('. ')}
-${o.prev ? `Previously: ${o.prev}\n` : ''}The writers' room chose this for the ${o.kind === 'ending' ? 'ending' : 'big problem'}: "${o.beat}"
+${o.prev ? `Previously: ${o.prev}\n` : ''}The writers' room chose this for the ${o.kind === 'ending' ? 'ending' : o.kind === 'cliffhanger' ? 'cliffhanger (end on a shock that sets up next week)' : 'big problem'}: "${o.beat}"
 The Network gave this note: "${o.note}"
 
-Write a 5-line scene that dramatises exactly what the room chose, uses the characters' traits and catchphrases, and lands a big laugh on the last line. Lines are spoken by "hero", "rival", or "narrator" (a short stage direction read aloud, at most one). Each line under 18 words. Then judge honestly whether the room's chosen line honoured the Network note.
+Write a 5-line scene that dramatises exactly what the room chose, uses the characters' traits and catchphrases, and lands a big laugh on the last line. Lines are spoken by "hero", "rival", or "narrator" (a short stage direction read aloud, at most one). Each line under 16 words. Keep it fast and punchy. Then judge honestly whether the room's chosen line honoured the Network note.
 Return {"lines": [{"who": "hero", "text": "..."}], "noteHonoured": true}.`, 900, 12000);
   const lines = (r?.lines || []).map((l) => ({ who: ['hero', 'rival', 'narrator'].includes(l.who) ? l.who : 'narrator', text: clean(l.text, 180) })).filter((l) => l.text);
   return lines.length >= 3 ? { lines: lines.slice(0, 6), noteHonoured: !!r.noteHonoured } : null;

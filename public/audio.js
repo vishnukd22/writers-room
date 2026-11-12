@@ -123,6 +123,8 @@ window.AV = (() => {
     fanfare: () => { [[60, 0], [64, 0.15], [67, 0.3], [72, 0.45]].forEach(([m, t]) => note(hz(m), ctx.currentTime + t, t === 0.45 ? 1.2 : 0.2, 'square', 0.06, sfxBus, 0.01)); },
     join: () => { note(hz(76), ctx.currentTime, 0.3, 'sine', 0.15, sfxBus, 0.005); note(hz(83), ctx.currentTime + 0.12, 0.4, 'sine', 0.12, sfxBus, 0.005); },
   };
+  // Land Grab sounds fall back to these built-in ones until the real files arrive
+  const ALIAS = { 'lg-stamp': 'stamp', 'lg-paper': 'whoosh', 'lg-murmur': 'gasp', 'lg-bus': 'trombone', 'lg-shutter': 'thunder', 'lg-cash': 'bell' };
   const lastPlayed = {};
   const buffers = {};
   async function loadBuf(name) {
@@ -138,9 +140,9 @@ window.AV = (() => {
       const b = await loadBuf(name);
       if (b) { const s = ctx.createBufferSource(); s.buffer = b; const g = ctx.createGain(); g.gain.value = opts.vol ?? 1; s.connect(g).connect(sfxBus); s.start(); return; }
     }
-    synthFx[name]?.();
+    (synthFx[name] || synthFx[ALIAS[name]])?.();
   }
-  ['laugh', 'gasp', 'boo', 'applause', 'gavel', 'typewriter', 'bell', 'drumroll', 'dundun', 'scratch', 'trombone', 'thunder', 'sting', 'whoosh'].forEach((n) => W.ready.then(() => { if (ctx && has('sfx', n)) loadBuf(n); }));
+  ['laugh', 'gasp', 'boo', 'applause', 'gavel', 'typewriter', 'bell', 'drumroll', 'dundun', 'scratch', 'trombone', 'thunder', 'sting', 'whoosh', ...Object.keys(ALIAS)].forEach((n) => W.ready.then(() => { if (ctx && has('sfx', n)) loadBuf(n); }));
 
   // ---------------------------------------------------------------- narrator
   let voiceEl = null; let speaking = null;

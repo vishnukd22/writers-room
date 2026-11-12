@@ -16,7 +16,7 @@ with sync_playwright() as p:
     tv = b.new_page(viewport={'width': 1600, 'height': 900})
     tv.on('pageerror', lambda e: errors.append(('tv', str(e))))
     tv.add_init_script(f"sessionStorage.setItem('wrHost', '{code}')")
-    tv.goto(URL + '/tv'); tv.click('#bOpen')
+    tv.goto(URL + '/tv/writers'); tv.click('#bOpen')
     phones = []
     for pl in info['players'][:int(want)]:
         ctx = b.new_context(viewport={'width': 390, 'height': 844})

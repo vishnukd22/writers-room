@@ -5,14 +5,13 @@
 
 const HOST = {
   welcome: "[excited] Welcome to Writers' Room, where dreams come true... [beat] and then get cancelled after one episode. I'm Johnny Primetime. Yes, THE Johnny Primetime. [beat] Stop clapping. [beat] Nobody's clapping. Okay.",
-  how: "[briskly] Here's the deal. The Network wants a hit. You lot are going to write two pilots tonight. You write, you vote, and I make it come to life. [beat] If neither pilot scores a seven, the Network fires all of us. [whispers] Including me. [normal] So no pressure.",
+  how: "[briskly] Here's the deal. Tonight you write one show. A whole season. The pilot, episode two, and the season finale. You write, you vote, and I make it come to life. [beat] Every episode needs a higher rating. Five, then six, then seven. Miss twice and the Network cancels us. [whispers] Including me. [normal] So no pressure.",
   showrunner: '[excited] {name}, you are tonight\'s showrunner! Pick a genre on your phone. [beat] Everybody else, shout your opinions at {name}. That always helps.',
-  showrunner2: '[dramatic] Pilot number two. {name}, the network trusts you. [beat] I don\'t. But the network does. Pick a genre.',
   genrePicked: '[excited] {genre}! [beat] Bold. Brave. Probably a mistake. Let\'s go.',
   pitchIntro: "[briskly] First, the pitch. One sentence. Fill in the blanks on your phone. Make the Network want to throw money at you. You've got two minutes.",
   traitsIntro: "[excited] Now we build our stars. Everyone gets a different question about our hero or our rival. Answer it. Don't overthink it. [beat] Actually, do overthink it. It's funnier.",
   problemIntro: '[dramatic] Act one. Every show needs a problem. Finish the sentence: it all goes wrong when... [beat] And remember the Network note!',
-  endingIntro: '[dramatic] The finale. How does it end? [beat] The Network has one more note. Of course they do.',
+  endingIntro: '[dramatic] Act two. How does this one end? [beat] The Network has another note. Of course they do.',
   writeHalf: '[amused] One minute left. Some of you are typing. Some of you are just staring at your phone like it owes you money.',
   writeLast: '[impatient] Thirty seconds! {names}, the whole room is looking at you.',
   hurry: [
@@ -31,13 +30,27 @@ const HOST = {
   meetHero: '[excited] Meet our hero.',
   meetRival: '[mischievous] And our rival.',
   rollScene: '[excited] Roll it!',
-  screening: '[dramatic] The Network watched your pilot. [beat] They have notes.',
+  screening: '[dramatic] The Network just watched the episode. [beat] They have notes.',
   rating: '[excited] {title} scores... {score} out of ten!',
   ratingLow: '[sighs] {title}. {score} out of ten. [beat] I\'ve seen worse. I\'ve hosted worse.',
   upfronts: '[dramatic] The upfronts. The Network decides who gets a series, and who gets a cardboard box.',
   greenlit: '[excited] {title} gets a full season! You all keep your jobs! [beat] For now.',
   fired: "[sighs] Neither pilot hit a seven. [beat] You're all fired. [beat] I'm fired. [beat] Somebody's taking the coffee machine.",
   headWriter: '[excited] And your head writer tonight, with the most ideas on screen, is... {name}!',
+  episode: [
+    "[dramatic] Episode one. The pilot. The Network wants five out of ten. [beat] Five. That's how much they believe in us.",
+    '[excited] Episode two! The bar goes up to six. [beat] Same characters. Brand new disaster. {name} is showrunner this week.',
+    "[dramatic] The season finale. We need a seven, or there's no season two. {name}, you're showrunner. Don't blow it.",
+  ],
+  previously: '[dramatic] Previously, on {title}... [beat] {a} [beat] {b}',
+  cliffIntro: "[mischievous] Now the cliffhanger. How does this week end? Leave them screaming for next week. [beat] And yes, there's a note.",
+  noteYes: '[excited] And the Network note? Nailed it.',
+  noteNo: '[winces] And the Network note? [beat] Completely ignored. They noticed.',
+  hit: '[excited] {score}! The bar was {target}. We live to write another week!',
+  warn: "[nervous] {score}. The bar was {target}. [beat] That's our one warning. One more miss and we're cancelled.",
+  cancel: '[sighs] {score}. Below {target}. Again. [beat] The Network has cancelled {title}. [beat] Clear your desks.',
+  seasonWin: '[excited] {title} is renewed for season two! You all keep your jobs! [beat] For now.',
+  seasonLose: "[sighs] The finale missed the bar. One season and done. [beat] It was a good run. It was a run.",
   goodnight: "[warmly] That's our show. Goodnight, writers. [beat] Same time next week, if they let us back in the building.",
 };
 
@@ -66,12 +79,19 @@ const TRAITS = [
   { who: 'hero', k: 'secret', q: "What is our hero's darkest secret?" },
   { who: 'rival', k: 'habit', q: "What is our rival's most annoying habit?" },
 ];
+// One show, one season. Each episode has two acts, and a higher bar.
+const EPISODES = [
+  { name: 'The Pilot', short: 'Pilot', target: 5, acts: ['problem', 'ending'] },
+  { name: 'Episode Two', short: 'Ep 2', target: 6, acts: ['problem', 'cliffhanger'] },
+  { name: 'The Season Finale', short: 'Finale', target: 7, acts: ['problem', 'ending'] },
+];
 const TRAIT_LABEL = { collects: 'Secretly collects', fear: 'Terrified of', catchphrase: 'Catchphrase', secret: 'Dark secret', habit: 'Annoying habit' };
 
 // What the room finishes in each act.
 const BEATS = {
   problem: { label: 'Act one', lead: 'It all goes wrong when...', hint: 'the hero accidentally marries the rival' },
-  ending: { label: 'The finale', lead: 'In the end...', hint: 'they team up and open a dosa truck' },
+  ending: { label: 'The ending', lead: 'In the end...', hint: 'they team up and open a dosa truck' },
+  cliffhanger: { label: 'The cliffhanger', lead: 'It ends on a cliffhanger when...', hint: "the rival reveals they own the hero's house" },
 };
 
 // The Network meddles. One note for act one and one for the finale.
@@ -100,6 +120,12 @@ const SCENE_FALLBACK = {
     ['rival', 'Oh, it is happening. And I planned all of it.'],
     ['hero', 'You will pay for this, {rival}.'],
   ],
+  cliffhanger: [
+    ['narrator', 'And then. {beat}'],
+    ['hero', 'Wait. What? WHAT?'],
+    ['rival', 'Oh, you have no idea what is coming next week, {hero}.'],
+    ['narrator', 'To be continued.'],
+  ],
   ending: [
     ['narrator', 'And in the end... {beat}'],
     ['rival', 'I suppose... I was wrong about you, {hero}.'],
@@ -113,4 +139,4 @@ const EXEC_FALLBACK = [
   'Strong pilot. Weak hair. Fix the hair.', 'I have questions. Lawyers will have more questions.',
 ];
 
-module.exports = { HOST, PITCH, TRAITS_FIRST, TRAITS, TRAIT_LABEL, BEATS, NOTES, TICKER, SCENE_FALLBACK, EXEC_FALLBACK };
+module.exports = { HOST, EPISODES, PITCH, TRAITS_FIRST, TRAITS, TRAIT_LABEL, BEATS, NOTES, TICKER, SCENE_FALLBACK, EXEC_FALLBACK };

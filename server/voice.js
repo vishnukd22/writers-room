@@ -42,9 +42,17 @@ async function request(text, voice, model) {
   } catch (e) { return { error: e.name === 'AbortError' ? 'timeout' : e.message }; } finally { clearTimeout(t); }
 }
 
-async function synth(text, voice, urgent) {
+// Characters use a fast model so scenes play without gaps; the hosts keep the expressive one.
+const FAST = () => process.env.ELEVENLABS_FAST_MODEL || 'eleven_flash_v2_5';
+let fastBroken = false;
+async function synth(text, voice, urgent, fast) {
   await slot(urgent);
   try {
+    if (fast && !fastBroken) {
+      const r = await request(stripTags(text), voice, FAST());
+      if (!r.error) return { buf: r.buf };
+      console.error('[voice] fast model failed, using the normal one:', r.error, r.body || ''); fastBroken = true;
+    }
     let model = v3Broken ? 'eleven_multilingual_v2' : MODEL();
     let input = model === 'eleven_v3' ? text : stripTags(text);
     let r = await request(input, voice, model);
@@ -59,14 +67,14 @@ async function synth(text, voice, urgent) {
 }
 
 // Returns a promise of an audio id (or null when there is no voice available).
-function get(text, voice, urgent = false) {
+function get(text, voice, urgent = false, fast = false) {
   if (!enabled() || !stripTags(text)) return Promise.resolve(null);
   voice = voice || NARRATOR();
-  if (badVoices.has(voice)) voice = NARRATOR();
-  const key = `${voice}|${text}`;
+  if (badVoices.has(voice)) voice = voice === lgFound ? LG_FALLBACK : NARRATOR();
+  const key = `${voice}|${fast ? 'f' : ''}|${text}`;
   if (byKey.has(key)) return byKey.get(key);
   const p = (async () => {
-    let r = await synth(text, voice, urgent);
+    let r = await synth(text, voice, urgent, fast);
     if (r.error && voice !== NARRATOR() && (r.error === 404 || r.error === 400 || r.error === 422)) {
       badVoices.add(voice);
       r = await synth(text, NARRATOR(), urgent);
@@ -83,4 +91,31 @@ function get(text, voice, urgent = false) {
 
 function audio(id) { return store.get(id)?.buf || null; }
 
-module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, charVoices };
+// ---------------------------------------------------------------- Land Grab's narrator
+// An English voice with an Indian accent. Set ELEVENLABS_LG_VOICE_ID to choose one yourself.
+// Otherwise, on start-up, the most used female Indian-accent English voice in the ElevenLabs
+// voice library is added to the account once (named "Land Grab gossip") and used from then on.
+const LG_FALLBACK = 'cgSgspJ2msm6clMCkdW9'; // "Jessica", only if the search fails
+let lgFound = null;
+const LG = () => process.env.ELEVENLABS_LG_VOICE_ID || lgFound || LG_FALLBACK;
+async function findIndianVoice() {
+  if (!enabled() || process.env.ELEVENLABS_LG_VOICE_ID) return;
+  const H = { 'xi-api-key': KEY() };
+  try {
+    const mine = await fetch('https://api.elevenlabs.io/v1/voices', { headers: H });
+    if (mine.ok) { const j = await mine.json(); const have = (j.voices || []).find((v) => /^Land Grab gossip/.test(v.name)); if (have) { lgFound = have.voice_id; console.log('[voice] Land Grab gossip:', have.name); return; } }
+    const q = new URLSearchParams({ page_size: '30', language: 'en', accent: 'indian', gender: 'female', sort: 'usage_character_count_1y' });
+    const res = await fetch(`https://api.elevenlabs.io/v1/shared-voices?${q}`, { headers: H });
+    if (!res.ok) { console.error('[voice] voice library search failed', res.status); return; }
+    const list = (await res.json()).voices || [];
+    const good = /convers|character|narrat|social|entertain|informative/i;
+    const v = list.find((x) => good.test(`${x.use_case || ''} ${x.descriptive || ''}`)) || list[0];
+    if (!v) { console.error('[voice] no Indian-accent voice found'); return; }
+    const add = await fetch(`https://api.elevenlabs.io/v1/voices/add/${v.public_owner_id}/${v.voice_id}`, { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ new_name: `Land Grab gossip (${v.name})`.slice(0, 60) }) });
+    if (add.ok) { const a = await add.json(); lgFound = a.voice_id || v.voice_id; } else { console.error('[voice] could not add library voice', add.status, (await add.text()).slice(0, 200)); lgFound = v.voice_id; }
+    console.log('[voice] Land Grab gossip:', v.name, lgFound);
+  } catch (e) { console.error('[voice] Indian voice search error', e.message); }
+}
+findIndianVoice();
+
+module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, charVoices };

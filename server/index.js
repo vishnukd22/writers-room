@@ -6,6 +6,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const QRCode = require('qrcode');
 const { Game } = require('./game');
+const { LandGrab } = require('./landgrab');
 const voice = require('./voice');
 const ai = require('./ai');
 
@@ -18,8 +19,11 @@ const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 10000, pingTimeout: 30000 });
 
 app.get('/health', (_q, r) => r.send('ok'));
-app.get('/tv', (_q, r) => r.sendFile(path.join(PUBLIC, 'tv.html')));
+app.get('/tv', (_q, r) => r.sendFile(path.join(PUBLIC, 'menu.html')));
+app.get('/tv/writers', (_q, r) => r.sendFile(path.join(PUBLIC, 'tv.html')));
+app.get('/tv/landgrab', (_q, r) => r.sendFile(path.join(PUBLIC, 'lg-tv.html')));
 app.get('/', (_q, r) => r.sendFile(path.join(PUBLIC, 'play.html')));
+app.get('/lg', (_q, r) => r.sendFile(path.join(PUBLIC, 'lg-play.html')));
 app.get('/audio/:id', (q, r) => {
   const buf = voice.audio(q.params.id);
   if (!buf) return r.status(404).end();
@@ -44,15 +48,18 @@ function originOf(socket) {
   const proto = (h['x-forwarded-proto'] || '').split(',')[0] || (socket.handshake.secure ? 'https' : 'http');
   return `${proto}://${h['x-forwarded-host'] || h.host}`;
 }
-async function createRoom(socket) {
+// kind: 'wr' (Writers' Room) or 'lg' (Land Grab). test: Land Grab's bot button.
+async function createRoom(socket, kind = 'wr', test = false) {
   const code = newCode();
-  const game = new Game(code, {
+  const hooks = {
     toHost: (s) => io.to(`host:${code}`).emit('state', s),
     toPlayer: (pid, s) => io.to(`p:${pid}`).emit('state', s),
     kicked: (pid) => io.to(`p:${pid}`).emit('kicked'),
-  });
+  };
+  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : new Game(code, hooks);
+  game.kind = kind;
   const origin = originOf(socket);
-  game.joinUrl = `${origin}/?room=${code}`;
+  game.joinUrl = kind === 'lg' ? `${origin}/lg?room=${code}` : `${origin}/?room=${code}`;
   game.qr = await QRCode.toDataURL(game.joinUrl, { margin: 1, width: 360, color: { dark: '#1E2A3A', light: '#F6EAD4' } });
   rooms.set(code, game);
   return game;
@@ -60,19 +67,23 @@ async function createRoom(socket) {
 
 io.on('connection', (socket) => {
   const ack = (fn, v) => { if (typeof fn === 'function') fn(v); };
-  socket.on('host:create', async (_a, fn) => { const g = await createRoom(socket); socket.join(`host:${g.code}`); socket.data = { code: g.code, host: true }; ack(fn, { code: g.code }); g.sync(); });
+  socket.on('host:create', async (a, fn) => { const g = await createRoom(socket, a?.game === 'lg' ? 'lg' : 'wr', !!a?.test); socket.join(`host:${g.code}`); socket.data = { code: g.code, host: true }; ack(fn, { code: g.code }); g.sync(); });
   socket.on('host:attach', (a, fn) => {
     const g = rooms.get(String(a?.code || '').toUpperCase());
-    if (!g) return ack(fn, { error: 'Room not found' });
+    if (!g || (a?.game && a.game !== g.kind)) return ack(fn, { error: 'Room not found' });
     socket.join(`host:${g.code}`); socket.data = { code: g.code, host: true }; ack(fn, { code: g.code }); g.sync();
   });
   socket.on('host:cueDone', (a) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host && a?.id) g.cueFinished(a.id); });
   socket.on('host:skip', () => { const g = rooms.get(socket.data?.code); if (g && socket.data.host) g.skip(null); });
   socket.on('host:start', (a, fn) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host) ack(fn, g.start(null, a?.genre) || {}); });
+  socket.on('host:addBot', (_a, fn) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host && g.addBot) ack(fn, g.addBot()); });
+  socket.on('host:removeBots', (_a, fn) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host && g.removeBots) { g.removeBots(); ack(fn, {}); } });
 
   socket.on('player:join', (a, fn) => {
     const g = rooms.get(String(a?.code || '').trim().toUpperCase());
     if (!g) return ack(fn, { error: 'No game with that code. Check the TV.' });
+    const want = a.game === 'lg' ? 'lg' : 'wr';
+    if (g.kind !== want) return ack(fn, { redirect: g.kind === 'lg' ? `/lg?room=${g.code}` : `/?room=${g.code}` });
     const r = g.join(a.name, a.token, a.pron, a.act);
     if (r.error) return ack(fn, { error: r.error });
     socket.join(`p:${r.player.id}`); socket.data = { code: g.code, pid: r.player.id };
@@ -94,4 +105,4 @@ io.on('connection', (socket) => {
 
 setInterval(() => { for (const [code, g] of rooms) if (Date.now() - g.lastActive > 6 * 3600 * 1000) { g.runId++; rooms.delete(code); } }, 10 * 60 * 1000);
 
-server.listen(PORT, () => console.log(`Writers' Room on http://localhost:${PORT}  (TV: /tv)  AI: ${ai.enabled() ? 'on' : 'off'}  Voice: ${voice.enabled() ? 'on' : 'off'}`));
+server.listen(PORT, () => console.log(`Party games on http://localhost:${PORT}  (TV: /tv)  AI: ${ai.enabled() ? 'on' : 'off'}  Voice: ${voice.enabled() ? 'on' : 'off'}`));

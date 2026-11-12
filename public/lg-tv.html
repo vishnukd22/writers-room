@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Land Grab</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/lg-tv.css">
+</head>
+<body>
+<div id="scenery" aria-hidden="true"><div class="art" id="art"></div><div class="drawn" id="drawn"></div><div class="veil"></div></div>
+<div id="app">
+  <header id="top"></header>
+  <div id="mid">
+    <aside id="board"></aside>
+    <main id="stage"></main>
+    <aside id="reg"></aside>
+  </div>
+  <footer id="dock"></footer>
+</div>
+<div id="caption" aria-live="polite"></div>
+<div id="controls">
+  <button id="bMusic">Music on</button>
+  <button id="bSfx">Sounds on</button>
+  <button id="bVoice">Narrator on</button>
+  <button id="bSkip" title="Space bar">Skip</button>
+  <button id="bFull">Full screen</button>
+  <a href="/tv" id="bMenu">Games</a>
+</div>
+<div id="gate">
+  <div class="gate-in">
+    <div class="gate-title">Land Grab</div>
+    <p class="hand">Save the village. Find the Puppet.</p>
+    <p>This screen is the TV. Everyone plays on their phone, and keeps their phone to themselves. You need 5 to 10 players.</p>
+    <button id="bOpen">Open the village</button>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/audio.js"></script>
+<script src="/lg-tv.js"></script>
+</body>
+</html>

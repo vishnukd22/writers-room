@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1D2238">
+<title>Land Grab</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/lg-play.css">
+</head>
+<body>
+<section id="join">
+  <div class="jtitle">Land Grab<span>Save the village. Find the Puppet.</span></div>
+  <form id="jform" autocomplete="off">
+    <label>Room code<input id="jcode" maxlength="4" autocapitalize="characters" spellcheck="false" placeholder="ABCD" required></label>
+    <label>Your name<input id="jname" maxlength="14" placeholder="Arun" required></label>
+    <button class="btn primary big" type="submit">Join the village</button>
+    <p id="jerr" class="err" role="alert"></p>
+  </form>
+</section>
+<section id="app" hidden>
+  <header id="hud"></header>
+  <main id="main"></main>
+</section>
+<div id="toasts" aria-live="polite"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/lg-play.js"></script>
+</body>
+</html>

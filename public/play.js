@@ -20,6 +20,7 @@
   function tryJoin(code, token) {
     const name = $('#jname').value.trim(); const pron = $('#jpron').value.trim();
     socket.emit('player:join', { code, token, name, pron }, (r) => {
+      if (r.redirect) { if (name) localStorage.setItem('wr:name', name); location.href = r.redirect; return; }
       if (r.error) { if (token) { localStorage.removeItem(`wr:token:${code}`); joined = null; } $('#jerr').textContent = r.error; $('#join').hidden = false; $('#app').hidden = true; return; }
       joined = { code: r.code, token: r.token };
       localStorage.setItem(`wr:token:${r.code}`, r.token); localStorage.setItem('wr:code', r.code);
@@ -57,7 +58,7 @@
   const d = (id, fallback = '') => (id in drafts ? drafts[id] : fallback);
   const dots = (n, cap) => `<span class="dots">${Array.from({ length: cap }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span>`;
   const memo = (note) => (note ? `<div class="memo"><b>NOTE FROM THE NETWORK</b>${esc(note)}</div>` : '');
-  const pid = () => (S.x.pilot ? S.x.pilot.i : 'x');
+  const pid = () => (S.x.pilot ? `${S.x.pilot.i}.${S.x.pilot.season?.ep ?? 's'}` : 'x');
   const laughBtn = (x, label) => `<button class="laughbtn ${x.own ? 'off' : ''}" data-a="laugh" ${x.own ? 'disabled' : ''}>😂<span>${x.own ? label || 'Your scene!' : 'LAUGH'}</span>${dots(x.myLaughs || 0, x.laughCap || 4)}</button>`;
 
   // ---------------------------------------------------------------- screens: each returns [key, html]
@@ -124,8 +125,9 @@
     TITLE() { const pl = S.x.pilot; return [`TI|${pid()}`, tv(esc(pl.title || ''), esc(pl.pitch || ''), '🎞️')]; },
     CAST() { const pl = S.x.pilot; const c = S.step === 'rival' ? pl.rival : pl.hero; return [`CA|${pid()}|${S.step}|${S.x.myLaughs}`, `<p class="lead center">Meet ${S.step === 'rival' ? 'the rival' : 'our hero'}, ${esc(c.name || '')}</p>${laughBtn(S.x)}`]; },
     SCENE() { const x = S.x; return [`SC|${pid()}|${x.kind}|${x.myLaughs}|${x.own}`, `<p class="lead center">${x.own ? 'Your idea is on screen. Watch them laugh.' : 'Laugh when it\'s funny. It moves the ratings.'}</p>${laughBtn(x, 'Your scene!')}`]; },
-    SCREENING() { const pl = S.x.pilot; return [`SR|${pid()}|${S.step}`, S.step === 'score' ? tv(`${pl.rating} / 10`, esc(pl.title || ''), pl.rating >= 7 ? '📈' : '📉') : tv('The Network is watching', 'Fingers crossed.', '🍿')]; },
-    UPFRONTS() { return [`UP|${S.step}`, S.step === 'verdict' ? tv(S.x.lit ? 'Greenlit!' : "You're all fired", S.x.lit ? 'You keep your jobs. For now.' : 'Pack your desk.', S.x.lit ? '🎉' : '📦') : tv('The upfronts', 'Eyes on the TV.', '🥁')]; },
+    EPISODE() { const se = S.x.pilot?.season; const e = se?.episodes[se.ep] || {}; return [`EP|${pid()}|${S.step}`, tv(esc(e.name || 'Next episode'), S.step === 'previously' ? 'Previously on...' : `Rating needed: ${e.target} out of 10.`, '🎬')]; },
+    SCREENING() { const pl = S.x.pilot; return [`SR|${pid()}|${S.step}`, S.step === 'score' ? tv(`${pl.rating} / 10`, `${S.x.target} needed. ${S.x.hit ? 'Renewed!' : pl.season?.cancelled ? 'Cancelled.' : 'Missed it.'}`, S.x.hit ? '📈' : '📉') : tv('The Network is watching', 'Fingers crossed.', '🍿')]; },
+    UPFRONTS() { return [`UP|${S.step}`, tv(S.x.lit ? 'Season two!' : 'Cancelled', S.x.lit ? 'You keep your jobs. For now.' : 'Pack your desk.', S.x.lit ? '🎉' : '📦')]; },
     FINAL() {
       const x = S.x;
       if (x.step !== 'board') return [`FI|${x.step}`, tv('And the head writer is...', 'Eyes on the TV.', '🏆')];
@@ -139,7 +141,7 @@
   function render() {
     if (!S.me) return;
     const pl = S.x.pilot;
-    const title = pl ? `<b>${esc(pl.title || pl.genre?.name || 'New pilot')}</b>Pilot ${pl.i + 1} of ${pl.count}` : "<b>Writers' Room</b>";
+    const se = pl?.season; const title = pl ? `<b>${esc(pl.title || pl.genre?.name || 'A new show')}</b>${se && se.ep >= 0 ? esc(se.episodes[se.ep]?.name || '') : 'Season set-up'}` : "<b>Writers' Room</b>";
     mount(hud, `<div class="me"><span class="dot" style="--c:${S.me.color}">${esc(W.initials(S.me.name))}</span>${esc(S.me.name)}<small>${S.me.score || 0}</small></div><div class="show">${title}</div>`);
     const fn = R[S.phase]; if (!fn) return;
     const [key, html] = fn();

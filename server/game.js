@@ -1,7 +1,7 @@
 'use strict';
 // WRITERS' ROOM: the game engine. One Game per room. The night runs itself as an async script.
-// Pilot season: two pilots, each built by the whole room (pitch, characters, problem, ending),
-// performed by the AI, rated by the Network. Score a 7 or everyone's fired.
+// One season: the room builds one show (genre, pitch, characters), then writes three episodes with a rising bar,
+// performed by the AI and rated by the Network. Miss the bar twice and the show is cancelled.
 const crypto = require('crypto');
 const C = require('./content');
 const W = require('./pilots');
@@ -24,7 +24,7 @@ class Cancelled extends Error {}
 const COLORS = ['#E07A3F', '#2F8F86', '#D9A13B', '#C9637A', '#5B7FC4', '#8C6BB1', '#6E9E4F', '#D46A5A', '#3E9FC1', '#B5803A', '#9C5B8F', '#4E8C6A'];
 const PTS = { pitchWin: 500, beatWin: 300, vote: 100, like: 50, laugh: 25, laughCap: 4 };
 const T = { pick: 45, write: 120, shortlist: 25, vote: 25 };
-const PILOTS = 2; const GREENLIGHT = 7;
+const GREENLIGHT = 7; // only used as a fallback; each episode has its own bar in W.EPISODES
 
 // Character portraits: every public/assets/img/bust-NN file that exists, or 1..16 drawn stand-ins.
 function bustPool() {
@@ -81,7 +81,7 @@ class Game {
     return vs[(off + (who === 'rival' ? 1 : 0)) % vs.length];
   }
   spoken(text) { let t = text; for (const p of this.players) if (p.pron) t = t.replace(new RegExp(`\\b${p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g'), p.pron); return t; }
-  prefetch(text, who, urgent) { return voice.get(this.spoken(text), this.voiceFor(who), urgent); }
+  prefetch(text, who, urgent) { return voice.get(this.spoken(text), this.voiceFor(who), urgent, who === 'hero' || who === 'rival'); }
   estimate(text) { return Math.min(30000, 900 + strip(text).length * 62); }
   async makeCue(text, opts = {}) {
     let audioId = null;
@@ -117,7 +117,7 @@ class Game {
     if (p.pron) this.prefetch(p.name);
     return { player: p };
   }
-  reset(p) { Object.assign(p, { score: 0, wins: 0, laughsGot: 0, wasShowrunner: false }); }
+  reset(p) { Object.assign(p, { score: 0, wins: 0, laughsGot: 0, srCount: 0 }); }
   setConnected(id, on) { const p = this.P(id); if (p) { p.connected = on; this.lastActive = Date.now(); this.check(); this.sync(); } }
   setProfile(id, a) { const p = this.P(id); if (!p) return; if ('pron' in a) p.pron = clip(a.pron, 30); this.sync(); }
   setBust(id, n) {
@@ -153,28 +153,38 @@ class Game {
     this.setPhase('INTRO', { step: 'how' });
     await this.say(g, W.HOST.how);
     if (voice.enabled()) this.players.forEach((p) => this.prefetch(p.hurryLine));
-    for (let i = 0; i < PILOTS; i++) await this.pilot(g, i);
-    await this.upfronts(g);
+    await this.season(g);
+    await this.seasonEnd(g);
   }
 
-  async pilot(g, i) {
-    const usedGenres = new Set(this.pilots.map((x) => x.genre.id));
-    const sr = shuffle(this.players).sort((a, b) => (a.wasShowrunner - b.wasShowrunner) || (b.connected - a.connected))[0];
-    sr.wasShowrunner = true;
+  nextShowrunner() {
+    const sr = shuffle(this.players).sort((a, b) => (a.srCount - b.srCount) || (b.connected - a.connected))[0];
+    sr.srCount++; return sr;
+  }
+  // the story so far, for the AI writer
+  story() {
+    const pl = this.pl; const out = [];
+    for (const e of pl.episodes || []) for (const k of e.acts) if (e.beats[k]) out.push(`${e.short}: ${e.beats[k].text}`);
+    return out.slice(-4).join(' Then: ') || null;
+  }
+
+  // One show, one season: set it up together, then three episodes with a rising bar.
+  async season(g) {
+    const sr = this.nextShowrunner();
     const free = shuffle(this.busts.filter((b) => !this.players.some((p) => p.bust === b)));
     const pl = this.pl = {
-      i, showrunner: sr.id, genre: null, title: null, pitch: null, pitchBy: null,
+      i: 0, showrunner: sr.id, genre: null, title: null, pitch: null, pitchBy: null,
       hero: { name: null, traits: [], bust: free[0] || pick(this.busts) }, rival: { name: null, traits: [], bust: free[1] || pick(this.busts) },
-      notes: shuffle(W.NOTES).slice(0, 2), beats: {}, scenes: {}, noteOk: [], laughs: 0, exec: null, rating: null, parts: null,
-      voiceOff: i * 2 + Math.floor(Math.random() * 3), ticker: [],
+      notes: [], beats: {}, scenes: {}, noteOk: [], laughs: 0, exec: null, rating: null, parts: null,
+      voiceOff: Math.floor(Math.random() * 3), ticker: [], episodes: [], ep: -1, strikes: 0, cancelled: false,
     };
-    this.pilots.push(pl);
+    this.pilots = [pl];
 
     // 1. the showrunner picks a genre from every genre we have
     this.setPhase('GENRE', { step: 'pick' }, T.pick);
-    this.sayOver(g, fill(i === 0 ? W.HOST.showrunner : W.HOST.showrunner2, { name: sr.name }));
+    this.sayOver(g, fill(W.HOST.showrunner, { name: sr.name }));
     await this.wait(ms(T.pick), () => !!pl.genre); this.guard(g);
-    if (!pl.genre) pl.genre = pick(C.GENRES.filter((x) => !usedGenres.has(x.id)));
+    if (!pl.genre) pl.genre = pick(C.GENRES);
     pl.ticker = shuffle(W.TICKER).slice(0, 6);
     this.setPhase('GENRE', { step: 'reveal' }); this.sfx('whoosh');
     await this.say(g, fill(W.HOST.genrePicked, { genre: pl.genre.name }));
@@ -200,21 +210,35 @@ class Game {
     this.setPhase('CAST', { step: 'rival' }); this.sfx('dundun');
     await this.say(g, `${W.HOST.meetRival} ${this.cardText(pl.rival)}`, { urgent: true });
 
-    // 4. act one (the problem) and 5. the finale (the ending)
-    for (const [k, kind] of ['problem', 'ending'].entries()) {
-      this.setPhase('BRIEF', { kind, note: pl.notes[k] }); this.sfx('bell');
-      await this.say(g, kind === 'problem' ? W.HOST.problemIntro : W.HOST.endingIntro);
-      await this.say(g, `[dry] The note says: ${pl.notes[k]}`, { who: 'exec' });
-      const entries = await this.writeRound(g, kind);
-      const sceneArgs = (beat) => ({ genre: pl.genre, pitch: pl.pitch, hero: this.charForAI(pl.hero), rival: this.charForAI(pl.rival), prev: kind === 'ending' ? pl.beats.problem?.text : null, beat, note: pl.notes[k], kind });
-      const win = await this.selectRound(g, kind, entries, W.BEATS[kind].hint, sceneArgs);
-      pl.beats[kind] = win;
-      if (kind === 'ending') pl.verdictP = timeout(ai.pilotVerdict({ genre: pl.genre, title: pl.title, pitch: pl.pitch, hero: pl.hero.name, rival: pl.rival.name, problem: pl.beats.problem.text, ending: win.text }), 15000);
-      await this.performScene(g, kind, win);
+    // 4. the episodes
+    const notes = shuffle(W.NOTES);
+    for (let e = 0; e < W.EPISODES.length; e++) {
+      const ep = W.EPISODES[e]; const prev = pl.episodes[e - 1];
+      if (e > 0) pl.showrunner = this.nextShowrunner().id;
+      Object.assign(pl, { ep: e, notes: notes.slice(e * 2, e * 2 + 2), beats: {}, scenes: {}, noteOk: [], exec: null, rating: null, parts: null, verdictP: null, sceneP: null });
+      if (e > 0) pl.laughs = 0;
+      this.setPhase('EPISODE', { step: 'card' }); this.sfx('drumroll');
+      await this.say(g, fill(W.HOST.episode[e], { name: this.P(pl.showrunner)?.name || '' }));
+      if (prev) {
+        this.setPhase('EPISODE', { step: 'previously' }); this.sfx('whoosh');
+        await this.say(g, fill(W.HOST.previously, { title: pl.title, a: endDot(prev.beats.problem?.text || ''), b: endDot(prev.beats[prev.acts[1]]?.text || '') }), { urgent: true });
+      }
+      for (const [k, kind] of ep.acts.entries()) {
+        this.setPhase('BRIEF', { kind, note: pl.notes[k] }); this.sfx('bell');
+        await this.say(g, kind === 'problem' ? W.HOST.problemIntro : kind === 'cliffhanger' ? W.HOST.cliffIntro : W.HOST.endingIntro);
+        await this.say(g, `[dry] The note says: ${pl.notes[k]}`, { who: 'exec' });
+        const entries = await this.writeRound(g, kind);
+        const story = this.story();
+        const sceneArgs = (beat) => ({ genre: pl.genre, pitch: pl.pitch, hero: this.charForAI(pl.hero), rival: this.charForAI(pl.rival), prev: kind === 'problem' ? story : [story, `This week: ${pl.beats.problem?.text}`].filter(Boolean).join(' '), beat, note: pl.notes[k], kind, episode: ep.name });
+        const win = await this.selectRound(g, kind, entries, W.BEATS[kind].hint, sceneArgs);
+        pl.beats[kind] = win;
+        if (k === ep.acts.length - 1) pl.verdictP = timeout(ai.pilotVerdict({ genre: pl.genre, title: `${pl.title}: ${ep.name}`, pitch: pl.pitch, hero: pl.hero.name, rival: pl.rival.name, problem: pl.beats.problem?.text || '', ending: win.text }), 15000);
+        await this.performScene(g, kind, win);
+      }
+      await this.screening(g);
+      pl.episodes.push({ n: e, name: ep.name, short: ep.short, target: ep.target, acts: ep.acts, rating: pl.rating, parts: pl.parts, beats: { ...pl.beats } });
+      if (pl.cancelled) break;
     }
-
-    // 6. the test screening
-    await this.screening(g);
   }
 
   charForAI(c) { return { name: c.name, traits: c.traits.map((t) => `${W.TRAIT_LABEL[t.k] || t.k}: ${t.text}`) }; }
@@ -223,7 +247,7 @@ class Game {
   // Everyone writes at once. Ends early when everyone is done.
   async writeRound(g, kind) {
     const wr = this.wr = { kind, entries: {}, endsAt: Date.now() + ms(T.write), lastHurry: 0 };
-    this.setPhase('WRITE', { kind, note: kind === 'problem' ? this.pl.notes[0] : kind === 'ending' ? this.pl.notes[1] : null }, T.write);
+    this.setPhase('WRITE', { kind, note: kind === 'problem' ? this.pl.notes[0] : W.BEATS[kind] ? this.pl.notes[1] : null }, T.write);
     const done = () => this.live().every((p) => wr.entries[p.id] !== undefined);
     await this.wait(ms(T.write - 60), done); this.guard(g);
     if (!done()) { this.sayOver(g, W.HOST.writeHalf); await this.wait(ms(30), done); this.guard(g); }
@@ -273,6 +297,7 @@ class Game {
 
     if (this.mode === 'date') {
       const fin = ids.slice(0, 2).map((id) => ({ id, text: textOf(id) }));
+      const pre = this.preScenes(fin, sceneArgs);
       this.setPhase('VOTE', { step: 'judge', kind, finalists: fin, winner: null });
       fin.forEach((f) => this.prefetch(f.text, null, true));
       const judged = timeout(ai.pickBetween(kind === 'pitch' ? 'pitch a TV show' : W.BEATS[kind].lead, fin[0].text, fin[1].text), 9000);
@@ -280,6 +305,7 @@ class Game {
       for (let i = 0; i < fin.length; i++) { this.d.idx = i; this.sync(); await this.say(g, fin[i].text, { urgent: true }); }
       const j = (await judged) || { pick: Math.floor(Math.random() * 2), why: pick(W.EXEC_FALLBACK) }; this.guard(g);
       const w = fin[j.pick];
+      this.useScene(pre, w.id);
       this.setPhase('VOTE', { step: 'result', kind, finalists: fin, winner: w.id, counts: {}, why: j.why }); this.sfx('applause');
       this.awardWin(kind, w.id);
       await this.say(g, `[dry] ${j.why}`, { who: 'exec', urgent: true });
@@ -306,6 +332,7 @@ class Game {
     }
 
     const fin = ids.map((id) => ({ id, text: textOf(id) }));
+    const pre = this.preScenes(fin, sceneArgs);
     fin.forEach((f) => this.prefetch(f.text, null, true));
     this.setPhase('VOTE', { step: 'read', kind, finalists: fin, idx: -1 });
     await this.say(g, W.HOST.finalists);
@@ -321,7 +348,7 @@ class Game {
     let tieBreak = false;
     if (tied.length > 1) { const srv = votes[this.pl.showrunner]; tieBreak = true; tied = [tied.includes(srv) ? srv : pick(tied)]; }
     const wid = tied[0]; const w = fin.find((f) => f.id === wid);
-    if (sceneArgs) this.pl.sceneP = timeout(ai.pilotScene(sceneArgs(w.text)), 14000);
+    this.useScene(pre, wid);
     for (const f of fin) this.award(this.P(f.id), counts[f.id] * PTS.vote);
     this.awardWin(kind, wid);
     this.setPhase('VOTE', { step: 'result', kind, finalists: fin, winner: wid, counts }); this.sfx('applause');
@@ -329,26 +356,41 @@ class Game {
     await this.say(g, fill(kind === 'pitch' ? W.HOST.pitchWinner : W.HOST.beatWinner, { name: this.P(wid)?.name || 'someone' }));
     return { pid: wid, text: w.text };
   }
+  // Write a scene for every finalist while people vote, so the winner's scene is ready at once.
+  preScenes(fin, sceneArgs) {
+    if (!sceneArgs || !ai.enabled()) return null;
+    return Object.fromEntries(fin.map((f) => [f.id, timeout(ai.pilotScene(sceneArgs(f.text)), 25000)]));
+  }
+  // The winner's scene: start voicing its lines straight away.
+  useScene(pre, wid) {
+    if (!pre || !pre[wid]) return;
+    this.pl.sceneP = pre[wid];
+    pre[wid].then((sc) => { if (sc && voice.enabled()) sc.lines.forEach((l) => this.prefetch(l.text, l.who === 'narrator' ? null : l.who, true)); });
+  }
   awardWin(kind, pid) { const p = this.P(pid); if (!p) return; this.award(p, kind === 'pitch' ? PTS.pitchWin : PTS.beatWin); p.wins++; }
 
   // The AI dramatises the room's choice; everyone can laugh along.
   async performScene(g, kind, win) {
     const pl = this.pl; const k = kind === 'problem' ? 0 : 1;
-    const args = { genre: pl.genre, pitch: pl.pitch, hero: this.charForAI(pl.hero), rival: this.charForAI(pl.rival), prev: kind === 'ending' ? pl.beats.problem?.text : null, beat: win.text, note: pl.notes[k], kind };
+    const args = { genre: pl.genre, pitch: pl.pitch, hero: this.charForAI(pl.hero), rival: this.charForAI(pl.rival), prev: kind === 'problem' ? this.story() : pl.beats.problem?.text, beat: win.text, note: pl.notes[k], kind };
     let sc = await timeout(pl.sceneP || (ai.enabled() ? ai.pilotScene(args) : Promise.resolve(null)), 9000); this.guard(g); pl.sceneP = null;
     if (!sc) sc = { lines: W.SCENE_FALLBACK[kind].map(([who, t]) => ({ who, text: fill(t, { hero: pl.hero.name, rival: pl.rival.name, beat: endDot(win.text) }) })), noteHonoured: null };
     pl.noteOk[k] = sc.noteHonoured;
-    sc.lines.forEach((l, i) => this.prefetch(l.text, l.who === 'narrator' ? null : l.who, i < 2));
+    // voice every line before the camera rolls, so they play back to back
+    const ready = voice.enabled() ? timeout(Promise.all(sc.lines.map((l) => this.prefetch(l.text, l.who === 'narrator' ? null : l.who, true))), 8000) : Promise.resolve();
     const scene = pl.scenes[kind] = { lines: sc.lines, cur: -1, by: win.pid, laughs: {}, total: 0 };
     this.setPhase('SCENE', { kind }); this.sfx('clapper');
     await this.say(g, W.HOST.rollScene);
+    await ready; this.guard(g);
     for (let i = 0; i < sc.lines.length; i++) {
       scene.cur = i; this.sync();
       const l = sc.lines[i];
-      await this.say(g, l.text, { who: l.who === 'narrator' ? null : l.who, maxWait: 6000 });
+      await this.say(g, l.text, { who: l.who === 'narrator' ? null : l.who, maxWait: 2500 });
     }
-    await this.wait(ms(1.5)); this.guard(g);
+    await this.wait(ms(1)); this.guard(g);
     scene.cur = sc.lines.length;
+    if (sc.noteHonoured === true) { this.d.note = 'yes'; this.sfx('bell'); this.sync(); await this.say(g, W.HOST.noteYes); }
+    else if (sc.noteHonoured === false) { this.d.note = 'no'; this.sfx('trombone'); this.sync(); await this.say(g, W.HOST.noteNo); }
   }
 
   async screening(g) {
@@ -364,21 +406,22 @@ class Game {
     const rating = Math.round(Math.min(10, laughPart + notePart + v.score) * 10) / 10;
     pl.parts = { laughs: Math.round(laughPart * 10) / 10, notes: Math.round(notePart * 10) / 10, exec: Math.round(v.score * 10) / 10 };
     pl.rating = rating;
-    this.setPhase('SCREENING', { step: 'score' }); this.sfx(rating >= GREENLIGHT ? 'applause' : 'trombone');
-    await this.say(g, fill(rating >= GREENLIGHT ? W.HOST.rating : W.HOST.ratingLow, { title: pl.title, score: String(rating).replace('.', ' point ') }));
+    const ep = W.EPISODES[pl.ep] || { target: GREENLIGHT }; const hit = rating >= ep.target; const last = pl.ep === W.EPISODES.length - 1;
+    if (!hit) { pl.strikes++; if (pl.strikes >= 2 && !last) pl.cancelled = true; }
+    this.setPhase('SCREENING', { step: 'score', hit, target: ep.target }); this.sfx(hit ? 'applause' : 'trombone');
+    const o = { title: pl.title, score: String(rating).replace('.', ' point '), target: ep.target };
+    await this.say(g, fill(hit ? W.HOST.hit : pl.cancelled ? W.HOST.cancel : last ? '[sighs] {score}. The bar was {target}.' : W.HOST.warn, o));
     await this.wait(ms(2)); this.guard(g);
   }
 
   board() { return [...this.players].sort((a, b) => b.score - a.score).map((p, i) => ({ ...this.pub(p), rank: i + 1, score: p.score, wins: p.wins, laughs: p.laughsGot })); }
-  async upfronts(g) {
-    this.pl = null; this.cue = null;
-    const best = [...this.pilots].sort((a, b) => b.rating - a.rating)[0];
-    const lit = best && best.rating >= GREENLIGHT;
-    this.setPhase('UPFRONTS', { step: 'intro', best: best?.i, lit }); this.sfx('drumroll');
-    await this.say(g, W.HOST.upfronts);
-    this.setPhase('UPFRONTS', { step: 'verdict', best: best?.i, lit }); this.sfx(lit ? 'applause' : 'trombone');
-    await this.say(g, lit ? fill(W.HOST.greenlit, { title: best.title }) : W.HOST.fired);
-    await this.wait(ms(1.5)); this.guard(g);
+  async seasonEnd(g) {
+    const pl = this.pl; this.cue = null;
+    const last = pl.episodes[pl.episodes.length - 1];
+    const lit = !pl.cancelled && !!last && last.n === W.EPISODES.length - 1 && last.rating >= last.target;
+    this.setPhase('UPFRONTS', { step: 'verdict', lit, cancelled: pl.cancelled }); this.sfx(lit ? 'applause' : 'trombone');
+    if (!pl.cancelled) await this.say(g, fill(lit ? W.HOST.seasonWin : W.HOST.seasonLose, { title: pl.title }));
+    await this.wait(ms(2.5)); this.guard(g);
     const rows = this.board();
     this.setPhase('FINAL', { step: 'winner', rows, lit }); this.sfx('drumroll');
     await this.wait(ms(1.6)); this.guard(g); this.sfx('applause');
@@ -463,10 +506,20 @@ class Game {
     if (!pl) return null;
     const card = (c) => ({ name: c.name, bust: c.bust, traits: c.traits.map((t) => ({ label: W.TRAIT_LABEL[t.k] || t.k, text: t.text, by: this.pub(this.P(t.by)) })) });
     return {
-      i: pl.i, count: PILOTS, title: pl.title, pitch: pl.pitch, pitchBy: this.pub(this.P(pl.pitchBy)), showrunner: this.pub(this.P(pl.showrunner)),
+      i: pl.i, count: 1, title: pl.title, season: this.seasonPub(pl), pitch: pl.pitch, pitchBy: this.pub(this.P(pl.pitchBy)), showrunner: this.pub(this.P(pl.showrunner)),
       genre: pl.genre ? { id: pl.genre.id, name: pl.genre.name, art: pl.genre.art, music: pl.genre.music, mood: pl.genre.mood, fx: pl.genre.fx || null } : null,
       hero: card(pl.hero), rival: card(pl.rival), notes: pl.notes, rating: pl.rating, parts: pl.parts, exec: pl.exec?.line || null, ticker: pl.ticker, laughs: pl.laughs,
       beats: Object.fromEntries(Object.entries(pl.beats).map(([k, b]) => [k, { text: b.text, by: this.pub(this.P(b.pid)) }])),
+    };
+  }
+  seasonPub(pl) {
+    const n = Math.max(1, this.live().length);
+    const ep = W.EPISODES[pl.ep] || null;
+    const meter = { laughs: Math.round(Math.min(4, (pl.laughs / (n * 3)) * 4) * 10) / 10, notes: pl.noteOk.reduce((a, ok) => a + (ok === true ? 1.5 : 0), 0), exec: pl.exec ? Math.round(pl.exec.score * 10) / 10 : null };
+    meter.total = Math.round(Math.min(10, meter.laughs + meter.notes + (meter.exec || 0)) * 10) / 10;
+    return {
+      ep: pl.ep, strikes: pl.strikes, cancelled: pl.cancelled, meter, target: ep?.target ?? null, name: ep?.name ?? null, acts: ep?.acts ?? [],
+      episodes: W.EPISODES.map((e, i) => ({ name: e.name, short: e.short, target: e.target, rating: pl.episodes[i]?.rating ?? null })),
     };
   }
   view(me) {
@@ -512,7 +565,10 @@ class Game {
       }
     }
     if (ph === 'CAST' && me && pl) { const m = pl.castLaughs?.[`cast_${d.step}`] || {}; x.myLaughs = m[me.id] || 0; x.laughCap = PTS.laughCap; }
-    if (ph === 'UPFRONTS') { x.lit = d.lit; x.best = d.best; }
+    if (ph === 'UPFRONTS') { x.lit = d.lit; x.cancelled = d.cancelled; }
+    if (ph === 'SCREENING') { x.hit = d.hit; x.target = d.target; }
+    if (ph === 'SCENE') x.note = d.note || null;
+    if (ph === 'EPISODE' && pl) { const pe = pl.episodes[pl.episodes.length - 1]; x.prev = pe ? pe.acts.filter((k) => pe.beats[k]).map((k) => ({ label: W.BEATS[k].label, text: pe.beats[k].text, by: this.P(pe.beats[k].pid)?.name || null })) : []; }
     if (ph === 'FINAL') { x.step = d.step; x.lit = d.lit; if (d.rows) { x.rows = d.rows; if (me) x.mine = d.rows.find((r) => r.id === me.id); } }
     return v;
   }
