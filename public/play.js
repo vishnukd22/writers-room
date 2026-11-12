@@ -6,7 +6,7 @@
   const main = $('#main'); const hud = $('#hud');
   const params = new URLSearchParams(location.search);
   $('#jcode').value = (params.get('room') || localStorage.getItem('wr:code') || '').toUpperCase();
-  $('#jname').value = localStorage.getItem('wr:name') || '';
+  $('#jname').value = localStorage.getItem('wr:name') || localStorage.getItem('lg:name') || sessionStorage.getItem('lg:name') || '';
   $('#jpron').value = localStorage.getItem('wr:pron') || '';
   const buzz = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* no vibration */ } };
 
@@ -34,6 +34,9 @@
     if (tok) tryJoin(code, tok);
   });
   $('#jform').onsubmit = (e) => { e.preventDefault(); $('#jerr').textContent = ''; const code = $('#jcode').value.trim().toUpperCase(); tryJoin(code, localStorage.getItem(`wr:token:${code}`)); };
+  // the TV went back to the game menu and started another game: follow it
+  socket.on('moveTo', ({ url }) => { location.href = `${url}${params.has('test') ? '&test' : ''}&auto=1`; });
+  if (params.has('auto') && $('#jcode').value && $('#jname').value) setTimeout(() => $('#jform').requestSubmit(), 300);
   socket.on('kicked', () => { joined = null; $('#join').hidden = false; $('#app').hidden = true; $('#jerr').textContent = 'You were removed from the room.'; });
   socket.on('state', (s) => { W.syncClock(s.now); P = S; S = s; window.__S = s; render(); notes(); feel(); });
   function send(type, data = {}, cb) { socket.emit('act', { type, ...data }, (r) => { if (r?.error) toast(r.error, 'bad'); cb?.(r); }); }
@@ -133,7 +136,7 @@
       if (x.step !== 'board') return [`FI|${x.step}`, tv('And the head writer is...', 'Eyes on the TV.', '🏆')];
       const m = x.mine;
       return [`FI|board|${S.me.vip}`, `<div class="card rankcard"><div class="muted">You finished</div><div class="rank">#${m.rank}</div><div class="muted">of ${x.rows.length} · ${m.score} points</div><div class="ledger"><div><span>Ideas on screen</span><b>${m.wins}</b></div><div><span>Laughs you got</span><b>${m.laughs}</b></div></div></div>
-        ${S.me.vip ? '<button class="btn primary big" data-a="again">Play again</button>' : `<p class="lead center">${esc(vipName())} can start another game.</p>`}`];
+        ${S.me.vip ? '<button class="btn primary big" data-a="again">Play again</button><button class="btn big" data-a="menu">Back to the game menu</button>' : `<p class="lead center">${esc(vipName())} can play again or pick another game.</p>`}`];
     },
   };
 
@@ -160,6 +163,7 @@
       case 'start': send('start'); break;
       case 'skip': send('skip'); break;
       case 'again': send('again'); break;
+      case 'menu': send('menu'); break;
       case 'bust': send('bust', { n: Number(b.dataset.n) }); buzz(10); break;
       case 'genre': send('genre', { id: b.dataset.id }); buzz(20); b.classList.add('on'); break;
       case 'hurry': send('hurry'); buzz([40, 30, 40]); break;

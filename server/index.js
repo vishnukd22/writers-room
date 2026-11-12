@@ -55,6 +55,7 @@ async function createRoom(socket, kind = 'wr', test = false) {
     toHost: (s) => io.to(`host:${code}`).emit('state', s),
     toPlayer: (pid, s) => io.to(`p:${pid}`).emit('state', s),
     kicked: (pid) => io.to(`p:${pid}`).emit('kicked'),
+    menu: () => io.to(`host:${code}`).emit('menu'),
   };
   const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : new Game(code, hooks);
   game.kind = kind;
@@ -67,7 +68,12 @@ async function createRoom(socket, kind = 'wr', test = false) {
 
 io.on('connection', (socket) => {
   const ack = (fn, v) => { if (typeof fn === 'function') fn(v); };
-  socket.on('host:create', async (a, fn) => { const g = await createRoom(socket, a?.game === 'lg' ? 'lg' : 'wr', !!a?.test); socket.join(`host:${g.code}`); socket.data = { code: g.code, host: true }; ack(fn, { code: g.code }); g.sync(); });
+  socket.on('host:create', async (a, fn) => {
+    const g = await createRoom(socket, a?.game === 'lg' ? 'lg' : 'wr', !!a?.test); socket.join(`host:${g.code}`); socket.data = { code: g.code, host: true }; ack(fn, { code: g.code }); g.sync();
+    // coming back from the game menu: send everyone from the last game straight into this one
+    const old = a?.from && rooms.get(String(a.from).toUpperCase());
+    if (old && old !== g) { const url = g.kind === 'lg' ? `/lg?room=${g.code}` : `/?room=${g.code}`; for (const p of old.players) if (!p.bot) io.to(`p:${p.id}`).emit('moveTo', { url }); }
+  });
   socket.on('host:attach', (a, fn) => {
     const g = rooms.get(String(a?.code || '').toUpperCase());
     if (!g || (a?.game && a.game !== g.kind)) return ack(fn, { error: 'Room not found' });

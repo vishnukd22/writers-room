@@ -383,6 +383,7 @@ class LandGrab {
     switch (a.type) {
       case 'start': return this.start(pid);
       case 'again': this.playAgain(pid); return {};
+      case 'menu': if (this.phase === 'END' && this.vip()?.id === pid) this.hooks.menu?.(); return {};
       case 'skip': this.skip(pid); return {};
       case 'kick': this.kick(pid, a.id); return {};
       case 'bust': if (this.phase !== 'LOBBY') return {}; return this.setBust(pid, a.n);

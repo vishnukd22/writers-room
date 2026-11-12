@@ -438,6 +438,7 @@ class Game {
     switch (a.type) {
       case 'start': return this.start(pid);
       case 'again': this.playAgain(pid); return {};
+      case 'menu': if (this.phase === 'FINAL' && this.vip()?.id === pid) this.hooks.menu?.(); return {};
       case 'skip': this.skip(pid); return {};
       case 'kick': this.kick(pid, a.id); return {};
       case 'profile': this.setProfile(pid, a); return {};

@@ -15,9 +15,13 @@
   };
   socket.on('connect', () => {
     const saved = sessionStorage.getItem('wrHost');
-    const create = () => socket.emit('host:create', { game: 'wr' }, (r) => sessionStorage.setItem('wrHost', r.code));
+    const create = () => { const from = sessionStorage.getItem('gnPrev'); sessionStorage.removeItem('gnPrev'); socket.emit('host:create', { game: 'wr', from }, (r) => sessionStorage.setItem('wrHost', r.code)); };
     if (saved) socket.emit('host:attach', { code: saved, game: 'wr' }, (r) => { if (r.error) create(); }); else create();
   });
+  // back to the game night menu; the next game brings everyone along
+  function goMenu() { if (S) sessionStorage.setItem('gnPrev', S.code); sessionStorage.removeItem('wrHost'); location.href = '/tv'; }
+  socket.on('menu', goMenu);
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-tv="menu"]')) goMenu(); });
   socket.on('state', (s) => { W.syncClock(s.now); P = S; S = s; window.__S = s; render(); effects(); });
   $('#bMusic').onclick = (e) => { e.target.textContent = AV.toggleMusic() ? 'Music on' : 'Music off'; lastMusic = null; music(); };
   $('#bSfx').onclick = (e) => { e.target.textContent = AV.toggleSfx() ? 'Sounds on' : 'Sounds off'; };
@@ -180,7 +184,7 @@
     FINAL() {
       const x = S.x; const rows = x.rows || [];
       if (x.step === 'winner') return `<div class="lastline">${W.bust(rows[0], 'xl')}<div><div class="name">Tonight's head writer</div><div class="huge">${esc(rows[0]?.name || '')}</div></div></div>`;
-      return `<div class="center"><div class="kicker">Final scores${x.lit ? ' · Renewed for season two' : ' · Cancelled'}</div><div class="board2">${rows.map((r, i) => `<div class="srow ${i === 0 ? 'first' : ''}" style="animation-delay:${(rows.length - i) * 0.2}s"><span class="rk">${r.rank}</span>${W.bust(r, 'xs')}<span class="nm">${esc(r.name)}</span><span class="sub">${r.wins} idea${r.wins === 1 ? '' : 's'} on screen · ${r.laughs} laughs</span><span class="pts">${r.score}</span></div>`).join('')}</div><p class="count">${esc(P_(S.vipId)?.name || 'The first player')} can start another game from their phone.</p></div>`;
+      return `<div class="center"><div class="kicker">Final scores${x.lit ? ' · Renewed for season two' : ' · Cancelled'}</div><div class="board2">${rows.map((r, i) => `<div class="srow ${i === 0 ? 'first' : ''}" style="animation-delay:${(rows.length - i) * 0.2}s"><span class="rk">${r.rank}</span>${W.bust(r, 'xs')}<span class="nm">${esc(r.name)}</span><span class="sub">${r.wins} idea${r.wins === 1 ? '' : 's'} on screen · ${r.laughs} laughs</span><span class="pts">${r.score}</span></div>`).join('')}</div><p class="count">${esc(P_(S.vipId)?.name || 'The first player')} can play again, or go back to the game menu, from their phone.</p><button class="menubtn" data-tv="menu">Back to the game menu</button></div>`;
     },
   };
 

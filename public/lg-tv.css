@@ -241,3 +241,13 @@ body[data-phase="LOBBY"] #caption { bottom: 2rem; }
 @keyframes flip { from { opacity: 0; transform: rotateY(90deg); } to { opacity: 1; } }
 @keyframes slidein { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
 @keyframes fadein { to { opacity: 1; } }
+
+/* readability: calm the bright village art and give the words a dark backing */
+#scenery.has-art .art { filter: brightness(.6) saturate(.92); }
+#scenery.moment.has-art .art, #scenery.dark.has-art .art { filter: brightness(.8); }
+#scenery .veil { background: radial-gradient(ellipse 48% 46% at 50% 50%, rgba(14,16,28,.6), rgba(14,16,28,.15) 80%), linear-gradient(180deg, rgba(14,16,28,.65), rgba(14,16,28,.2) 20%, rgba(14,16,28,.25) 72%, rgba(14,16,28,.88)); }
+#scenery.council .veil, #scenery.teashop .veil { background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(14,16,28,.62), rgba(14,16,28,.3) 80%), linear-gradient(180deg, rgba(14,16,28,.6), transparent 25%, transparent 70%, rgba(14,16,28,.88)); }
+.center { text-shadow: 0 2px 3px rgba(0,0,0,.95), 0 0 26px rgba(0,0,0,.85); }
+.center > .lede, .center > .hint, .center > .count, .tnote, .tray > span, .tshut { background: rgba(14,16,28,.66); padding: .25rem .9rem; border-radius: 10px; }
+.seat b, .brand, .code { text-shadow: 0 2px 3px rgba(0,0,0,.95), 0 0 14px rgba(0,0,0,.8); }
+.menubtn { margin-top: .4rem; background: var(--paper) var(--grain); color: var(--ink); border: 2px solid var(--ink); border-radius: 12px; padding: .5rem 1.2rem; font-weight: 800; font-size: 1rem; box-shadow: 3px 4px 0 rgba(0,0,0,.4); text-shadow: none; }

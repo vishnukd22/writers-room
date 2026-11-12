@@ -17,9 +17,12 @@
   const KEY = TEST ? 'lgHostTest' : 'lgHost';
   socket.on('connect', () => {
     const saved = sessionStorage.getItem(KEY);
-    const create = () => socket.emit('host:create', { game: 'lg', test: TEST }, (r) => sessionStorage.setItem(KEY, r.code));
+    const create = () => { const from = sessionStorage.getItem('gnPrev'); sessionStorage.removeItem('gnPrev'); socket.emit('host:create', { game: 'lg', test: TEST, from }, (r) => sessionStorage.setItem(KEY, r.code)); };
     if (saved) socket.emit('host:attach', { code: saved, game: 'lg' }, (r) => { if (r.error) create(); }); else create();
   });
+  // back to the game night menu; the next game brings everyone along
+  function goMenu() { if (S) sessionStorage.setItem('gnPrev', S.code); sessionStorage.removeItem(KEY); location.href = TEST ? '/tv?test' : '/tv'; }
+  socket.on('menu', goMenu);
   socket.on('state', (s) => { W.syncClock(s.now); P = S; S = s; window.__S = s; render(); effects(); });
   $('#bMusic').onclick = (e) => { e.target.textContent = AV.toggleMusic() ? 'Music on' : 'Music off'; lastMusic = null; music(); };
   $('#bSfx').onclick = (e) => { e.target.textContent = AV.toggleSfx() ? 'Sounds on' : 'Sounds off'; };
@@ -34,6 +37,7 @@
     if (a === 'fill') { const need = Math.max(0, 5 - S.players.length); for (let i = 0; i < need; i++) socket.emit('host:addBot', {}); }
     if (a === 'nobots') socket.emit('host:removeBots', {});
     if (a === 'start') socket.emit('host:start', {}, (r) => { if (r?.error) flash(r.error); });
+    if (a === 'menu') goMenu();
   });
   function flash(t) { caption.textContent = t; caption.className = 'show'; setTimeout(() => { caption.className = ''; }, 2500); }
 
@@ -210,7 +214,7 @@
       const why = { protect: 'Five Protect files signed.', sell: 'Six Sell files signed.', puppetElected: `${esc(w.name)} was the Puppet, and became Secretary.`, puppetGone: `${esc(w.name)} was the Puppet, and got run out of town.`, error: '' }[w.reason] || '';
       if (S.step !== 'reveal') return `<div class="center"><div class="banner ${w.team === 'V' ? 'v' : 'g'}">${title}</div><p class="lede big">${why}</p></div>`;
       const roles = (S.x.roles || []).map((p, i) => `<div class="rcard ${p.role === 'V' ? 'v' : 'g'} ${p.role === 'P' ? 'puppet' : ''}" style="--r:${rot(i)};--i:${i}">${W.bust(p, 'md')}<b>${esc(p.name)}</b><span>${esc(p.roleName)}</span></div>`).join('');
-      return `<div class="center"><div class="banner sm ${w.team === 'V' ? 'v' : 'g'}">${title}</div><p class="lede">${why}</p><div class="rcards">${roles}</div><p class="hint">${esc(P_(S.vipId)?.name || 'The first player')} can start another game from their phone.</p></div>`;
+      return `<div class="center"><div class="banner sm ${w.team === 'V' ? 'v' : 'g'}">${title}</div><p class="lede">${why}</p><div class="rcards">${roles}</div><p class="hint">${esc(P_(S.vipId)?.name || 'The first player')} can play again, or go back to the game menu, from their phone.</p><button class="menubtn" data-tv="menu">Back to the game menu</button></div>`;
     },
   };
 

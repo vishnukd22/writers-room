@@ -26,6 +26,7 @@
       if (r.error) { if (token) { store.removeItem(`lg:token:${code}`); joined = null; } $('#jerr').textContent = r.error; $('#join').hidden = false; $('#app').hidden = true; return; }
       joined = { code: r.code, token: r.token };
       store.setItem(`lg:token:${r.code}`, r.token); store.setItem('lg:code', r.code); store.setItem('lg:name', name);
+      if (!TEST) localStorage.setItem('wr:name', name);
       $('#join').hidden = true; $('#app').hidden = false; keepAwake();
     });
   }
@@ -35,6 +36,9 @@
     if (tok) tryJoin(code, tok);
   });
   $('#jform').onsubmit = (e) => { e.preventDefault(); $('#jerr').textContent = ''; const code = $('#jcode').value.trim().toUpperCase(); tryJoin(code, store.getItem(`lg:token:${code}`)); };
+  // the TV went back to the game menu and started another game: follow it
+  socket.on('moveTo', ({ url }) => { location.href = `${url}${TEST ? '&test' : ''}&auto=1`; });
+  if (params.has('auto') && $('#jcode').value && $('#jname').value) setTimeout(() => $('#jform').requestSubmit(), 300);
   socket.on('kicked', () => { joined = null; $('#join').hidden = false; $('#app').hidden = true; $('#jerr').textContent = 'You were removed from the room.'; });
   socket.on('state', (s) => { W.syncClock(s.now); P = S; S = s; window.__S = s; render(); notes(); feel(); });
   function send(type, data = {}, cb) { socket.emit('act', { type, ...data }, (r) => { if (r?.error) toast(r.error, 'bad'); cb?.(r); }); }
@@ -78,9 +82,9 @@
     const know = m.know.length ? `<div class="know"><b>${m.role === 'P' ? 'Your team' : 'Your team (keep it secret)'}</b>${m.know.map((k) => `<span>${W.bust(k, 'xs')}${esc(k.name)}: ${esc(k.roleName)}</span>`).join('')}</div>` : m.role === 'P' ? '<div class="know"><b>You don\'t know who your team is.</b><span>They know you. Trust the Godfather.</span></div>' : '';
     const tip = m.tip ? `<div class="know tipoff"><b>A tip-off arrived</b><span>${W.bust(m.tip, 'xs')}${esc(m.tip.name)} is definitely a villager.</span></div>` : '';
     const seen = (m.seen || []).length ? `<div class="know"><b>Your inquiries</b>${m.seen.map((s) => `<span>${W.bust(s, 'xs')}${esc(s.name)}: ${s.team === 'V' ? 'Villager' : 'works for the Godfather'}</span>`).join('')}</div>` : '';
-    return `<div class="role ${m.team === 'V' ? 'v' : 'g'} ${full ? 'full' : ''}">${art ? `<img src="${art}" alt="">` : `<div class="roleart">${m.role === 'V' ? '🌴' : m.role === 'M' ? '💼' : '🎭'}</div>`}<h3>${esc(m.roleName)}</h3><p>${team}</p>${know}${tip}${seen}</div>`;
+    return `<div class="role ${m.team === 'V' ? 'v' : 'g'} ${full ? 'full' : ''}">${art ? `<div class="roleimg" style="background-image:url('${art}')" role="img" aria-label="${esc(m.roleName)}"></div>` : `<div class="roleart">${m.role === 'V' ? '🌴' : m.role === 'M' ? '💼' : '🎭'}</div>`}<h3>${esc(m.roleName)}</h3><p>${team}</p>${know}${tip}${seen}<button class="btn big hideRole" data-role="hide">Hide my role</button></div>`;
   }
-  const holdRole = () => `<button class="hold" data-hold>Hold to see your role</button><div class="secret">${roleCard(true)}</div>`;
+  const holdRole = () => `<button class="hold" data-role="show">Tap to see your role</button><div class="secret">${roleCard(true)}</div>`;
 
   // ---------------------------------------------------------------- screens: each returns [key, html]
   const R = {
@@ -164,7 +168,7 @@
     END() {
       const m = me(); const w = S.x.winner || {}; const won = m.team === w.team;
       return [`END|${S.step}|${m.vip}`, `<div class="endcard ${won ? 'won' : 'lost'}"><div class="ico">${won ? '🏆' : '💸'}</div><h2>${won ? 'You won' : 'You lost'}</h2><p>${w.team === 'V' ? 'Greenwater is saved.' : 'The Godfather wins.'}</p></div>${roleCard(true)}
-        ${m.vip ? '<button class="btn primary big" data-a="again">Play again</button>' : `<p class="lead center">${vipName()} can start another game.</p>`}`];
+        ${m.vip ? '<button class="btn primary big" data-a="again">Play again</button><button class="btn big" data-a="menu">Back to the game menu</button>' : `<p class="lead center">${vipName()} can play again or pick another game.</p>`}`];
     },
   };
 
@@ -173,7 +177,7 @@
     const m = me(); if (!m) return '';
     const status = !m.alive && m.role ? '<span class="dead">Out of town</span>' : m.pres ? '<span class="tagp">President</span>' : m.sec && ['VOTE', 'FILES', 'SIGNED', 'CLAIMS'].includes(S.phase) ? '<span class="tags">Secretary</span>' : '';
     const b = S.board; const track = m.role ? `<span class="trk"><b class="g">${b.protect}/5</b><b class="r">${b.sell}/6</b></span>` : '';
-    return `${W.bust(m, 'sm')}<span class="nm">${esc(m.name)}</span>${status}${track}<button class="rulesbtn" data-a="rules">Rules</button>${m.role && !['ROLES', 'END', 'INTRO', 'TUTORIAL'].includes(S.phase) ? '<button class="peek" data-hold>Role</button>' : ''}`;
+    return `${W.bust(m, 'sm')}<span class="nm">${esc(m.name)}</span>${status}${track}<button class="rulesbtn" data-a="rules">Rules</button>${m.role && !['ROLES', 'END', 'INTRO', 'TUTORIAL'].includes(S.phase) ? '<button class="peek" data-role="toggle">Role</button>' : ''}`;
   }
   function render() {
     if (!S.me) return;
@@ -202,16 +206,21 @@
   document.body.appendChild(rules);
 
   // hold-to-see role
-  const showRole = (on) => document.body.classList.toggle('peeking', on);
-  document.addEventListener('pointerdown', (e) => { if (e.target.closest('[data-hold]')) { e.preventDefault(); showRole(true); buzz(15); } });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => document.addEventListener(ev, () => showRole(false)));
-  document.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-hold]')) e.preventDefault(); });
+  // Tap to see your role, tap again (or wait 15 seconds) to hide it.
+  let roleTimer = null;
+  const showRole = (on) => { document.body.classList.toggle('peeking', on); clearTimeout(roleTimer); if (on) { buzz(15); roleTimer = setTimeout(() => showRole(false), 15000); } };
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-role]'); if (!b) return;
+    const v = b.dataset.role; showRole(v === 'show' ? true : v === 'hide' ? false : !document.body.classList.contains('peeking'));
+  });
+  document.addEventListener('contextmenu', (e) => { if (e.target.closest('.role, [data-role]')) e.preventDefault(); });
 
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
     const a = b.dataset.a;
     if (a === 'start') return send('start');
     if (a === 'again') return send('again');
+    if (a === 'menu') return send('menu');
     if (a === 'skip') return send('skip');
     if (a === 'skipTutorial') return send('skipTutorial');
     if (a === 'rules') { document.body.classList.toggle('rules'); return null; }

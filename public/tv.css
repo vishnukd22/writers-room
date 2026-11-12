@@ -504,3 +504,4 @@ body.nocap #caption { display: none; }
 .uprow.dim { opacity: .45; }
 .uprow.dead b { color: var(--red); }
 .scene { position: relative; }
+.menubtn { margin-top: .6rem; background: rgba(246,234,212,.12); color: var(--cream); border: 2px solid rgba(246,234,212,.35); border-radius: 12px; padding: .5rem 1.2rem; font-weight: 800; font-size: 1rem; }
