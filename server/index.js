@@ -37,7 +37,9 @@ app.get('/assets-manifest', (_q, r) => {
 app.use('/fonts/baloo', express.static(path.join(NM, '@fontsource-variable', 'baloo-2'), { maxAge: '30d' }));
 app.use('/fonts/courier', express.static(path.join(NM, '@fontsource', 'courier-prime'), { maxAge: '30d' }));
 app.use('/fonts/kalam', express.static(path.join(NM, '@fontsource', 'kalam'), { maxAge: '30d' }));
-app.use(express.static(PUBLIC, { maxAge: '1h' }));
+// Pictures and music can be cached for days. Code is always checked for updates, so a new upload shows up at once.
+app.use('/assets', express.static(path.join(PUBLIC, 'assets'), { maxAge: '7d' }));
+app.use(express.static(PUBLIC, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
 
 const rooms = new Map();
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
