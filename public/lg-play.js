@@ -9,7 +9,7 @@
   const TEST = params.has('test');
   const store = TEST ? sessionStorage : localStorage;
   $('#jcode').value = (params.get('room') || store.getItem('lg:code') || '').toUpperCase();
-  $('#jname').value = store.getItem('lg:name') || (TEST ? '' : localStorage.getItem('wr:name') || '');
+  $('#jname').value = store.getItem('lg:name') || store.getItem('bc:name') || (TEST ? '' : localStorage.getItem('wr:name') || '');
   const buzz = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* no vibration */ } };
 
   let S = null; let P = null; let joined = null; let lastNote = null; let screenKey = null;

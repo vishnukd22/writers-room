@@ -6,7 +6,7 @@
   const main = $('#main'); const hud = $('#hud');
   const params = new URLSearchParams(location.search);
   $('#jcode').value = (params.get('room') || localStorage.getItem('wr:code') || '').toUpperCase();
-  $('#jname').value = localStorage.getItem('wr:name') || localStorage.getItem('lg:name') || sessionStorage.getItem('lg:name') || '';
+  $('#jname').value = localStorage.getItem('wr:name') || localStorage.getItem('lg:name') || sessionStorage.getItem('lg:name') || sessionStorage.getItem('bc:name') || '';
   $('#jpron').value = localStorage.getItem('wr:pron') || '';
   const buzz = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* no vibration */ } };
 

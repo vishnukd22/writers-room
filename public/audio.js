@@ -78,9 +78,11 @@ window.AV = (() => {
   }
   let current = { key: null, el: null, gain: null };
   // key: track file name (without .mp3); mood: built-in fallback
+  // BID-COIN! borrows Writers' Room tracks until its own arrive
+  const MUSIC_ALIAS = { 'bc-lobby': 'lobby', 'bc-auction': 'pitch', 'bc-reveal': 'ratings', 'bc-finale': 'finale' };
   function music(key, mood) {
     if (!ctx) return;
-    const want = key && has('music', key) ? key : null;
+    const want = key && has('music', key) ? key : key && MUSIC_ALIAS[key] && has('music', MUSIC_ALIAS[key]) ? MUSIC_ALIAS[key] : null;
     const id = want || `synth:${mood}`;
     if (current.key === id) return;
     // fade out the old
@@ -122,9 +124,19 @@ window.AV = (() => {
     swell: () => { [48, 55, 60, 64].forEach((m) => note(hz(m), ctx.currentTime, 2.5, 'triangle', 0.08, sfxBus, 0.8)); },
     fanfare: () => { [[60, 0], [64, 0.15], [67, 0.3], [72, 0.45]].forEach(([m, t]) => note(hz(m), ctx.currentTime + t, t === 0.45 ? 1.2 : 0.2, 'square', 0.06, sfxBus, 0.01)); },
     join: () => { note(hz(76), ctx.currentTime, 0.3, 'sine', 0.15, sfxBus, 0.005); note(hz(83), ctx.currentTime + 0.12, 0.4, 'sine', 0.12, sfxBus, 0.005); },
+    blip: () => { note(hz(84), ctx.currentTime, 0.09, 'square', 0.07, sfxBus, 0.002); note(hz(91), ctx.currentTime + 0.05, 0.12, 'square', 0.06, sfxBus, 0.002); },
+    tick: () => { note(1200, ctx.currentTime, 0.06, 'square', 0.12, sfxBus, 0.001); noise(ctx.currentTime, 0.04, 0.3, sfxBus, 5000); },
+    tick2: () => { [0, 0.12].forEach((t) => { note(1500, ctx.currentTime + t, 0.06, 'square', 0.12, sfxBus, 0.001); noise(ctx.currentTime + t, 0.04, 0.3, sfxBus, 5000); }); },
+    thud: () => { note(70, ctx.currentTime, 0.18, 'sine', 0.4, sfxBus, 0.002); noise(ctx.currentTime, 0.06, 0.25, sfxBus, 700); },
+    freeze: () => { [88, 95, 100, 107].forEach((m, i) => note(hz(m), ctx.currentTime + i * 0.05, 0.6, 'sine', 0.06, sfxBus, 0.005)); noise(ctx.currentTime, 0.5, 0.15, sfxBus, 9000); },
+    door: () => { for (let i = 0; i < 14; i++) noise(ctx.currentTime + i * 0.07, 0.07, 0.22, sfxBus, 600 + i * 40); note(55, ctx.currentTime + 1.05, 0.4, 'sine', 0.4, sfxBus, 0.003); },
   };
   // Land Grab sounds fall back to these built-in ones until the real files arrive
-  const ALIAS = { 'lg-stamp': 'stamp', 'lg-paper': 'whoosh', 'lg-murmur': 'gasp', 'lg-bus': 'trombone', 'lg-shutter': 'thunder', 'lg-cash': 'bell' };
+  const ALIAS = { 'lg-stamp': 'stamp', 'lg-paper': 'whoosh', 'lg-murmur': 'gasp', 'lg-bus': 'trombone', 'lg-shutter': 'thunder', 'lg-cash': 'bell',
+    // BID-COIN!
+    'bc-bid': 'blip', 'bc-gavel': 'gavel', 'bc-door': 'door', 'bc-tick': 'tick', 'bc-tick2': 'tick2', 'bc-thud': 'thud', 'bc-cash': 'bell', 'bc-legend': 'fanfare',
+    'bc-curse': 'dundun', 'bc-lock': 'stamp', 'bc-plant': 'scratch', 'bc-boom': 'fanfare', 'bc-bust': 'trombone', 'bc-freeze': 'freeze', 'bc-phantom': 'sting',
+    'bc-steal': 'scratch', 'bc-tax': 'bell', 'bc-swap': 'whoosh', 'bc-appraise': 'bell' };
   const lastPlayed = {};
   const buffers = {};
   async function loadBuf(name) {
@@ -136,6 +148,8 @@ window.AV = (() => {
   async function fx(name, opts = {}) {
     if (!ctx || !sfxOn) return;
     const gap = opts.gap ?? 120; if (Date.now() - (lastPlayed[name] || 0) < gap) return; lastPlayed[name] = Date.now();
+    // no file of its own: borrow a real recording from another game if there is one (the gavel, the bell...)
+    if (!has('sfx', name) && ALIAS[name] && has('sfx', ALIAS[name])) name = ALIAS[name];
     if (has('sfx', name)) {
       const b = await loadBuf(name);
       if (b) { const s = ctx.createBufferSource(); s.buffer = b; const g = ctx.createGain(); g.gain.value = opts.vol ?? 1; s.connect(g).connect(sfxBus); s.start(); return; }

@@ -118,4 +118,7 @@ async function findIndianVoice() {
 }
 findIndianVoice();
 
-module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, charVoices };
+// ---------------------------------------------------------------- BID-COIN!'s auctioneer: fast and lively. Set ELEVENLABS_BC_VOICE_ID to change it.
+const BC = () => process.env.ELEVENLABS_BC_VOICE_ID || 'IKne3meq5aSn9XLyUdCD'; // "Charlie"
+
+module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, BC, charVoices };

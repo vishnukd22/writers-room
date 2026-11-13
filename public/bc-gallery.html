@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BID-COIN! items and photo credits</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/fonts/bungee/400.css">
+<style>
+  body { background: #14171D; color: #F6F1E4; padding: 2rem 4vw 4rem; }
+  h1 { font-family: 'Bungee', sans-serif; font-weight: 400; color: #F5C518; margin: 0; font-size: 2.4rem; }
+  .sum { color: #9BA6B8; margin: .4rem 0 1.4rem; max-width: 52rem; line-height: 1.45; }
+  .sum b { color: #F6F1E4; }
+  .filters { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
+  .filters button { background: #222935; color: #F6F1E4; border: 0; border-radius: 99px; padding: .35rem .9rem; font-weight: 700; }
+  .filters button.on { background: #F5C518; color: #1B1D22; }
+  h2 { font-family: 'Bungee', sans-serif; font-weight: 400; font-size: 1.2rem; margin: 2rem 0 .8rem; color: #F5C518; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; }
+  .it { background: #F6F1E4; color: #1B1D22; border-radius: 6px; padding: .5rem; display: grid; gap: .3rem; align-content: start; }
+  .it .ph { aspect-ratio: 1; background: repeating-linear-gradient(45deg, #E8E1D0 0 10px, #E1D9C6 10px 20px); display: grid; place-items: center; overflow: hidden; border-radius: 3px; font-size: .9rem; color: #777; text-align: center; }
+  .it img { width: 100%; height: 100%; object-fit: cover; }
+  .it b { font-size: 1rem; line-height: 1.15; }
+  .it .n { font-family: 'Bungee', sans-serif; font-size: .75rem; color: #8A6400; }
+  .it .v { font-size: .85rem; font-weight: 700; }
+  .it .c { font-size: .72rem; color: #555; line-height: 1.3; word-break: break-word; }
+  .it .c a { color: #2F5FA8; }
+  .it.r-l { box-shadow: 0 0 0 3px #FFB627; } .it.r-x { background: #E4DDF5; }
+  .it.missing .ph { outline: 3px dashed #E5484D; outline-offset: -3px; }
+</style>
+</head>
+<body>
+<h1>BID-COIN! items</h1>
+<p class="sum" id="sum">Loading...</p>
+<div class="filters" id="filters"></div>
+<div id="list"></div>
+<script>
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const RAR = { j: 'Junk', d: 'Decent', r: 'Rare', l: 'Legendary', x: 'Cursed', s: 'Sealed box' };
+  let DATA = null; let filter = 'all';
+  fetch('/bidcoin/items.json').then((r) => r.json()).then((d) => { DATA = d; draw(); });
+  function draw() {
+    const items = DATA.items.map((it, i) => ({ ...it, n: i + 1 }));
+    const have = items.filter((i) => i.photo).length;
+    document.getElementById('sum').innerHTML = `<b>${items.length}</b> items, <b>${have}</b> with photos. Photos come from Wikimedia Commons under free licences, and each one is credited below. If a photo looks wrong, note its number and ask for a better one.`;
+    const cats = ['all', 'missing', ...Object.keys(DATA.cats)];
+    document.getElementById('filters').innerHTML = cats.map((c) => `<button data-f="${c}" class="${filter === c ? 'on' : ''}">${c === 'all' ? 'Everything' : c === 'missing' ? 'No photo yet' : esc(DATA.cats[c].name)}</button>`).join('');
+    const shown = items.filter((i) => filter === 'all' || (filter === 'missing' ? !i.photo : i.cat === filter));
+    const groups = {}; shown.forEach((i) => { (groups[i.cat] = groups[i.cat] || []).push(i); });
+    document.getElementById('list').innerHTML = Object.entries(groups).map(([c, list]) => `<h2>${esc(DATA.cats[c]?.name || c)}</h2><div class="grid">${list.map(card).join('')}</div>`).join('');
+  }
+  function card(i) {
+    const cr = i.credit;
+    const credit = cr ? `Photo: ${esc(cr.author || 'Unknown')}, ${esc(cr.license || '')}${cr.page ? ` <a href="${esc(cr.page)}" target="_blank" rel="noopener">source</a>` : ''}` : '';
+    return `<div class="it r-${i.rar} ${i.photo ? '' : 'missing'}"><div class="ph">${i.photo ? `<img loading="lazy" src="/assets/bc/items/${i.id}.webp" alt="">` : 'No photo yet'}</div><span class="n">#${i.n} ${esc(i.id)}</span><b>${esc(i.name)}</b><span class="v">${RAR[i.rar] || ''}${i.value !== null ? ` · AED ${i.value.toLocaleString('en-US')}` : ''}</span><span class="c">${credit}</span></div>`;
+  }
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; draw(); } });
+</script>
+</body>
+</html>

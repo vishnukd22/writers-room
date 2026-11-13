@@ -14,7 +14,7 @@ Style rules:
 - Use the names exactly as given. Build on what the players wrote; their jokes are canon. Keep every line short: one breath, under 16 words.
 - Reply with JSON only, no prose before or after, matching the shape asked for.`;
 
-async function ask(user, maxTokens = 1200, timeoutMs = 30000) {
+async function ask(user, maxTokens = 1200, timeoutMs = 30000, system = SYSTEM) {
   if (!enabled()) return null;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -23,7 +23,7 @@ async function ask(user, maxTokens = 1200, timeoutMs = 30000) {
     if (process.env.ANTHROPIC_WORKSPACE_ID) headers['anthropic-workspace-id'] = process.env.ANTHROPIC_WORKSPACE_ID;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers, signal: ctrl.signal,
-      body: JSON.stringify({ model: MODEL(), max_tokens: maxTokens, system: SYSTEM, messages: [{ role: 'user', content: user }] }),
+      body: JSON.stringify({ model: MODEL(), max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
     });
     if (!res.ok) { console.error('[ai] HTTP', res.status, (await res.text()).slice(0, 300)); return null; }
     const data = await res.json();
@@ -152,4 +152,13 @@ Return {"stars": 4, "review": "...", "best": 3}.`, 400, 9000);
   return { stars: Math.max(1, Math.min(5, Math.round(Number(r.stars)) || 3)), review: clean(r.review, 300), best: best >= 0 && best < lines.length ? best : null };
 }
 
-module.exports = { enabled, sceneSetups, finaleScript, continueFinale, interject, critique, pilotTitle, pilotScene, pilotVerdict, pickBetween };
+// BID-COIN!: one-of-a-kind legendary finds, invented fresh each game. base: an existing item whose photo is borrowed.
+const BC_SYSTEM = `You write items for BID-COIN!, a family-friendly party game about bidding on storage lockers in Dubai. Items are read aloud by an auctioneer voice. Be funny and specific. Never name real people or brands. Never use em dashes or en dashes. Reply with JSON only.`;
+async function bcLegends(n, baseIds) {
+  const r = await ask(`Invent ${n} legendary one-of-a-kind finds that could turn up at the back of a storage locker. Each needs: name (under 8 words), line (one funny sentence under 14 words), value (AED, between 2500 and 5000), base (the id from this list that looks most like it, so we can show its photo): ${baseIds.join(', ')}.
+Shape: {"items":[{"name":"","line":"","value":3500,"base":""}]}`, 600, 8000, BC_SYSTEM);
+  const ok = (r?.items || []).filter((x) => x && x.name && baseIds.includes(x.base)).map((x) => ({ name: clean(x.name, 60), line: clean(x.line, 90), value: Number(x.value) || 3500, base: x.base }));
+  return ok.length ? ok : null;
+}
+
+module.exports = { bcLegends, enabled, sceneSetups, finaleScript, continueFinale, interject, critique, pilotTitle, pilotScene, pilotVerdict, pickBetween };

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#14171D">
+<title>BID-COIN!</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/fonts/bungee/400.css">
+<link rel="stylesheet" href="/bc-play.css">
+</head>
+<body>
+<section id="join">
+  <div class="jtitle">BID-COIN!<span>Your phone is your bidding paddle.</span></div>
+  <form id="jform" autocomplete="off">
+    <label>Room code<input id="jcode" maxlength="4" autocapitalize="characters" spellcheck="false" placeholder="ABCD" required></label>
+    <label>Your name<input id="jname" maxlength="12" placeholder="Vishnu" required></label>
+    <button class="btn primary big" type="submit">Join the auction</button>
+    <p id="jerr" class="err" role="alert"></p>
+  </form>
+</section>
+<section id="app" hidden>
+  <header id="hud"></header>
+  <main id="main"></main>
+</section>
+<div id="drawer" hidden></div>
+<div id="picker" hidden></div>
+<div id="toasts" aria-live="polite"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/bc-play.js"></script>
+</body>
+</html>
