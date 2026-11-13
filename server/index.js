@@ -35,6 +35,15 @@ app.get('/bidcoin/items.json', (_q, r) => {
   const row = (i) => { const f = BCP.info(i.id); return { id: i.id, name: i.name, cat: i.cat, rar: i.rar || 's', value: i.value ?? null, line: i.line, q: i.q, photo: BCP.urlFor(i.id), credit: f ? { text: f.credit, page: f.page } : null }; };
   r.set('Cache-Control', 'no-cache'); r.json({ items: [...BCI.ITEMS.map(row), ...BCI.CONTAINERS.map(row)], cats: BCI.CATS, status: BCP.status() });
 });
+// item photos, served from this website (the server keeps a copy of each one)
+app.get('/bidcoin/photo/:id', async (q, r) => {
+  try {
+    const out = await BCP.serve(String(q.params.id).replace(/[^a-z0-9-]/gi, ''));
+    if (!out) return r.status(404).end();
+    if (out.redirect) return r.redirect(302, out.redirect);
+    r.set('Cache-Control', 'public, max-age=604800'); r.type('jpg'); return r.sendFile(out.file);
+  } catch (e) { return r.status(500).end(); }
+});
 // how the photo lookups are going (open it in a browser to check)
 app.get('/bidcoin/photos-status', (_q, r) => { r.set('Cache-Control', 'no-cache'); r.json(BCP.status()); });
 app.get('/audio/:id', (q, r) => {

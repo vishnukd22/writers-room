@@ -52,7 +52,7 @@
   function card(i) {
     const cr = i.credit;
     const credit = cr ? `Photo: ${esc(cr.text)}${cr.page ? ` <a href="${esc(cr.page)}" target="_blank" rel="noopener">source</a>` : ''}` : `Search: ${esc(i.q || '')}`;
-    return `<div class="it r-${i.rar} ${i.photo ? '' : 'missing'}"><div class="ph">${i.photo ? `<img loading="lazy" src="${esc(i.photo)}" alt="" referrerpolicy="no-referrer">` : 'No photo yet'}</div><span class="n">#${i.n} ${esc(i.id)}</span><b>${esc(i.name)}</b><span class="v">${RAR[i.rar] || ''}${i.value !== null ? ` · AED ${i.value.toLocaleString('en-US')}` : ''}</span><span class="c">${credit}</span></div>`;
+    return `<div class="it r-${i.rar} ${i.photo ? '' : 'missing'}"><div class="ph">${i.photo ? `<img loading="lazy" src="${esc(i.photo)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Photo found but would not load'}))">` : 'No photo yet'}</div><span class="n">#${i.n} ${esc(i.id)}</span><b>${esc(i.name)}</b><span class="v">${RAR[i.rar] || ''}${i.value !== null ? ` · AED ${i.value.toLocaleString('en-US')}` : ''}</span><span class="c">${credit}</span></div>`;
   }
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { filter = b.dataset.f; draw(); } });
 </script>

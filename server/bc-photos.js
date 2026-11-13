@@ -9,8 +9,11 @@ const os = require('os');
 const path = require('path');
 const C = require('./bc-items');
 
-const COMMONS = 'https://commons.wikimedia.org/w/api.php';
-const WIKIDATA = 'https://www.wikidata.org/w/api.php';
+const COMMONS = process.env.BC_COMMONS_API || 'https://commons.wikimedia.org/w/api.php';
+const WIKIDATA = process.env.BC_WIKIDATA_API || 'https://www.wikidata.org/w/api.php';
+// photos are downloaded once by the server and served from here (same website, so nothing can block them)
+const IMG_DIR = path.join(os.tmpdir(), 'bidcoin-img');
+try { fs.mkdirSync(IMG_DIR, { recursive: true }); } catch (e) { /* fine */ }
 const LOCAL_DIR = path.join(__dirname, '..', 'public', 'assets', 'bc', 'items');
 const CACHE = path.join(os.tmpdir(), 'bidcoin-photos-v2.json');
 const OVERRIDES = path.join(__dirname, 'bc-photo-overrides.json');
@@ -24,7 +27,7 @@ const STOP = new Set(['the', 'and', 'with', 'of', 'a', 'an', 'for', 'old', 'set'
 const found = new Map(); // id -> { url, credit } or { none: true }
 const busy = new Map(); // id -> promise
 const tries = new Map();
-const stats = { looked: 0, ok: 0, missing: 0, errors: 0, lastError: null, started: Date.now() };
+const stats = { looked: 0, ok: 0, missing: 0, errors: 0, lastError: null, downloaded: 0, downloadFailed: 0, lastDownloadError: null, started: Date.now() };
 let overrides = {};
 try { overrides = JSON.parse(fs.readFileSync(OVERRIDES, 'utf8')); } catch (e) { overrides = {}; }
 try { for (const [k, v] of Object.entries(JSON.parse(fs.readFileSync(CACHE, 'utf8')))) if (v && v.url) found.set(k, v); } catch (e) { /* first run */ }
@@ -116,7 +119,7 @@ function resolve(id) {
     stats.looked++;
     try {
       const ii = await lookup(item);
-      if (ii) { found.set(id, pack(ii)); stats.ok++; save(); } else { found.set(id, { none: true }); stats.missing++; }
+      if (ii) { found.set(id, pack(ii)); stats.ok++; save(); await download(id); } else { found.set(id, { none: true }); stats.missing++; }
     } catch (e) {
       // a network problem, not a missing photo: try again in a minute (three times at most)
       stats.errors++; stats.lastError = e.message;
@@ -145,13 +148,45 @@ function warm(ids, urgent = false) {
   pump();
 }
 // warm the whole catalogue in the background, starting a few seconds after the server starts
-setTimeout(() => warm(ALL().map((i) => i.id)), 4000).unref();
+setTimeout(() => { warm(ALL().map((i) => i.id)); for (const [id, v] of found) if (v.url && !have(id)) download(id); }, 4000).unref();
 
 // the address of an item's photo right now (or null while it's still being looked up)
+// ---------------------------------------------------------------- the photo files themselves
+const imgPath = (id) => path.join(IMG_DIR, `${id}.jpg`);
+const have = (id) => { try { return fs.statSync(imgPath(id)).size > 500; } catch (e) { return false; } };
+const fetching = new Map();
+function download(id) {
+  const f = found.get(id); if (!f || !f.url || have(id)) return Promise.resolve(have(id));
+  if (fetching.has(id)) return fetching.get(id);
+  const p = (async () => {
+    for (let i = 0; i < 3; i++) {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 15000);
+      try {
+        const r = await fetch(f.url, { headers: { 'User-Agent': UA(), Referer: 'https://commons.wikimedia.org/' }, signal: ctl.signal });
+        clearTimeout(t);
+        if (r.status === 429 || r.status >= 500) { stats.lastDownloadError = `HTTP ${r.status}`; await sleep(2000 * (i + 1)); continue; }
+        if (!r.ok) { stats.lastDownloadError = `HTTP ${r.status} for ${id}`; break; }
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.length < 500) { stats.lastDownloadError = `tiny file for ${id}`; break; }
+        fs.writeFileSync(imgPath(id), buf); stats.downloaded++; return true;
+      } catch (e) { clearTimeout(t); stats.lastDownloadError = e.message; await sleep(1000 * (i + 1)); }
+    }
+    stats.downloadFailed++; return false;
+  })().finally(() => fetching.delete(id));
+  fetching.set(id, p); return p;
+}
+// what the /bidcoin/photo/<id> address sends back: the saved file, or (if the download failed) Wikimedia's own address
+async function serve(id) {
+  if (!found.has(id) && !local.has(id)) await resolve(id);
+  if (have(id)) return { file: imgPath(id) };
+  if (await download(id)) return { file: imgPath(id) };
+  const f = found.get(id); return f && f.url ? { redirect: f.url } : null;
+}
+
 function urlFor(id) {
   if (!id) return null;
   if (local.has(id)) return `/assets/bc/items/${id}.webp`;
-  const f = found.get(id); return f && f.url ? f.url : null;
+  const f = found.get(id); return f && f.url ? `/bidcoin/photo/${encodeURIComponent(id)}` : null;
 }
 function creditFor(id) { const f = found.get(id); return f && f.credit ? f.credit : null; }
 function info(id) { const f = found.get(id); return f && f.url ? f : null; }
@@ -160,4 +195,4 @@ function status() {
   return { items: all.length, withPhoto: all.filter((i) => urlFor(i.id)).length, stillLooking: queue.length + running, noPhotoFound: [...found].filter(([, v]) => v.none).map(([k]) => k), ...stats, sinceSeconds: Math.round((Date.now() - stats.started) / 1000) };
 }
 
-module.exports = { urlFor, creditFor, info, warm, status, resolve, scanLocal };
+module.exports = { urlFor, creditFor, info, warm, status, resolve, scanLocal, serve };
