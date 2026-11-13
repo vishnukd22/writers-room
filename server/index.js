@@ -25,7 +25,17 @@ app.get('/health', (_q, r) => r.send('ok'));
 app.get('/tv', (_q, r) => r.sendFile(path.join(PUBLIC, 'menu.html')));
 app.get('/tv/writers', (_q, r) => r.sendFile(path.join(PUBLIC, 'tv.html')));
 app.get('/tv/landgrab', (_q, r) => r.sendFile(path.join(PUBLIC, 'lg-tv.html')));
-app.get('/', (_q, r) => r.sendFile(path.join(PUBLIC, 'play.html')));
+// the front door: pick a game on the TV, or type a room code on a phone. Writers' Room's join links (/?room=CODE) still go straight to its phone page.
+app.get('/', (q, r) => r.sendFile(path.join(PUBLIC, q.query.room ? 'play.html' : 'home.html')));
+app.get('/play', (_q, r) => r.sendFile(path.join(PUBLIC, 'play.html')));
+// which game is this room code for?
+app.get('/join/:code', (q, r) => {
+  const code = String(q.params.code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  const g = rooms.get(code);
+  r.set('Cache-Control', 'no-store');
+  if (!g) return r.status(404).json({ error: 'No game with that code. Check the TV.' });
+  r.json({ path: phonePath(g.kind, code) });
+});
 app.get('/lg', (_q, r) => r.sendFile(path.join(PUBLIC, 'lg-play.html')));
 app.get('/tv/bidcoin', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-tv.html')));
 app.get('/bc', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-play.html')));
