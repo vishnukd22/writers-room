@@ -8,6 +8,7 @@ const QRCode = require('qrcode');
 const { Game } = require('./game');
 const { LandGrab } = require('./landgrab');
 const { BidCoin } = require('./bidcoin');
+const { Rigged } = require('./rigged');
 const BCI = require('./bc-items');
 const BCP = require('./bc-photos');
 const voice = require('./voice');
@@ -39,6 +40,8 @@ app.get('/join/:code', (q, r) => {
 app.get('/lg', (_q, r) => r.sendFile(path.join(PUBLIC, 'lg-play.html')));
 app.get('/tv/bidcoin', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-tv.html')));
 app.get('/bc', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-play.html')));
+app.get('/tv/rigged', (_q, r) => r.sendFile(path.join(PUBLIC, 'rg-tv.html')));
+app.get('/rg', (_q, r) => r.sendFile(path.join(PUBLIC, 'rg-play.html')));
 // every BID-COIN! item with its photo and who took it, for checking the photos and for the credits
 app.get(['/bidcoin/gallery', '/bidcoin/credits'], (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-gallery.html')));
 app.get('/bidcoin/items.json', (_q, r) => {
@@ -70,6 +73,7 @@ app.use('/fonts/baloo', express.static(path.join(NM, '@fontsource-variable', 'ba
 app.use('/fonts/courier', express.static(path.join(NM, '@fontsource', 'courier-prime'), { maxAge: '30d' }));
 app.use('/fonts/kalam', express.static(path.join(NM, '@fontsource', 'kalam'), { maxAge: '30d' }));
 app.use('/fonts/bungee', express.static(path.join(NM, '@fontsource', 'bungee'), { maxAge: '30d' }));
+app.use('/fonts/shrikhand', express.static(path.join(NM, '@fontsource', 'shrikhand'), { maxAge: '30d' }));
 // Pictures and music can be cached for days. Code is always checked for updates, so a new upload shows up at once.
 app.use('/assets', express.static(path.join(PUBLIC, 'assets'), { maxAge: '7d' }));
 app.use(express.static(PUBLIC, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
@@ -83,9 +87,9 @@ function originOf(socket) {
   const proto = (h['x-forwarded-proto'] || '').split(',')[0] || (socket.handshake.secure ? 'https' : 'http');
   return `${proto}://${h['x-forwarded-host'] || h.host}`;
 }
-// kind: 'wr' (Writers' Room), 'lg' (Land Grab) or 'bc' (BID-COIN!). test: the bot buttons.
-const KINDS = ['wr', 'lg', 'bc'];
-const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : `/?room=${code}`);
+// kind: 'wr' (Writers' Room), 'lg' (Land Grab), 'bc' (BID-COIN!) or 'rg' (RIGGED!). test: the bot buttons.
+const KINDS = ['wr', 'lg', 'bc', 'rg'];
+const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : `/?room=${code}`);
 async function createRoom(socket, kind = 'wr', test = false) {
   const code = newCode();
   const hooks = {
@@ -95,7 +99,7 @@ async function createRoom(socket, kind = 'wr', test = false) {
     menu: () => io.to(`host:${code}`).emit('menu'),
     blast: (ev, data) => io.to(`room:${code}`).emit(ev, data), // tiny instant messages to everyone in the room (bids)
   };
-  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : new Game(code, hooks);
+  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : new Game(code, hooks);
   game.kind = kind;
   const origin = originOf(socket);
   game.joinUrl = `${origin}${phonePath(kind, code)}`;

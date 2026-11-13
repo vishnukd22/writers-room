@@ -79,7 +79,9 @@ window.AV = (() => {
   let current = { key: null, el: null, gain: null };
   // key: track file name (without .mp3); mood: built-in fallback
   // BID-COIN! borrows Writers' Room tracks until its own arrive
-  const MUSIC_ALIAS = { 'bc-lobby': 'lobby', 'bc-auction': 'pitch', 'bc-reveal': 'ratings', 'bc-finale': 'finale' };
+  const MUSIC_ALIAS = { 'bc-lobby': 'lobby', 'bc-auction': 'pitch', 'bc-reveal': 'ratings', 'bc-finale': 'finale',
+    // RIGGED! borrows tracks too, until its own arrive (the Bomb uses the built-in tense score)
+    'rg-lobby': 'lobby', 'rg-question': 'pitch', 'rg-wheel': 'ratings', 'rg-finale': 'finale' };
   function music(key, mood) {
     if (!ctx) return;
     const want = key && has('music', key) ? key : key && MUSIC_ALIAS[key] && has('music', MUSIC_ALIAS[key]) ? MUSIC_ALIAS[key] : null;
@@ -129,6 +131,12 @@ window.AV = (() => {
     tick2: () => { [0, 0.12].forEach((t) => { note(1500, ctx.currentTime + t, 0.06, 'square', 0.12, sfxBus, 0.001); noise(ctx.currentTime + t, 0.04, 0.3, sfxBus, 5000); }); },
     thud: () => { note(70, ctx.currentTime, 0.18, 'sine', 0.4, sfxBus, 0.002); noise(ctx.currentTime, 0.06, 0.25, sfxBus, 700); },
     freeze: () => { [88, 95, 100, 107].forEach((m, i) => note(hz(m), ctx.currentTime + i * 0.05, 0.6, 'sine', 0.06, sfxBus, 0.005)); noise(ctx.currentTime, 0.5, 0.15, sfxBus, 9000); },
+    buzzer: () => { const o = ctx.createOscillator(); const g = ctx.createGain(); o.type = 'square'; o.frequency.value = 110; g.gain.setValueAtTime(0.14, ctx.currentTime); g.gain.setValueAtTime(0.14, ctx.currentTime + 0.5); g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6); o.connect(g).connect(sfxBus); o.start(); o.stop(ctx.currentTime + 0.65); },
+    ding: () => { note(hz(88), ctx.currentTime, 0.6, 'sine', 0.18, sfxBus, 0.002); note(hz(95), ctx.currentTime + 0.12, 0.8, 'sine', 0.15, sfxBus, 0.002); },
+    fuse: () => { for (let i = 0; i < 16; i++) noise(ctx.currentTime + i * 0.05, 0.05, 0.12, sfxBus, 6000 + Math.random() * 3000); },
+    boom: () => { noise(ctx.currentTime, 1.4, 1, sfxBus, 120); note(45, ctx.currentTime, 0.9, 'sine', 0.6, sfxBus, 0.002); noise(ctx.currentTime, 0.2, 0.7, sfxBus, 1500); },
+    wheel: () => { for (let i = 0; i < 18; i++) { const t = ctx.currentTime + 0.04 * i * (1 + i / 12); note(1800, t, 0.03, 'square', 0.08, sfxBus, 0.001); } },
+    cash: () => { noise(ctx.currentTime, 0.08, 0.5, sfxBus, 3000); note(hz(96), ctx.currentTime + 0.08, 0.5, 'sine', 0.16, sfxBus, 0.002); note(hz(100), ctx.currentTime + 0.14, 0.6, 'sine', 0.12, sfxBus, 0.002); },
     door: () => { for (let i = 0; i < 14; i++) noise(ctx.currentTime + i * 0.07, 0.07, 0.22, sfxBus, 600 + i * 40); note(55, ctx.currentTime + 1.05, 0.4, 'sine', 0.4, sfxBus, 0.003); },
   };
   // Land Grab sounds fall back to these built-in ones until the real files arrive
@@ -136,7 +144,12 @@ window.AV = (() => {
     // BID-COIN!
     'bc-bid': 'blip', 'bc-gavel': 'gavel', 'bc-door': 'door', 'bc-tick': 'tick', 'bc-tick2': 'tick2', 'bc-thud': 'thud', 'bc-cash': 'bell', 'bc-legend': 'fanfare',
     'bc-curse': 'dundun', 'bc-lock': 'stamp', 'bc-plant': 'scratch', 'bc-boom': 'fanfare', 'bc-bust': 'trombone', 'bc-freeze': 'freeze', 'bc-phantom': 'sting',
-    'bc-steal': 'scratch', 'bc-tax': 'bell', 'bc-swap': 'whoosh', 'bc-appraise': 'bell' };
+    'bc-steal': 'scratch', 'bc-tax': 'bell', 'bc-swap': 'whoosh', 'bc-appraise': 'bell',
+    // RIGGED!
+    'rg-sting': 'sting', 'rg-house': 'dundun', 'rg-question': 'blip', 'rg-ding': 'ding', 'rg-buzzer': 'buzzer', 'rg-tick': 'tick', 'rg-pass': 'blip', 'rg-fuse': 'fuse',
+    'rg-boom': 'boom', 'rg-reveal': 'sting', 'rg-wheel': 'wheel', 'rg-card': 'fanfare', 'rg-swap': 'whoosh', 'rg-cash': 'cash', 'rg-fanfare': 'fanfare', 'rg-go': 'fanfare',
+    'rg-climb': 'blip', 'rg-slip': 'scratch', 'rg-shield': 'freeze', 'rg-copy': 'scratch', 'rg-fog': 'whoosh', 'rg-shuffle': 'scratch', 'rg-mirror': 'whoosh',
+    'rg-tiny': 'blip', 'rg-quake': 'thunder', 'rg-spam': 'blip', 'rg-freeze': 'freeze' };
   const lastPlayed = {};
   const buffers = {};
   async function loadBuf(name) {

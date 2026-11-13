@@ -120,5 +120,7 @@ findIndianVoice();
 
 // ---------------------------------------------------------------- BID-COIN!'s auctioneer: fast and lively. Set ELEVENLABS_BC_VOICE_ID to change it.
 const BC = () => process.env.ELEVENLABS_BC_VOICE_ID || 'IKne3meq5aSn9XLyUdCD'; // "Charlie"
+// RIGGED!'s host, Vince Velvet: a smooth old-school announcer. Set ELEVENLABS_RG_VOICE_ID to change it.
+const RG = () => process.env.ELEVENLABS_RG_VOICE_ID || 'nPczCjzI2devNBz1zQrb'; // "Brian"
 
-module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, BC, charVoices };
+module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, BC, RG, charVoices };

@@ -1,4 +1,4 @@
-# Vishnu's Game Night: Writers' Room, Land Grab and BID-COIN!
+# Vishnu's Game Night: Writers' Room, Land Grab, BID-COIN! and RIGGED!
 
 Three party games. Open `/tv` on the TV and pick one. Phones join with the code on screen.
 
@@ -51,6 +51,29 @@ One locker in the middle of the game is a mystery locker (no peeking). The last 
 
 **Testing on your own:** open `/tv/bidcoin?test`. The lobby has **Add a bot**, **Fill to 3**, **Remove bots** and **Start**. To be several players on one laptop, open `/bc?test` in several tabs. In a normal game, the first player's phone also has **Add a bot**, so two people can play against bots.
 
+## RIGGED!
+
+A trivia game show for 2 to 8 players (bots can fill seats), about 20 to 25 minutes. Everyone starts with $1,000 in Bucks. The questions are fair. Nothing else is. Most Bucks at the end wins. Join at `/rg` (or type the code on the front page).
+
+1. **The Dossier:** three odd questions about yourself, answered in secret. They come back in round 3.
+2. **Warm-Up:** four multiple-choice questions. The first is clean, then sabotage, the Audience Remote, bribes and copying switch on one by one.
+3. **Lie Detector:** a weird true fact with a blank. Write a fake answer, then find the truth among everyone's lies and Vince's.
+4. **Who In This Room?:** guess who wrote each Dossier answer. With only 2 players it becomes **Lie About Yourself**: write a fake answer next to your real one.
+5. **The Bomb:** true or false, passed from phone to phone with a shrinking fuse.
+6. **Closest Number:** guess a real number, then bet on who will be the most wrong.
+7. **Double Trouble:** four more questions, everything x2, sabotage half price.
+8. **The Rigged Ladder:** a 3-minute race up 7 rungs. Your rivals vote on your next category. Buy a Lift, Grease a rival.
+
+**Rule cards:** after every round, the player in last place picks one of three rule cards (Opposite Day, Robin Hood, Amnesia, Musical Chairs and 15 more). Up to three stay on the board at once. Pass the Phone can be switched off from the first phone in the lobby.
+
+**Tricks on your phone:** a tray at the bottom with Sabotage (Fog, Shuffle, Mirror, Tiny Text, Earthquake, Spam, Freeze, and a Shield), Bribes (Hint, Peek, Stopwatch, Veto, Fix the Fact) and Copy. Whoever is in last place gets the Audience Remote instead: Boo, Cheer, Spin and Heckle.
+
+**Two players:** Vince joins as **The House**, a third contestant that cheats. If the House finishes first, nobody wins.
+
+**Questions:** a fixed, checked bank in `server/rg-trivia.js` (about 400 multiple-choice questions in 12 categories) and `server/rg-content.js` (true or false statements, number questions, Lie Detector facts, Dossier questions, heckles). The game remembers what it has asked, so repeats are rare. Vince's lines are in `server/rg-lines.js`.
+
+**Testing on your own:** open `/tv/rigged?test`. The lobby has **Add a bot**, **Fill to 4**, **Remove bots** and **Start**. In a normal game, the first player's phone has **Add a bot** too.
+
 ## Put it online (Render, free)
 
 1. Make a new GitHub repository called `writers-room`.
@@ -72,7 +95,7 @@ The game still works without either key. It uses backup scripts and the browser'
 
 ## Art, music and sounds
 
-Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<name>`, `bust-01` onward, small `t-` copies for phones, Land Grab's `lg-` pictures and BID-COIN!'s `bc-` pictures), music in `music` (one track per game stage and per genre) and sound effects in `sfx`. Anything missing is drawn or played by the game itself, so a file can be removed or swapped at any time with the same name.
+Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<name>`, `bust-01` onward, small `t-` copies for phones, Land Grab's `lg-` pictures, BID-COIN!'s `bc-` pictures and RIGGED!'s `rg-` pictures), music in `music` (one track per game stage and per genre) and sound effects in `sfx`. Anything missing is drawn or played by the game itself, so a file can be removed or swapped at any time with the same name.
 
 ## Optional settings (Render, Environment tab)
 
@@ -82,6 +105,7 @@ Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<na
 | `ELEVENLABS_EXEC_VOICE_ID` | The Network exec's voice (default is Daniel) |
 | `ELEVENLABS_LG_VOICE_ID` | Land Grab's tea shop gossip. If not set, an English voice with an Indian accent is picked from the ElevenLabs voice library |
 | `ELEVENLABS_BC_VOICE_ID` | BID-COIN!'s auctioneer (default is Charlie) |
+| `ELEVENLABS_RG_VOICE_ID` | RIGGED!'s host, Vince Velvet (default is Brian) |
 | `BC_LOCKERS` | How many lockers in a BID-COIN! game (default 8) |
 | `ELEVENLABS_FAST_MODEL` | The quick voice model for Writers' Room characters (default `eleven_flash_v2_5`) |
 | `ELEVENLABS_MODEL` | Defaults to `eleven_v3`, which does the whispers and laughs |
@@ -95,4 +119,4 @@ npm install
 npm start
 ```
 
-Then open http://localhost:3000/tv. To watch bots play a whole game: `URL=http://localhost:3000 N=6 npm run bots`. For Land Grab: `URL=http://localhost:3000 N=7 GAMES=5 node test/lg-bots.js`. For BID-COIN!: `URL=http://localhost:3000 N=5 GAMES=3 node test/bc-bots.js` (start the server with `WR_SPEED=0.1` to make it quick).
+Then open http://localhost:3000/tv. To watch bots play a whole game: `URL=http://localhost:3000 N=6 npm run bots`. For Land Grab: `URL=http://localhost:3000 N=7 GAMES=5 node test/lg-bots.js`. For BID-COIN!: `URL=http://localhost:3000 N=5 GAMES=3 node test/bc-bots.js`. For RIGGED!: `URL=http://localhost:3000 N=3 GAMES=3 node test/rg-bots.js` (start the server with `WR_SPEED=0.1` to make it quick).
