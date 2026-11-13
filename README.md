@@ -35,19 +35,19 @@ To be several players on one laptop, open `/lg?test` in several tabs. Each tab i
 
 ## BID-COIN!
 
-A storage-locker bidding war for 2 to 8 players (bots can fill seats), about 15 to 20 minutes. Everyone starts with AED 4,000. Eight lockers come up for auction. Richest at the end wins.
+A storage-locker bidding war for 2 to 8 players (bots can fill seats), about 15 to 20 minutes. Everyone starts with AED 40,000 and bids in steps of 500, 1,000 or 5,000. Eight lockers come up for auction. Richest at the end wins.
 
 1. **Peek:** the door rolls up a little and each phone shows a different thing inside. The player in last place sees two.
-2. **Auction:** tap +50, +100 or +500. Five seconds with no bids and the hammer falls. The server decides who was first, so bids never clash.
-3. **Boom or bust:** everyone else bets AED 200 on whether the winner makes money.
+2. **Auction:** tap +500, +1,000 or +5,000. Five seconds with no bids and the hammer falls. The server decides who was first, so bids never clash.
+3. **Boom or bust:** everyone else bets AED 2,000 on whether the winner makes money.
 4. **Reveal:** the locker is opened one thing at a time, with the back of the locker last. Junk, decent, rare, legendary and cursed things. Sealed boxes are opened at the very end. Cursed things cost money at the end unless you pass them on.
 5. **Power cards:** everyone starts with two and holds up to three. Win a locker or a bet to get another. X-Ray Specs, Insider Tip, The Plant, Freeze, Phantom Bidder, Steal, Tax Man, Swap Meet, Appraiser, Pass the Curse.
 
-One locker in the middle of the game is a mystery locker (no peeking). The last locker is worth double. The AI invents one or two one-of-a-kind finds each game.
+One locker in the middle of the game is a mystery locker (no peeking). The last locker is a billionaire's vault with more and better things. The AI invents one or two one-of-a-kind finds each game.
 
-**Items:** about 260 items in `server/bc-items.js`, each with a name, a category, a rarity, a value in AED, a funny line and a photo search term.
+**Items:** about 230 real things (a Rolex Submariner 126610LN, a 1965 Ford Mustang, a Singer 201, a box of Uni-ball Signo pens...) in `server/bc-items.js`, each with a rarity, a realistic resale value in AED, a funny line and a photo search.
 
-**Item photos:** real, freely licensed photos from Wikimedia Commons, saved in `public/assets/bc/items`. They are fetched by the "BID-COIN photos" robot on GitHub (Actions tab, Run workflow), which also writes `public/assets/bc/credits.json`. See every item, its photo and its credit at `/bidcoin/gallery`. To change one photo, add a line to `server/bc-photo-overrides.json` (a Commons file name like `"File:Something.jpg"`, or different search words), then run the robot again with that item's id in the "redo" box.
+**Item photos:** the game server looks each item up on Wikimedia Commons by itself (freely licensed photos), and the TV and phones load them straight from Wikimedia. The photographer is credited under each photo on the TV. Check progress at `/bidcoin/photos-status`, and see every item with its photo at `/bidcoin/gallery`. To change a photo, add a line to `server/bc-photo-overrides.json`, either an exact Commons file name like `"File:Something.jpg"` or better search words. A file saved as `public/assets/bc/items/<id>.webp` always wins.
 
 **Testing on your own:** open `/tv/bidcoin?test`. The lobby has **Add a bot**, **Fill to 3**, **Remove bots** and **Start**. To be several players on one laptop, open `/bc?test` in several tabs. In a normal game, the first player's phone also has **Add a bot**, so two people can play against bots.
 

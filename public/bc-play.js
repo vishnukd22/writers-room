@@ -63,14 +63,14 @@
   const CARD = {
     xray: ['X-Ray Specs', '🩻', 'See three more things in this locker.'], tip: ['Insider Tip', '🕵️', 'Find out roughly what this locker is worth.'],
     plant: ['The Plant', '🪴', "Everyone else's peek shows a fake treasure. Exposed at the reveal."], freeze: ['Freeze', '🧊', 'Lock one rival out of bidding for 10 seconds.'],
-    phantom: ['Phantom Bidder', '👻', 'A mystery +300 bid. If nobody beats it, nobody gets the locker.'], steal: ['Steal', '🦝', 'After SOLD, take the locker for the price plus 20%.'],
+    phantom: ['Phantom Bidder', '👻', 'A mystery +3,000 bid. If nobody beats it, nobody gets the locker.'], steal: ['Steal', '🦝', 'After SOLD, take the locker for the price plus 20%.'],
     tax: ['Tax Man', '🧾', "Take 25% of this locker's profit."], swap: ['Swap Meet', '🔁', "Swap your cheapest find for this locker's best one."],
     appraise: ['Appraiser', '🔍', 'Your locker only: double the value of its best find.'], curse: ['Pass the Curse', '🧿', 'Give your worst cursed thing to a rival.'],
   };
   const WHEN = { xray: 'Use while peeking', tip: 'Use while peeking', plant: 'Use while peeking', freeze: 'Use during the auction', phantom: 'Use during the auction', steal: 'Use right after SOLD', tax: 'Use after the reveal', swap: 'Use after the reveal', appraise: 'Use after the reveal', curse: 'Use after the reveal' };
   const TARGET = { freeze: 1, curse: 1 };
-  const photo = (img) => (img ? `/assets/bc/items/${img}.webp` : null);
-  const pic = (it) => (photo(it.img) ? `<img src="${photo(it.img)}" alt="">` : `<span class="noph">${CATS[it.cat] || '📦'}</span>`);
+  const photo = (img) => (img ? (/^(https?:)?\//.test(img) ? img : `/assets/bc/items/${img}.webp`) : null);
+  const pic = (it) => (photo(it.img) ? `<img src="${esc(photo(it.img))}" alt="" referrerpolicy="no-referrer">` : `<span class="noph">${CATS[it.cat] || '📦'}</span>`);
   const tv = (title, sub = '', ico = '📺') => `<div class="tv"><div class="ico">${ico}</div><h2 class="h">${title}</h2>${sub ? `<p class="lead">${sub}</p>` : ''}</div>`;
   const cardPic = (k) => (W.img(`t-bc-card-${k}`) ? `<img class="art" src="${W.img(`t-bc-card-${k}`)}" alt="">` : `<span class="e">${CARD[k][1]}</span>`);
   const cardBtn = (c, extra = '') => `<button class="pcard ${c.usable ? 'live' : ''}" data-a="card" data-k="${c.k}" ${c.usable ? '' : 'disabled'}>${cardPic(c.k)}<b>${CARD[c.k][0]}</b><small>${c.usable ? 'Tap to use' : WHEN[c.k]}</small>${extra}</button>`;
@@ -94,9 +94,9 @@
       : a.leader === 'phantom' ? '<div class="status">A mystery bidder leads</div>'
       : a.leader ? `<div class="status" style="--c:${P_(a.leader)?.color}">${name(a.leader)} leads</div>` : '<div class="status">No bids yet</div>';
     const call = a.done ? '' : a.calls === 2 ? '<em class="call c2">Going twice!</em>' : a.calls === 1 ? '<em class="call c1">Going once</em>' : '';
-    const btns = [50, 100, 500].map((inc) => {
+    const btns = (S.rules.inc || [500, 1000, 5000]).map((inc, i) => {
       const to = a.price + inc; const off = a.done || mine || frozenMs > 0 || to > m.cash;
-      return `<button class="bid b${inc}" data-bid="${inc}" ${off ? 'disabled' : ''}><b>+${inc}</b><span>${to > m.cash ? 'Too much' : `to ${num(to)}`}</span></button>`;
+      return `<button class="bid b${i}" data-bid="${inc}" ${off ? 'disabled' : ''}><b>+${num(inc)}</b><span>${to > m.cash ? 'Too much' : `to ${num(to)}`}</span></button>`;
     }).join('');
     return `<div class="pricebox ${a.calls ? 'hot' : ''}"><small>AED</small><b>${num(a.price)}</b>${call}</div>${status}<div class="hammer"><i id="hbar"></i></div>
       <div class="bids ${frozenMs ? 'iced' : ''}">${btns}${frozenMs ? `<div class="ice">🧊 Frozen<span data-ice="${Date.now() + frozenMs}">${Math.ceil(frozenMs / 1000)}</span></div>` : ''}</div>`;

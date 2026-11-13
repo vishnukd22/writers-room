@@ -153,11 +153,11 @@ Return {"stars": 4, "review": "...", "best": 3}.`, 400, 9000);
 }
 
 // BID-COIN!: one-of-a-kind legendary finds, invented fresh each game. base: an existing item whose photo is borrowed.
-const BC_SYSTEM = `You write items for BID-COIN!, a family-friendly party game about bidding on storage lockers in Dubai. Items are read aloud by an auctioneer voice. Be funny and specific. Never name real people or brands. Never use em dashes or en dashes. Reply with JSON only.`;
+const BC_SYSTEM = `You write items for BID-COIN!, a family-friendly party game about bidding on storage lockers in Dubai. Items are read aloud by an auctioneer voice. Be funny and specific. Never name real people. Real brands and exact product models are welcome. Never use em dashes or en dashes. Reply with JSON only.`;
 async function bcLegends(n, baseIds) {
-  const r = await ask(`Invent ${n} legendary one-of-a-kind finds that could turn up at the back of a storage locker. Each needs: name (under 8 words), line (one funny sentence under 14 words), value (AED, between 2500 and 5000), base (the id from this list that looks most like it, so we can show its photo): ${baseIds.join(', ')}.
-Shape: {"items":[{"name":"","line":"","value":3500,"base":""}]}`, 600, 8000, BC_SYSTEM);
-  const ok = (r?.items || []).filter((x) => x && x.name && baseIds.includes(x.base)).map((x) => ({ name: clean(x.name, 60), line: clean(x.line, 90), value: Number(x.value) || 3500, base: x.base }));
+  const r = await ask(`Invent ${n} legendary one-of-a-kind finds that could turn up at the back of a storage locker in Dubai. Each must be a real-world product with its exact model name, given a special twist (for example: a specific watch model with its original box and papers, a classic car with very low mileage). Each needs: name (under 10 words), line (one funny sentence under 14 words), value (realistic resale value in AED, between 15000 and 90000), base (the id from this list that looks most like it, so we can show its photo): ${baseIds.join(', ')}.
+Shape: {"items":[{"name":"","line":"","value":40000,"base":""}]}`, 600, 8000, BC_SYSTEM);
+  const ok = (r?.items || []).filter((x) => x && x.name && baseIds.includes(x.base)).map((x) => ({ name: clean(x.name, 60), line: clean(x.line, 90), value: Number(x.value) || 40000, base: x.base }));
   return ok.length ? ok : null;
 }
 

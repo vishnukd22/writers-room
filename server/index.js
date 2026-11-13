@@ -9,6 +9,7 @@ const { Game } = require('./game');
 const { LandGrab } = require('./landgrab');
 const { BidCoin } = require('./bidcoin');
 const BCI = require('./bc-items');
+const BCP = require('./bc-photos');
 const voice = require('./voice');
 const ai = require('./ai');
 
@@ -31,11 +32,11 @@ app.get('/bc', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-play.html')));
 // every BID-COIN! item with its photo and who took it, for checking the photos and for the credits
 app.get(['/bidcoin/gallery', '/bidcoin/credits'], (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-gallery.html')));
 app.get('/bidcoin/items.json', (_q, r) => {
-  let credits = {}; try { credits = JSON.parse(fs.readFileSync(path.join(PUBLIC, 'assets', 'bc', 'credits.json'), 'utf8')); } catch (e) { credits = {}; }
-  const have = new Set((() => { try { return fs.readdirSync(path.join(PUBLIC, 'assets', 'bc', 'items')); } catch (e) { return []; } })());
-  const row = (i) => ({ id: i.id, name: i.name, cat: i.cat, rar: i.rar || 's', value: i.value ?? null, line: i.line, photo: have.has(`${i.id}.webp`), credit: credits[i.id] || null });
-  r.set('Cache-Control', 'no-cache'); r.json({ items: [...BCI.ITEMS.map(row), ...BCI.CONTAINERS.map(row)], cats: BCI.CATS });
+  const row = (i) => { const f = BCP.info(i.id); return { id: i.id, name: i.name, cat: i.cat, rar: i.rar || 's', value: i.value ?? null, line: i.line, q: i.q, photo: BCP.urlFor(i.id), credit: f ? { text: f.credit, page: f.page } : null }; };
+  r.set('Cache-Control', 'no-cache'); r.json({ items: [...BCI.ITEMS.map(row), ...BCI.CONTAINERS.map(row)], cats: BCI.CATS, status: BCP.status() });
 });
+// how the photo lookups are going (open it in a browser to check)
+app.get('/bidcoin/photos-status', (_q, r) => { r.set('Cache-Control', 'no-cache'); r.json(BCP.status()); });
 app.get('/audio/:id', (q, r) => {
   const buf = voice.audio(q.params.id);
   if (!buf) return r.status(404).end();
@@ -128,5 +129,9 @@ io.on('connection', (socket) => {
 });
 
 setInterval(() => { for (const [code, g] of rooms) if (Date.now() - g.lastActive > 6 * 3600 * 1000) { g.runId++; rooms.delete(code); } }, 10 * 60 * 1000);
+
+// one bad moment in one room must never take every game down
+process.on('uncaughtException', (e) => console.error('uncaught', e));
+process.on('unhandledRejection', (e) => console.error('unhandled', e));
 
 server.listen(PORT, () => console.log(`Party games on http://localhost:${PORT}  (TV: /tv)  AI: ${ai.enabled() ? 'on' : 'off'}  Voice: ${voice.enabled() ? 'on' : 'off'}`));

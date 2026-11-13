@@ -18,7 +18,7 @@
   socket.on('connect', () => {
     const saved = sessionStorage.getItem(KEY);
     const create = () => { const from = sessionStorage.getItem('gnPrev'); sessionStorage.removeItem('gnPrev'); socket.emit('host:create', { game: 'bc', test: TEST, from }, (r) => sessionStorage.setItem(KEY, r.code)); };
-    if (saved) socket.emit('host:attach', { code: saved, game: 'bc' }, (r) => { if (r.error) create(); }); else create();
+    if (saved) socket.emit('host:attach', { code: saved, game: 'bc' }, (r) => { if (r.error) { if (S && S.phase !== 'LOBBY') flash('The game server restarted, so that game ended. Here is a fresh one.', 9000); create(); } }); else create();
   });
   function goMenu() { if (S) sessionStorage.setItem('gnPrev', S.code); sessionStorage.removeItem(KEY); location.href = TEST ? '/tv?test' : '/tv'; }
   socket.on('menu', goMenu);
@@ -40,9 +40,17 @@
     if (a === 'start') socket.emit('host:start', {}, (r) => { if (r?.error) flash(r.error); });
     if (a === 'menu') goMenu();
   });
-  function flash(t) { caption.textContent = t; caption.className = 'show'; setTimeout(() => { caption.className = ''; }, 2500); }
+  function flash(t, ms = 2500) { caption.textContent = t; caption.className = 'show'; setTimeout(() => { caption.className = ''; }, ms); }
+  // a safety net: if the screen hears nothing for 40 seconds mid-game, reconnect and ask for the latest
+  let heard = Date.now();
+  socket.on('state', () => { heard = Date.now(); });
+  socket.on('bc:b', () => { heard = Date.now(); });
+  setInterval(() => {
+    if (!S || S.phase === 'LOBBY' || S.phase === 'END') return;
+    if (Date.now() - heard > 40000) { heard = Date.now(); if (socket.connected) socket.emit('host:attach', { code: S.code, game: 'bc' }, () => {}); else socket.connect(); }
+  }, 5000);
   const warm = new Set();
-  function preload(list) { (list || []).forEach((img) => { if (warm.has(img)) return; warm.add(img); const i = new Image(); i.decoding = 'async'; i.src = photo(img); }); }
+  function preload(list) { (list || []).forEach((img) => { if (warm.has(img)) return; warm.add(img); const i = new Image(); i.decoding = 'async'; i.referrerPolicy = 'no-referrer'; i.src = photo(img); }); }
 
   // ---------------------------------------------------------------- helpers
   const aed = (n) => `${n < 0 ? '-' : ''}AED ${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
@@ -60,8 +68,8 @@
     xray: ['X-Ray Specs', '🩻'], tip: ['Insider Tip', '🕵️'], plant: ['The Plant', '🪴'], freeze: ['Freeze', '🧊'], phantom: ['Phantom Bidder', '👻'],
     steal: ['Steal', '🦝'], tax: ['Tax Man', '🧾'], swap: ['Swap Meet', '🔁'], appraise: ['Appraiser', '🔍'], curse: ['Pass the Curse', '🧿'],
   };
-  const photo = (img) => (img ? `/assets/bc/items/${img}.webp` : null);
-  const pic = (it) => (photo(it.img) ? `<img src="${photo(it.img)}" alt="" decoding="async">` : `<div class="noph"><span>${CATS[it.cat] || '📦'}</span></div>`);
+  const photo = (img) => (img ? (/^(https?:)?\//.test(img) ? img : `/assets/bc/items/${img}.webp`) : null);
+  const pic = (it) => (photo(it.img) ? `<img src="${esc(photo(it.img))}" alt="" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : `<div class="noph"><span>${CATS[it.cat] || '📦'}</span></div>`);
   const tagFor = (it) => (it.sealed ? '<b>???</b><i>Sealed</i>' : `<b>${aed(it.value)}</b><i>${RAR[it.rar] || ''}${it.appraised ? ' x2' : ''}</i>`);
   const itemCard = (it, i, cls = '') => `<div class="item r-${it.rar} ${it.back ? 'back' : ''} ${it.legend ? 'one' : ''} ${it.swapped ? 'swapped' : ''} ${cls}" style="--r:${rot(i)}deg;--i:${i}"><div class="ph">${pic(it)}</div><div class="nm">${esc(it.name)}</div><div class="tag">${tagFor(it)}</div>${it.legend ? '<em class="onebadge">One of a kind</em>' : ''}${it.swapped ? '<em class="stamp sw">Swapped</em>' : ''}</div>`;
   const cardArt = (k) => (W.img(`bc-card-${k}`) ? `<img class="full" src="${W.img(`bc-card-${k}`)}" alt="${esc(CARD[k]?.[0] || '')}">` : `<div class="cemo">${CARD[k]?.[1] || '🃏'}</div>`);
@@ -81,7 +89,7 @@
   function topBar() {
     const lk = S.locker;
     const logo = W.img('bc-logo') ? `<img class="logo" src="${W.img('bc-logo')}" alt="BID-COIN!">` : '<div class="logo word">BID-COIN!</div>';
-    const mid = lk ? `<div class="lnum"><span>Locker ${lk.n} of ${lk.total}</span><b>${esc(lk.origin)}</b>${lk.special === 'mega' ? '<em class="sp mega">Everything worth double</em>' : lk.special === 'mystery' ? '<em class="sp mys">Mystery locker: no peeking</em>' : ''}</div>` : '<div></div>';
+    const mid = lk ? `<div class="lnum"><span>Locker ${lk.n} of ${lk.total}</span><b>${esc(lk.origin)}</b>${lk.special === 'mega' ? '<em class="sp mega">The billionaire\'s vault: more stuff, better stuff</em>' : lk.special === 'mystery' ? '<em class="sp mys">Mystery locker: no peeking</em>' : ''}</div>` : '<div></div>';
     return `${S.phase === 'LOBBY' ? '<div></div>' : logo}${mid}<div class="code"><b>${esc(S.code)}</b><small>${esc(host())}/bc${TEST ? ' · test mode' : ''}</small></div>`;
   }
   function dockHtml() {
@@ -121,7 +129,7 @@
     TUTORIAL() {
       const k = S.x.key; let body = '';
       if (k === 'peek') body = `<div class="tut-peek">${door('crack', { n: 1 }, shapes(6))}<div class="phones">${['Rolex?', 'A guitar', 'Old shoes'].map((t, i) => `<div class="mini" style="--r:${rot(i)}deg"><span>Your peek</span><b>${t}</b></div>`).join('')}</div></div><p class="tnote">Everyone sees something different. Only you know what you saw.</p>`;
-      if (k === 'bid') body = `<div class="tut-bid"><div class="bigprice">${aed(1250)}</div><div class="incs"><span>+50</span><span>+100</span><span>+500</span></div><div class="calls"><em>Going once</em><em>Going twice</em><em class="sold">SOLD</em></div></div><p class="tnote">No bids for 5 seconds and the hammer falls.</p>`;
+      if (k === 'bid') body = `<div class="tut-bid"><div class="bigprice">${aed(S.rules.start * 0.3)}</div><div class="incs">${S.rules.inc.map((n) => `<span>+${num(n)}</span>`).join('')}</div><div class="calls"><em>Going once</em><em>Going twice</em><em class="sold">SOLD</em></div></div><p class="tnote">No bids for 5 seconds and the hammer falls.</p>`;
       if (k === 'bet') body = `<div class="tut-bet"><div class="bb v-boom">BOOM<small>they make money</small></div><div class="bb v-bust">BUST<small>they lose money</small></div></div><p class="tnote">Bet ${aed(S.rules.stake)}. Win it, and you get a power card too.</p>`;
       if (k === 'cards') body = `<div class="fan">${['freeze', 'plant', 'steal', 'tax', 'phantom'].map((c, i) => `<div class="pcard" style="--i:${i}">${cardArt(c)}<b>${CARD[c][0]}</b></div>`).join('')}</div><p class="tnote">You start with 2. Win a locker or a bet to get more. Hold up to ${S.rules.hand}.</p>`;
       const prog = Array.from({ length: S.x.slides }, (_, i) => `<i class="${i === S.x.slide ? 'on' : i < S.x.slide ? 'done' : ''}"></i>`).join('');
@@ -183,7 +191,7 @@
     const plants = (lk.plants || []).map((p, i) => `<div class="item r-l planted" style="--r:${rot(i + 3)}deg"><div class="ph">${pic(p.item)}</div><div class="nm">${esc(p.item.name)}</div><em class="stamp pl">Planted by ${name(p.by)}</em></div>`).join('');
     const found = shown.reduce((s, it) => s + (it.sealed || it.swapped ? 0 : it.value), 0);
     const meter = lk.owner || lk.phantom ? `<div class="meter" id="meter"><div><small>Paid</small><b>${aed(lk.price)}</b></div><div><small>Found so far</small><b class="${found >= lk.price ? 'g' : ''}">${aed(found)}</b></div>${v ? `<div class="verdict ${v.profit > 0 ? 'v-boom' : 'v-bust'}">${v.profit > 0 ? 'BOOM' : 'BUST'}<span>${signed(v.profit)}</span></div>` : ''}</div>` : `<div class="meter" id="meter"><div><small>Nobody paid</small><b>AED 0</b></div><div><small>Worth</small><b>${aed(found)}</b></div></div>`;
-    const spot = last && !v && !after && st !== 'plant' ? `<div class="spot" id="spot"><p class="line">${esc(last.line || '')}</p></div>` : '';
+    const spot = last && !v && !after && st !== 'plant' ? `<div class="spot" id="spot"><p class="line">${esc(last.line || '')}</p>${last.credit ? `<small class="credit">Photo: ${esc(last.credit)}</small>` : ''}</div>` : '';
     const backHint = st === 'back' && (!last || !last.back) ? '<div class="backhint">At the back of the locker...</div>' : '';
     const bets = lk.bets ? `<div class="betrow">${Object.entries(lk.bets).map(([id, b]) => `<span class="chip ${b.won ? 'won' : 'lost'}">${name(id)}: ${b.pick === 'boom' ? 'Boom' : 'Bust'} ${b.won ? `+${S.rules.stake}` : `-${S.rules.stake}`}</span>`).join('')}</div>` : '';
     const fx = (lk.effects || []).map((e) => `<span class="chip fx">${CARD[e.k]?.[1] || ''} ${name(e.by)}: ${CARD[e.k]?.[0] || e.k}${e.item ? ` (${esc(e.item)})` : ''}</span>`).join('');
@@ -225,7 +233,7 @@
     const fresh = P !== null; lastSplash = sp.id; if (!fresh) return;
     const by = sp.by ? name(sp.by) : 'Someone'; const t = sp.target ? name(sp.target) : '';
     const text = {
-      freeze: `${by} froze ${t}! No bidding for 10 seconds.`, phantom: 'A mystery bid! +AED 300 from nowhere.', steal: `${by} stole it from ${t} for ${aed(sp.price || 0)}!`,
+      freeze: `${by} froze ${t}! No bidding for 10 seconds.`, phantom: 'A mystery bid! +AED 3,000 from nowhere.', steal: `${by} stole it from ${t} for ${aed(sp.price || 0)}!`,
       tax: `${by} sends the Tax Man after ${t}. 25% of the profit.`, swap: `${by} swaps ${sp.mine ? esc(sp.mine) : 'some cash'} for the ${esc(sp.item || 'best find')}!`,
       appraise: `${by} gets the ${esc(sp.item || 'best find')} appraised. Double the value!`, curse: `${by} passes the ${esc(sp.item || 'curse')} to ${t}!`,
     }[sp.k] || '';

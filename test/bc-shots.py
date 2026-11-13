@@ -40,7 +40,7 @@ with sync_playwright() as p:
               const S = window.__S; if (!S) return;
               let b = null;
               if (S.phase === 'PEEK') b = q('.pcard.live') || q('[data-a=ready]:not([disabled])');
-              if (S.phase === 'AUCTION') { const bb = q('.bid.b100:not([disabled])'); if (bb && S.auc && S.auc.price < 1200 && Math.random() < 0.12) { bb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return; } if (Math.random() < 0.01) b = q('.pcard.live'); }
+              if (S.phase === 'AUCTION') { const bb = q('.bid.b1:not([disabled])'); if (bb && S.auc && S.auc.price < 12000 && Math.random() < 0.12) { bb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return; } if (Math.random() < 0.01) b = q('.pcard.live'); }
               if (S.phase === 'BET') b = q('[data-a=bet]:not([disabled])');
               if (S.phase === 'AFTER') b = q('.pcard.live') || q('[data-a=pass]');
               if (q('#picker:not([hidden]) [data-a=target]')) b = q('#picker [data-a=target]');

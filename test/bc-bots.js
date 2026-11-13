@@ -37,8 +37,8 @@ async function one() {
         try {
           const me = S.me;
           if (S.phase === 'PEEK' && !me.ready) { const c = me.hand.find((h) => h.usable); if (c) await act({ type: 'card', k: c.k }); await act({ type: 'ready' }); }
-          if (S.phase === 'AUCTION' && auc && !auc.done && auc.leader !== me.id && auc.price + 100 < Math.min(2500, me.cash) && Math.random() < 0.35) {
-            const t0 = Date.now(); const r = await act({ type: 'bid', inc: 100, at: auc.price }); lat.push(Date.now() - t0);
+          if (S.phase === 'AUCTION' && auc && !auc.done && auc.leader !== me.id && auc.price + 1000 < Math.min(25000, me.cash) && Math.random() < 0.35) {
+            const t0 = Date.now(); const r = await act({ type: 'bid', inc: 1000, at: auc.price }); lat.push(Date.now() - t0);
             if (r.ok) accepted++; if (r.stale) stale++;
           }
           if (S.phase === 'AUCTION' && Math.random() < 0.02) { const c = me.hand.find((h) => h.usable && h.k === 'freeze'); const t = S.players.find((p) => p.id !== me.id); if (c && t) await act({ type: 'card', k: 'freeze', target: t.id }); }

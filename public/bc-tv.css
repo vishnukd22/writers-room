@@ -289,3 +289,6 @@ body { overflow: hidden; background: var(--asphalt); }
 .locker .inside.art .box { display: none; }
 .meter { background: rgba(20,23,29,.88); }
 .locker .door[style] .handle { display: none; }
+
+.spot { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+.spot .credit { font-size: .75rem; color: var(--mute); background: rgba(20,23,29,.7); padding: .1rem .5rem; border-radius: 6px; }
