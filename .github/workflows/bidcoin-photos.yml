@@ -1,0 +1,39 @@
+name: BID-COIN photos
+# Fetches a free photo for every BID-COIN! item from Wikimedia Commons and saves it in the repo.
+# Run it from the Actions tab: "BID-COIN photos" > "Run workflow".
+on:
+  workflow_dispatch:
+    inputs:
+      redo:
+        description: 'Optional: item ids to fetch again, separated by commas'
+        required: false
+        default: ''
+      all:
+        description: 'Fetch every photo again from scratch'
+        type: boolean
+        default: false
+permissions:
+  contents: write
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install the image tool
+        run: npm install --no-save --no-audit --no-fund sharp@0.33.5
+      - name: Fetch the photos
+        env:
+          REDO: ${{ inputs.redo }}
+          ALL: ${{ inputs.all }}
+        run: node scripts/fetch-bc-images.js
+      - name: Save them to the repo
+        run: |
+          git config user.name "bidcoin-photo-robot"
+          git config user.email "bidcoin-photo-robot@users.noreply.github.com"
+          git add public/assets/bc
+          git commit -m "BID-COIN! item photos from Wikimedia Commons" || echo "Nothing new to save"
+          git push
