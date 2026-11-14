@@ -10,6 +10,14 @@
   const store = TEST ? sessionStorage : localStorage;
   $('#jcode').value = (params.get('room') || store.getItem('mn:code') || '').toUpperCase();
   $('#jname').value = store.getItem('mn:name') || store.getItem('rg:name') || (TEST ? '' : localStorage.getItem('wr:name') || '');
+  // the wordmark on the join screen, the wallpaper behind everything
+  W.ready.then(() => {
+    const logo = W.thumb('mn-logo'); if (logo) $('.jtitle').innerHTML = `<img src="${logo}" alt="Last Night in the Mansion"><small>Your phone is your lantern. Keep it close.</small>`;
+    const bg = W.img('mn-phone-bg'); if (bg) document.body.style.setProperty('--wall', `url(${bg})`);
+  });
+  const JOB = [['The Key', 'key'], ['The Lock', 'lock'], ['The Lookout', 'lookout'], ['The Flame', 'flame'], ['Guide', 'lantern']];
+  const medal = (label) => { const j = JOB.find(([l]) => String(label || '').startsWith(l)); const src = j && W.thumb(`mn-job-${j[1]}`); return src ? `<img class="medal" src="${src}" alt="">` : ''; };
+  const posCard = (key, cls = 'poscard') => { const src = W.thumb(`mn-pos-${key === 'steady' ? 'hand' : key}`); return src ? `<img class="${cls}" src="${src}" alt="">` : ''; };
   const buzz = (p) => { try { navigator.vibrate?.(p); } catch (e) { /* no vibration */ } };
 
   let S = null; let P = null; let joined = null; let lastNote = null;
@@ -109,10 +117,10 @@
       if (!mine) {
         if (S.step === 'win') return tv(`${name(x.who)} broke free!`, '+10% candle.', '✨');
         if (S.step === 'fail') return tv(`The house kept ${name(x.who)} a little while`, '-15% candle.', '💀');
-        return tv(`${name(x.who)} is possessed`, `${esc(poss.name)}. Watch the TV. You can shout, but you cannot help.`, '👁️');
+        return `${posCard(poss.key, 'poscard small')}${tv(`${name(x.who)} is possessed`, `${esc(poss.name)}. Watch the TV. You can shout, but you cannot help.`, '👁️')}`;
       }
-      if (S.step === 'chosen') return `<div class="itsyou"><h2>It's you.</h2><p>The house has chosen you.</p></div>`;
-      if (S.step === 'ready') return `<div class="itsyou ready"><span class="k">${esc(poss.name)}</span><h2>Get ready</h2><p>${esc(m.job || poss.how)}</p></div>`;
+      if (S.step === 'chosen') return `<div class="itsyou">${posCard(poss.key)}<h2>It's you.</h2><p>The house has chosen you.</p></div>`;
+      if (S.step === 'ready') return `<div class="itsyou ready">${posCard(poss.key, 'poscard small')}<span class="k">${esc(poss.name)}</span><h2>Get ready</h2><p>${esc(m.job || poss.how)}</p></div>`;
       if (S.step === 'win') return `<div class="result win"><h2>You broke free</h2><p>+10% candle. The house sulks.</p></div>`;
       if (S.step === 'fail') return `<div class="result fail"><h2>The house kept you</h2><p>Only for a moment. Probably.</p></div>`;
       return `<div class="poss">${timerBar()}${MNW.render(m.w, { S, live: true })}</div>`;
@@ -129,7 +137,7 @@
       return `<div class="result ${e.escaped ? 'win' : 'fail'}"><h2>${e.escaped ? 'You got out.' : 'The house kept you.'}</h2><p>${e.escaped ? `Dawn, with ${e.candle}% of the candle left.` : 'Your rooms are ready.'} ${e.rooms} of ${e.of} rooms cleared.</p></div>${S.step === 'stats' ? btns : ''}`;
     },
   };
-  function jobCard(role, job) { return `<div class="job"><span class="k">Your job</span><h2>${esc(role || 'Helper')}</h2><p>${esc(job || '')}</p></div>`; }
+  function jobCard(role, job) { return `<div class="job">${medal(role)}<span class="k">Your job</span><h2>${esc(role || 'Helper')}</h2><p>${esc(job || '')}</p></div>`; }
   function timerBar() { const x = S.x; if (!x.ends) return ''; return `<div class="ptimer"><i data-ends="${x.ends}" data-total="${Math.max(1, x.ends - (x.start || W.now()))}" data-kind="bar"></i></div>`; }
   function playHtml(m) {
     return `<div class="playing"><div class="rolebar"><b>${esc(m.role || '')}</b><span>${esc(m.job || '')}</span></div>${timerBar()}${MNW.render(m.w, { S, live: true })}</div>`;

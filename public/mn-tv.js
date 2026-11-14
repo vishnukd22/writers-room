@@ -10,6 +10,7 @@
   let S = null; let P = null;
 
   // ---------------------------------------------------------------- boot
+  W.ready.then(() => { if (img('mn-logo')) $('.gate-title').innerHTML = `<img src="${img('mn-logo')}" alt="Last Night in the Mansion">`; if (img('mn-candle')) $('.gate-in').insertAdjacentHTML('afterbegin', `<img class="gate-candle" src="${img('mn-candle')}" alt="">`); });
   $('#bOpen').onclick = async () => {
     AV.init(); await W.ready; $('#gate').classList.add('hide');
     try { document.documentElement.requestFullscreen?.(); } catch (e) { /* fine */ }
@@ -56,6 +57,11 @@
   const totals = {};
   const timer = (ends, start) => { if (!ends) return ''; const total = start ? Math.max(1, ends - start) : (totals[ends] = totals[ends] || Math.max(1, ends - W.now())); return `<div class="timer"><i data-ends="${ends}" data-total="${total}" data-kind="bar"></i></div><span class="secs" data-ends="${ends}"></span>`; };
   const mort = (cls = '') => `<div class="mort ${cls}">${pic('mn-mortimer-full') || pic('mn-mortimer') || '<span class="ghostly">🕯️</span>'}</div>`;
+  // role badges and possession cards
+  const JOB = [['The Key', 'key'], ['The Lock', 'lock'], ['The Lookout', 'lookout'], ['The Flame', 'flame'], ['Guide', 'lantern']];
+  const medal = (label, cls = 'medal') => { const j = JOB.find(([l]) => String(label || '').startsWith(l)); return j && img(`mn-job-${j[1]}`) ? `<img class="${cls}" src="${img(`mn-job-${j[1]}`)}" alt="">` : ''; };
+  const POSPIC = { steady: 'hand' };
+  const posCard = (key) => pic(`mn-pos-${POSPIC[key] || key}`, 'poscard');
   const TYPE = { talk: 'Talk it through', timing: 'Timing', speed: 'Be quick', memory: 'Eyes and memory' };
   const pct = () => Math.max(0, Math.round(S.candle));
 
@@ -63,7 +69,7 @@
   function candleHtml() {
     if (S.phase === 'LOBBY') return '';
     const c = Math.max(0, Math.min(100, S.candle)); const low = c < 20;
-    const keys = [...Array(5).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}">${i < S.keys ? (img('mn-key') ? `<img src="${img('mn-key')}" alt="">` : '🗝️') : ''}</i>`).join('');
+    const kp = W.thumb('mn-job-key'); const keys = [...Array(5).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}">${i < S.keys ? (kp ? `<img src="${kp}" alt="">` : '🗝️') : ''}</i>`).join('');
     return `<div class="cwrap ${low ? 'low' : ''} ${c <= 0 ? 'out' : ''}" style="--h:${c}">
       <div class="flame"><div class="glow"></div><div class="fl"></div></div><div class="wick"></div>
       <div class="wax"><span class="drip d1"></span><span class="drip d2"></span></div><div class="dish"></div></div>
@@ -119,7 +125,7 @@
     },
     INTRO() {
       if (S.step === 'door') return `<div class="doorslam">${pic('mn-door', 'big') || '<span class="em">🚪</span>'}</div>`;
-      return `<div class="hall">${mort('big')}<div class="hx"><h2>Good evening.</h2><p>I am Mortimer. I have been the butler here for a hundred and twelve years. Most of them dead.</p><div class="rules"><span>🕯️ One candle for all of you</span><span>🚪 Five rooms, then the front door</span><span>🗝️ Every room you clear gives you a key piece</span><span>📱 Do what your phone says</span></div></div></div>`;
+      return `<div class="hall ${img('mn-mortimer-full') ? 'wide' : ''}">${mort('big')}<div class="hx"><h2>Good evening.</h2><p>I am Mortimer. I have been the butler here for a hundred and twelve years. Most of them dead.</p><div class="rules"><span>🕯️ One candle for all of you</span><span>🚪 Five rooms, then the front door</span><span>🗝️ Every room you clear gives you a key piece</span><span>📱 Do what your phone says</span></div></div></div>`;
     },
     HALL() {
       const doors = (S.night || []).map((r, i) => { const cur = i === S.x.next; const st = r.res || (cur ? 'next' : 'shut'); return `<div class="nd st-${st}"><span class="e">${r.res === 'win' ? '🗝️' : r.res === 'fail' ? '✖' : cur ? '🕯️' : '🚪'}</span><b>${r.res || cur ? esc(r.name) : '?'}</b><small>${r.res === 'win' ? 'Cleared' : r.res === 'fail' ? 'Lost' : cur ? 'Next' : ''}</small></div>`; }).join('');
@@ -136,7 +142,7 @@
     POSSESS() {
       const x = S.x; const p = P_(x.who); const poss = x.poss || {};
       if (S.step === 'dark') return '<div class="black"></div>';
-      if (['chosen', 'ready'].includes(S.step)) return `<div class="chosen">${p ? W.bust(p, 'xl') : ''}<div class="cx"><span class="kind">The house has chosen</span><h2>${esc(p?.name || '')}</h2><p class="pn">${esc(poss.name)}</p><p>${esc(poss.how)}</p>${S.step === 'ready' ? '<p class="watch">Everyone else: watch. Shout if it helps.</p>' : ''}</div></div>`;
+      if (['chosen', 'ready'].includes(S.step)) return `<div class="chosen ${img(`mn-pos-${POSPIC[poss.key] || poss.key}`) ? 'withcard' : ''}">${p ? W.bust(p, 'xl') : ''}${posCard(poss.key)}<div class="cx"><span class="kind">The house has chosen</span><h2>${esc(p?.name || '')}</h2><p class="pn">${esc(poss.name)}</p><p>${esc(poss.how)}</p>${S.step === 'ready' ? '<p class="watch">Everyone else: watch. Shout if it helps.</p>' : ''}</div></div>`;
       const w = MNW.render(x.tv?.w, { S, live: false });
       const over = S.step === 'win' ? `<div class="stamp win"><b>${esc(p?.name || '')} broke free</b><span>+10% candle</span></div>` : S.step === 'fail' ? `<div class="stamp fail"><b>The house kept ${esc(p?.name || '')} a while</b><span>-15% of your candle</span></div>` : '';
       return `<div class="possplay"><div class="who">${p ? W.bust(p, 'lg') : ''}<b>${esc(p?.name || '')} is possessed</b></div><div class="pw">${w}</div>${over}</div>`;
@@ -161,7 +167,7 @@
   function jobsHtml(r) {
     const roles = S.x.roles || {};
     const by = {}; S.players.forEach((p) => { const k = roles[p.id] || 'Helper'; (by[k] = by[k] || []).push(p); });
-    return `<div class="jobs"><h2>${esc(r.name || '')}</h2><p class="how">${esc(r.how || '')}</p><div class="jg">${Object.entries(by).map(([k, ps]) => `<div class="jb"><span>${esc(k)}</span><div>${ps.map((p) => `${W.bust(p, 'md')}<b>${esc(p.name)}</b>`).join('')}</div></div>`).join('')}</div><p class="look">Look at your phone.</p></div>`;
+    return `<div class="jobs"><h2>${esc(r.name || '')}</h2><p class="how">${esc(r.how || '')}</p><div class="jg">${Object.entries(by).map(([k, ps]) => `<div class="jb">${medal(k)}<span>${esc(k)}</span><div>${ps.map((p) => `${W.bust(p, 'md')}<b>${esc(p.name)}</b>`).join('')}</div></div>`).join('')}</div><p class="look">Look at your phone.</p></div>`;
   }
 
   // ---------------------------------------------------------------- backdrop art for each room
@@ -195,7 +201,7 @@
     const ph = S.phase; const t = S.x.room?.type; const k = S.x.room?.key;
     let key = 'mn-lobby'; let mood = 'dark';
     if (ph === 'INTRO' || ph === 'HALL') key = 'mn-intro';
-    if (ph === 'ROOM') { if (k === 'ballroom') { key = 'mn-waltz'; mood = 'gentle'; } else if (t === 'speed' || t === 'timing') { key = 'mn-speed'; mood = 'tense'; } else if (t === 'memory') key = 'mn-memory'; else key = 'mn-talk'; }
+    if (ph === 'ROOM') { if (t === 'memory' || k === 'nursery') key = 'mn-memory'; else if (t === 'timing') { key = 'mn-waltz'; mood = 'gentle'; } else if (t === 'speed') { key = 'mn-speed'; mood = 'tense'; } else key = 'mn-talk'; }
     if (ph === 'POSSESS') { key = 'mn-possessed'; mood = 'tense'; }
     if (ph === 'DOOR') { key = 'mn-finale'; mood = 'tense'; }
     if (ph === 'END') { key = S.x.end?.escaped ? 'mn-dawn' : 'mn-lost'; mood = S.x.end?.escaped ? 'gentle' : 'dark'; }
@@ -203,6 +209,15 @@
     const id = `${key}|${mood}`;
     if (id !== lastMusic) { lastMusic = id; AV.music(key, mood); }
   }
+
+  let lastBeat = 0; let lastTickSec = null; let nextThunder = Date.now() + 25000;
+  setInterval(() => {
+    if (!S) return; const now = Date.now();
+    const playing = ['ROOM', 'DOOR', 'POSSESS'].includes(S.phase) && S.step === 'play';
+    if (playing && S.candle < 20 && now - lastBeat > 5200) { lastBeat = now; AV.fx('mn-heartbeat'); }
+    if (playing && S.x.ends) { const left = Math.ceil((S.x.ends - W.now()) / 1000); if (left <= 10 && left > 0 && left !== lastTickSec) { lastTickSec = left; AV.fx('mn-tick', { gap: 0 }); } }
+    if (['LOBBY', 'HALL'].includes(S.phase) && now > nextThunder) { nextThunder = now + 35000 + Math.random() * 40000; AV.fx(Math.random() < 0.6 ? 'mn-thunder' : 'mn-wind'); }
+  }, 250);
 
   // ---------------------------------------------------------------- Mortimer, sounds, the scares
   let lastCue = null; let lastFx = 0; let lastPlayers = 0; let lastScare = 0; let lastFlash = 0; let capTimer = null;

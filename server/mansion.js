@@ -294,10 +294,11 @@ class Mansion {
     this.nights++;
     this.setPhase('INTRO', { step: 'door' }); this.sfx('mn-slam');
     await this.hold(g, 1.5);
-    this.setPhase('INTRO', { step: 'welcome' });
+    this.setPhase('INTRO', { step: 'welcome' }); this.sfx('mn-thunder');
     await this.say(g, SAY.welcome);
     if (this.addedBots) await this.say(g, SAY.welcomeBots);
     await this.say(g, SAY.rules);
+    this.sfx('mn-candle-light');
     this.plan = this.pickRooms(); this.recent = [...this.plan];
     this.plan.forEach((k) => this.prefetch(ROOM_LINES[k]));
     const possessAfter = new Set([1, 3]);
@@ -317,7 +318,7 @@ class Mansion {
     const def = ROOMS[key]; this.roomN = level;
     const R = { key, level, roles: {}, bubbles: [], events: [], evSeq: 0, done: null, burn: false, ends: Infinity };
     this.players.forEach((p) => { p.mx = {}; });
-    this.setPhase('ROOM', { step: 'intro', key }); this.sfx('mn-creak');
+    this.setPhase('ROOM', { step: 'intro', key }); this.sfx(pick(['mn-creak', 'mn-creak2']));
     const X = await this.play(g, R, def);
     await this.say(g, ROOM_LINES[key]);
     this.setPhase('ROOM', { step: 'jobs', key }); this.sfx('mn-page');
@@ -368,7 +369,7 @@ class Mansion {
     this.setPhase('POSSESS', { step: 'dark', who: who.id, key });
     await this.hold(g, 1);
     if (this.scares < this.scareBudget && this.scares === 0) await this.jumpScare(g);
-    this.setPhase('POSSESS', { step: 'chosen', who: who.id, key });
+    this.setPhase('POSSESS', { step: 'chosen', who: who.id, key }); this.sfx('mn-breath');
     await this.say(g, fill(SAY.possessIntro, { name: who.name }));
     this.sayOver(g, fill(SAY.possessWatch, { name: who.name }));
     const R = { key, level: 1, roles: {}, bubbles: [], events: [], evSeq: 0, done: null, burn: false, ends: Infinity, who: who.id };
@@ -381,14 +382,14 @@ class Mansion {
     // bots only get possessed when there is nobody else; they muddle through
     while (!R.done) { await this.wait(400, () => !!R.done); this.guard(g); if (who.bot && !R.done && Math.random() < 0.08) R.done = Math.random() < 0.5 ? 'win' : 'fail'; }
     this.active = null;
-    if (R.done === 'win') { who.possWins++; this.gain(10); this.sfx('mn-clear'); this.setPhase('POSSESS', { step: 'win', who: who.id, key }); await this.say(g, line(SAY.possessWin, { name: who.name })); } else { who.possFails++; this.drip(15, null); this.sfx('mn-fail'); this.setPhase('POSSESS', { step: 'fail', who: who.id, key }); if (this.dead) return; await this.say(g, line(SAY.possessFail, { name: who.name })); }
+    if (R.done === 'win') { who.possWins++; this.gain(10); this.sfx('mn-clear'); this.setPhase('POSSESS', { step: 'win', who: who.id, key }); await this.say(g, line(SAY.possessWin, { name: who.name })); } else { who.possFails++; this.drip(15, null); this.sfx('mn-chains'); this.setPhase('POSSESS', { step: 'fail', who: who.id, key }); if (this.dead) return; await this.say(g, line(SAY.possessFail, { name: who.name })); }
     await this.candleWarn(g);
   }
   async door(g) {
     this.roomN = 6;
     const R = { key: 'door', level: 5, roles: {}, bubbles: [], events: [], evSeq: 0, done: null, burn: false, ends: Infinity };
     this.players.forEach((p) => { p.mx = {}; });
-    this.setPhase('DOOR', { step: 'intro' }); this.sfx('mn-chime');
+    this.setPhase('DOOR', { step: 'intro' }); this.sfx('mn-thunder');
     const X = this.makeX(R); R.st = DOOR.setup(X, this.keys); this.active = { X, R, def: DOOR };
     await this.say(g, SAY.door);
     await this.say(g, SAY.doorPieces[this.keys] || SAY.doorPieces.low);

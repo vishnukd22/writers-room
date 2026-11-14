@@ -39,7 +39,7 @@ window.MNW = (() => {
     },
     clock: (w) => `<div class="w-clock"><svg viewBox="0 0 200 200" aria-label="Clock at ${w.h || 12}:${String((w.m || 0) * 5).padStart(2, '0')}"><circle cx="100" cy="100" r="92" class="face"/>${[...Array(12).keys()].map((i) => { const a = (i * Math.PI) / 6; return `<text x="${100 + 74 * Math.sin(a)}" y="${106 - 74 * Math.cos(a)}" class="num">${i || 12}</text>`; }).join('')}<line x1="100" y1="100" x2="100" y2="52" class="hour" transform="rotate(${(w.h || 0) * 30} 100 100)"/><line x1="100" y1="100" x2="100" y2="30" class="min" transform="rotate(${(w.m || 0) * 30} 100 100)"/><circle cx="100" cy="100" r="6" class="pin"/></svg><p>Set both hands to 12</p></div>`,
     beat: (w) => `<div class="w-beat" data-t0="${w.t0}" data-period="${w.period}" data-steps="${w.steps}"><div class="ring"><i></i></div><span class="cnt"></span></div>`,
-    doll: (w) => `<div class="w-doll st-${w.state}">${W.img('mn-doll') ? `<img src="${W.img('mn-doll')}" alt="">` : '<span class="e">🪆</span>'}<b>${{ away: 'She is looking away. MOVE.', turn: 'She is turning...', look: 'FREEZE. She is watching.' }[w.state] || ''}</b></div>`,
+    doll: (w) => { const k = w.state === 'look' ? 'mn-doll' : 'mn-doll-back'; return `<div class="w-doll st-${w.state} ${W.img(k) ? 'pic' : ''}">${W.img(k) ? `<img src="${W.img(k)}" alt="">` : '<span class="e">🪆</span>'}<b>${{ away: 'She is looking away. MOVE.', turn: 'She is turning...', look: 'FREEZE. She is watching.' }[w.state] || ''}</b></div>`; },
     candle: (w) => `<div class="w-flame ${w.flicker ? 'flick' : ''}"><div class="fl"></div><div class="wick"></div><div class="stick"></div></div>`,
     dials: (w) => `<div class="w-dials">${(w.vals || []).map((v, i) => `<div class="dial">${live ? `<button${act(w.act, i)} data-dir="up">▲</button>` : ''}<b>${v}</b>${live ? `<button${act(w.act, i)} data-dir="down">▼</button>` : ''}</div>`).join('')}</div>`,
     input: (w) => (live ? `<form class="w-input" data-form="${esc(w.act)}"><input maxlength="14" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${esc(w.placeholder || '')}"><button type="submit">Cast</button></form>` : ''),
@@ -54,7 +54,7 @@ window.MNW = (() => {
     },
     faces: (w) => {
       const p = P(w.who); if (!p) return '';
-      return `<div class="w-faces">${[0, 1].map((i) => `<button class="fc ${i === w.fake ? `fake ${w.how}` : ''}"${act(w.act, i)} ${live ? '' : 'disabled'}>${W.bust(p, 'xl')}${i === w.fake && w.how === 'eyes' ? '<span class="eyes"><i></i><i></i></span>' : ''}<b>${esc(p.name)}?</b></button>`).join('')}</div>`;
+      return `<div class="w-faces">${[0, 1].map((i) => `<button class="fc ${i === w.fake ? `fake f-${w.how}` : ''}"${act(w.act, i)} ${live ? '' : 'disabled'}>${W.bust(p, 'xl')}${i === w.fake && w.how === 'eyes' ? '<span class="eyedots"><i></i><i></i></span>' : ''}<b>${esc(p.name)}?</b></button>`).join('')}</div>`;
     },
     door: (w) => `<div class="w-door ${w.open ? 'open' : ''} ${w.freeze ? 'frz' : ''}">
       <div class="dpan ghosts st-${w.ghost}"><span class="e">👻👻👻</span><b>${{ creep: 'The ghosts are creeping closer', warn: 'They are about to turn...', look: 'THEY ARE LOOKING. Nobody move.' }[w.ghost]}</b></div>

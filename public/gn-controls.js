@@ -32,9 +32,10 @@
     return btn + sheet + over;
   }
   function render() {
-    root.innerHTML = html();
-    clearInterval(tick);
-    if (root.querySelector('[data-gn-left]')) tick = setInterval(() => root.querySelectorAll('[data-gn-left]').forEach((el) => { el.textContent = Math.max(0, Math.ceil((Number(el.dataset.gnLeft) - Date.now()) / 1000)); }), 250);
+    // only redraw when something changed: some games update many times a second, and redrawing would make the menu flicker
+    const h = html(); const same = h === root.__gnHtml;
+    if (!same) { root.__gnHtml = h; root.innerHTML = h; clearInterval(tick); }
+    if (!same && root.querySelector('[data-gn-left]')) tick = setInterval(() => root.querySelectorAll('[data-gn-left]').forEach((el) => { el.textContent = Math.max(0, Math.ceil((Number(el.dataset.gnLeft) - Date.now()) / 1000)); }), 250);
     const paused = !!(S?.ctl?.paused || S?.ctl?.quit);
     document.body.classList.toggle('gn-paused', paused);
     if (isTV && paused !== wasPaused && typeof AV !== 'undefined' && AV.hold) AV.hold(paused);
