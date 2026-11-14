@@ -123,4 +123,7 @@ const BC = () => process.env.ELEVENLABS_BC_VOICE_ID || 'IKne3meq5aSn9XLyUdCD'; /
 // RIGGED!'s host, Vince Velvet: a smooth old-school announcer. Set ELEVENLABS_RG_VOICE_ID to change it.
 const RG = () => process.env.ELEVENLABS_RG_VOICE_ID || 'nPczCjzI2devNBz1zQrb'; // "Brian"
 
-module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, BC, RG, charVoices };
+// Last Night in the Mansion's butler, Mortimer: an older, posh, polite British voice. Set ELEVENLABS_MN_VOICE_ID to change it.
+const MN = () => process.env.ELEVENLABS_MN_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; // "George"
+
+module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, BC, RG, MN, charVoices };

@@ -1,6 +1,18 @@
-# Vishnu's Game Night: Writers' Room, Land Grab, BID-COIN! and RIGGED!
+# Vishnu's Game Night: Last Night in the Mansion, BID-COIN!, RIGGED! and Land Grab
 
-Three party games. Open `/tv` on the TV and pick one. Phones join with the code on screen.
+Party games for the TV and everyone's phones. Open `/tv` on the TV and pick one. Phones join with the code on screen.
+
+## Last Night in the Mansion
+
+A spooky, silly co-op game for 2 to 8 players, about 20 minutes. Everyone wins together or loses together. Join at `/mn`. With exactly 2 people, two guests (bots) join to fill the jobs.
+
+The group shares one candle. It burns slowly while you are in a room, and mistakes melt it faster. Mortimer, the dead butler, leads you through 5 rooms picked from 20 (talking rooms, timing rooms, speed rooms and memory rooms, never the same kind twice in a row). Each room gives every phone a different job. Clear a room to win a key piece. Fail and you lose 15% of the candle and move on.
+
+Between rooms the house possesses one person (never the same one twice in a row). Their phone gets a 15-second challenge that everyone watches on the TV: win and the candle grows, lose and it shrinks. There are only 1 or 2 jump scares a night.
+
+The finale is the Front Door: the Key, the Lock, the Lookout and the Flame all at once, with the key pieces you won. Escape before the candle goes out. Any picture, music or sound named in the art doc can be dropped into `public/assets` at any time; until then the game draws and plays its own.
+
+The old Writers' Room still works at `/tv/writers`, but it is no longer on the game menu.
 
 ## Writers' Room
 
@@ -41,11 +53,13 @@ A storage-locker bidding war for 2 to 8 players (bots can fill seats), about 15 
 2. **Auction:** tap +500, +1,000 or +5,000. Five seconds with no bids and the hammer falls. The server decides who was first, so bids never clash.
 3. **Boom or bust:** everyone else bets AED 2,000 on whether the winner makes money.
 4. **Reveal:** the locker is opened one thing at a time, with the back of the locker last. Junk, decent, rare, legendary and cursed things. Sealed boxes are opened at the very end. Cursed things cost money at the end unless you pass them on.
-5. **Power cards:** everyone starts with two and holds up to three. Win a locker or a bet to get another. X-Ray Specs, Insider Tip, The Plant, Freeze, Phantom Bidder, Steal, Tax Man, Swap Meet, Appraiser, Pass the Curse.
+5. **Disasters:** about one locker in four hides a disaster behind something innocent in the peek (a "classic car under a dust sheet" that turns out to be stolen). Fixed fines of AED 15,000 to 60,000, or a tax audit (25% of your cash) or a lawsuit (30%). Paid on the spot, never below zero. The vault and garages are riskier.
+6. **Power cards:** everyone starts with two and holds up to three. Win a locker or a bet to get another. X-Ray Specs, Insider Tip, The Plant (fakes one thing in everyone else's peek of the next locker), Freeze, Phantom Bidder, Steal (price plus 50%), Tax Man (15%), Swap Meet (takes the second-best find), Appraiser (best find x1.5), Pass the Curse, and Lock.
+7. **Locks:** everyone gets one free Lock. When someone plays Steal, Tax Man, Swap Meet, Pass the Curse or Freeze on you, your phone gives you five seconds to block it. Lock cards give you more.
 
-One locker in the middle of the game is a mystery locker (no peeking). The last locker is a billionaire's vault with more and better things. The AI invents one or two one-of-a-kind finds each game.
+One locker in the middle of the game is a mystery locker (no peeking). Most games have a garage locker with a car at the back, from a rusty Corolla to a Skyline worth AED 250,000. The last locker is a billionaire's vault with more and better things. The AI invents one or two one-of-a-kind finds each game.
 
-**Items:** about 230 real things (a Rolex Submariner 126610LN, a 1965 Ford Mustang, a Singer 201, a box of Uni-ball Signo pens...) in `server/bc-items.js`, each with a rarity, a realistic resale value in AED, a funny line and a photo search.
+**Items:** about 520 real things and 30 cars (a Rolex Submariner 126610LN, a 1965 Ford Mustang, a Singer 201, a box of Uni-ball Signo pens...) in `server/bc-items.js` and `server/bc-items-more.js` (with the disasters), each with a rarity, a realistic resale value in AED, a funny line and a photo search.
 
 **Item photos:** the game server looks each item up on Wikimedia Commons by itself (freely licensed photos), and the TV and phones load them straight from Wikimedia. The photographer is credited under each photo on the TV. Check progress at `/bidcoin/photos-status`, and see every item with its photo at `/bidcoin/gallery`. To change a photo, add a line to `server/bc-photo-overrides.json`, either an exact Commons file name like `"File:Something.jpg"` or better search words. A file saved as `public/assets/bc/items/<id>.webp` always wins.
 
@@ -53,24 +67,27 @@ One locker in the middle of the game is a mystery locker (no peeking). The last 
 
 ## RIGGED!
 
-A trivia game show for 2 to 8 players (bots can fill seats), about 20 to 25 minutes. Everyone starts with $1,000 in Bucks. The questions are fair. Nothing else is. Most Bucks at the end wins. Join at `/rg` (or type the code on the front page).
+A trivia game show for 2 to 8 players (bots can fill seats), about 20 minutes. Everyone starts with $1,000 in Bucks. Bucks buy a head start in the final race, and whoever wins the race wins the show. Join at `/rg` (or type the code on the front page).
 
-1. **The Dossier:** three odd questions about yourself, answered in secret. They come back in round 3.
-2. **Warm-Up:** four multiple-choice questions. The first is clean, then sabotage, the Audience Remote, bribes and copying switch on one by one.
+1. **The Dossier:** three odd questions about yourself, answered in secret in 60 seconds. Vince reads them out all game.
+2. **Round One:** five multiple-choice questions (only the first is easy) and one "who wrote this?" question from the Dossier.
 3. **Lie Detector:** a weird true fact with a blank. Write a fake answer, then find the truth among everyone's lies and Vince's.
-4. **Who In This Room?:** guess who wrote each Dossier answer. With only 2 players it becomes **Lie About Yourself**: write a fake answer next to your real one.
+4. **Round Three:** five harder questions and another Dossier question.
 5. **The Bomb:** true or false, passed from phone to phone with a shrinking fuse.
-6. **Closest Number:** guess a real number, then bet on who will be the most wrong.
-7. **Double Trouble:** four more questions, everything x2, sabotage half price.
-8. **The Rigged Ladder:** a 3-minute race up 7 rungs. Your rivals vote on your next category. Buy a Lift, Grease a rival.
+6. **Grudge Match:** last place picks anyone to duel. The winner gets a head start.
+7. **The Rigged Race:** one shared question at a time, six options, tap every one that fits. Right taps step you forward, wrong taps step you back. Last place starts furthest ahead. One question is about the room's Dossier answers.
 
-**Rule cards:** after every round, the player in last place picks one of three rule cards (Opposite Day, Robin Hood, Amnesia, Musical Chairs and 15 more). Up to three stay on the board at once. Pass the Phone can be switched off from the first phone in the lobby.
+**Showdowns:** every round ends with the leader against last place: one question, fastest right answer takes a pot from the loser. Everyone else bets on who wins. One Showdown is a Dossier Duel (who wrote this, you or them?) and one brings back the Lie Detector's best lie.
 
-**Tricks on your phone:** a tray at the bottom with Sabotage (Fog, Shuffle, Mirror, Tiny Text, Earthquake, Spam, Freeze, and a Shield), Bribes (Hint, Peek, Stopwatch, Veto, Fix the Fact) and Copy. Whoever is in last place gets the Audience Remote instead: Boo, Cheer, Spin and Heckle.
+**Rule cards:** after rounds 1 to 3, last place picks one of three rule cards. Only one rule is live at a time: Double or Nothing, Speed Tax, Robin Hood, Bounty, Last Laugh, Blind Buttons, Hot Hands, Copycat.
 
-**Two players:** Vince joins as **The House**, a third contestant that cheats. If the House finishes first, nobody wins.
+**One sabotage each:** once per game, tap the red button and a face. Something random hits their phone: Fog, Shuffle, Mirror, Tiny Text, Earthquake or Freeze.
 
-**Questions:** a fixed, checked bank in `server/rg-trivia.js` (about 400 multiple-choice questions in 12 categories) and `server/rg-content.js` (true or false statements, number questions, Lie Detector facts, Dossier questions, heckles). The game remembers what it has asked, so repeats are rare. Vince's lines are in `server/rg-lines.js`.
+**Two players:** Vince joins as **The House**, a third contestant that cheats. If the House wins, nobody wins.
+
+**Questions:** `server/rg-trivia.js` and `server/rg-trivia-more.js` (about 390 multiple-choice questions in 12 categories, mostly medium and hard), `server/rg-race.js` (the finale's tap-every-one questions) and `server/rg-content.js` (true or false statements, Lie Detector facts, Dossier questions, rule cards). The game remembers what it has asked, so repeats are rare. Vince's lines are in `server/rg-lines.js`.
+
+**Pause and quit:** every phone (in every game except Writers' Room) has a round menu button in the corner. Anyone can pause; the TV stops the clock, music and narrator. Anyone can resume, after a 3-second countdown. Quitting to the game menu needs most of the room to agree.
 
 **Testing on your own:** open `/tv/rigged?test`. The lobby has **Add a bot**, **Fill to 4**, **Remove bots** and **Start**. In a normal game, the first player's phone has **Add a bot** too.
 
@@ -106,6 +123,7 @@ Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<na
 | `ELEVENLABS_LG_VOICE_ID` | Land Grab's tea shop gossip. If not set, an English voice with an Indian accent is picked from the ElevenLabs voice library |
 | `ELEVENLABS_BC_VOICE_ID` | BID-COIN!'s auctioneer (default is Charlie) |
 | `ELEVENLABS_RG_VOICE_ID` | RIGGED!'s host, Vince Velvet (default is Brian) |
+| `ELEVENLABS_MN_VOICE_ID` | The Mansion's butler, Mortimer (default is George, an older British voice) |
 | `BC_LOCKERS` | How many lockers in a BID-COIN! game (default 8) |
 | `ELEVENLABS_FAST_MODEL` | The quick voice model for Writers' Room characters (default `eleven_flash_v2_5`) |
 | `ELEVENLABS_MODEL` | Defaults to `eleven_v3`, which does the whispers and laughs |
@@ -119,4 +137,4 @@ npm install
 npm start
 ```
 
-Then open http://localhost:3000/tv. To watch bots play a whole game: `URL=http://localhost:3000 N=6 npm run bots`. For Land Grab: `URL=http://localhost:3000 N=7 GAMES=5 node test/lg-bots.js`. For BID-COIN!: `URL=http://localhost:3000 N=5 GAMES=3 node test/bc-bots.js`. For RIGGED!: `URL=http://localhost:3000 N=3 GAMES=3 node test/rg-bots.js` (start the server with `WR_SPEED=0.1` to make it quick).
+Then open http://localhost:3000/tv. To watch bots play a whole game: `URL=http://localhost:3000 N=6 npm run bots`. For Land Grab: `URL=http://localhost:3000 N=7 GAMES=5 node test/lg-bots.js`. For BID-COIN!: `URL=http://localhost:3000 N=5 GAMES=3 node test/bc-bots.js`. For RIGGED!: `URL=http://localhost:3000 N=3 GAMES=3 node test/rg-bots.js` (start the server with `WR_SPEED=0.1` to make it quick). For the Mansion: `URL=http://localhost:3000 N=4 HUMANS=0 GAMES=2 node test/mn-bots.js`, and every room on its own: `node test/mn-rooms-test.js`. Pause and quit in every game: `node test/pause-test.js`. The iPhone check (every phone screen at four iPhone sizes): `python3 test/phone-fit.py` with the server on `WR_SPEED=0.25`.

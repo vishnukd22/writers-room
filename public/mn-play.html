@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" class="gn-phone">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D0A12">
+<title>Last Night in the Mansion</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/gn.css">
+<link rel="stylesheet" href="/fonts/fell/400.css">
+<link rel="stylesheet" href="/fonts/fell/400-italic.css">
+<link rel="stylesheet" href="/fonts/inter/index.css">
+<link rel="stylesheet" href="/mn.css">
+<link rel="stylesheet" href="/mn-play.css">
+</head>
+<body>
+<section id="join">
+  <div class="jtitle">Last Night<br><span>in the</span> Mansion<small>Your phone is your lantern. Keep it close.</small></div>
+  <form id="jform" autocomplete="off">
+    <label>Room code<input id="jcode" maxlength="4" autocapitalize="characters" spellcheck="false" placeholder="ABCD" required></label>
+    <label>Your name<input id="jname" maxlength="12" placeholder="Vishnu" required></label>
+    <button class="jbtn" type="submit">Step inside</button>
+    <p id="jerr" class="err" role="alert"></p>
+  </form>
+</section>
+<section id="app" hidden>
+  <header id="hud"></header>
+  <main id="main"></main>
+</section>
+<div id="frost" aria-hidden="true"></div>
+<div id="flash" aria-hidden="true"></div>
+<div id="toasts" aria-live="polite"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/mn-widgets.js"></script>
+<script src="/mn-play.js"></script>
+<script src="/gn-controls.js"></script>
+</body>
+</html>

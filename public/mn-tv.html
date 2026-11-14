@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" class="gn-tv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Last Night in the Mansion</title>
+<link rel="stylesheet" href="/base.css">
+<link rel="stylesheet" href="/gn.css">
+<link rel="stylesheet" href="/fonts/fell/400.css">
+<link rel="stylesheet" href="/fonts/fell/400-italic.css">
+<link rel="stylesheet" href="/fonts/inter/index.css">
+<link rel="stylesheet" href="/mn.css">
+<link rel="stylesheet" href="/mn-tv.css">
+</head>
+<body>
+<div id="backdrop" aria-hidden="true"><div class="art" id="art"></div><div class="vig"></div></div>
+<div id="app">
+  <aside id="candle"></aside>
+  <header id="top"></header>
+  <main id="stage"></main>
+  <aside id="side"></aside>
+  <footer id="guests"></footer>
+</div>
+<div id="frost" aria-hidden="true"></div>
+<div id="caption" aria-live="polite"></div>
+<div id="scare" aria-hidden="true"></div>
+<div id="controls">
+  <button id="bMusic">Music on</button>
+  <button id="bSfx">Sounds on</button>
+  <button id="bVoice">Mortimer on</button>
+  <button id="bSkip" title="Space bar">Skip</button>
+  <button id="bFull">Full screen</button>
+  <a href="/tv" id="bMenu">Games</a>
+</div>
+<div id="gate">
+  <div class="gate-in">
+    <div class="gate-title">Last Night in the Mansion</div>
+    <p class="gate-sub">One candle. Five rooms. A butler who has been dead for a hundred years.</p>
+    <p>This screen is the house. Everyone plays on their phone, together. You need 2 to 8 players. With just 2, two more guests join you. Turn the sound up.</p>
+    <button id="bOpen">Open the front door</button>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/audio.js"></script>
+<script src="/mn-widgets.js"></script>
+<script src="/mn-tv.js"></script>
+<script src="/gn-controls.js"></script>
+</body>
+</html>

@@ -81,7 +81,9 @@ window.AV = (() => {
   // BID-COIN! borrows Writers' Room tracks until its own arrive
   const MUSIC_ALIAS = { 'bc-lobby': 'lobby', 'bc-auction': 'pitch', 'bc-reveal': 'ratings', 'bc-finale': 'finale',
     // RIGGED! borrows tracks too, until its own arrive (the Bomb uses the built-in tense score)
-    'rg-lobby': 'lobby', 'rg-question': 'pitch', 'rg-wheel': 'ratings', 'rg-finale': 'finale' };
+    'rg-lobby': 'lobby', 'rg-question': 'pitch', 'rg-wheel': 'ratings', 'rg-finale': 'finale',
+    // Last Night in the Mansion borrows the old Writers' Room horror tracks until its own arrive
+    'mn-lobby': 'genre-horror', 'mn-intro': 'genre-horror', 'mn-talk': 'genre-nordic-noir', 'mn-memory': 'genre-true-crime', 'mn-possessed': 'genre-cult', 'mn-speed': 'genre-zombie', 'mn-finale': 'genre-zombie', 'mn-lost': 'genre-horror' };
   function music(key, mood) {
     if (!ctx) return;
     const want = key && has('music', key) ? key : key && MUSIC_ALIAS[key] && has('music', MUSIC_ALIAS[key]) ? MUSIC_ALIAS[key] : null;
@@ -139,6 +141,10 @@ window.AV = (() => {
     cash: () => { noise(ctx.currentTime, 0.08, 0.5, sfxBus, 3000); note(hz(96), ctx.currentTime + 0.08, 0.5, 'sine', 0.16, sfxBus, 0.002); note(hz(100), ctx.currentTime + 0.14, 0.6, 'sine', 0.12, sfxBus, 0.002); },
     door: () => { for (let i = 0; i < 14; i++) noise(ctx.currentTime + i * 0.07, 0.07, 0.22, sfxBus, 600 + i * 40); note(55, ctx.currentTime + 1.05, 0.4, 'sine', 0.4, sfxBus, 0.003); },
   };
+  // the Mansion's music room: eight piano keys, and a soft wax drip
+  [0, 2, 4, 5, 7, 9, 11, 12].forEach((st, i) => { synthFx[`note${i}`] = () => { note(hz(60 + st), ctx.currentTime, 0.9, 'triangle', 0.2, sfxBus, 0.005); note(hz(72 + st), ctx.currentTime, 0.5, 'sine', 0.05, sfxBus, 0.005); }; });
+  synthFx.drip = () => { note(hz(91), ctx.currentTime, 0.08, 'sine', 0.12, sfxBus, 0.002); note(hz(84), ctx.currentTime + 0.06, 0.18, 'sine', 0.1, sfxBus, 0.002); };
+  synthFx.heartbeat = () => { [0, 0.22].forEach((t, i) => note(i ? 50 : 58, ctx.currentTime + t, 0.2, 'sine', 0.6, sfxBus, 0.004)); };
   // Land Grab sounds fall back to these built-in ones until the real files arrive
   const ALIAS = { 'lg-stamp': 'stamp', 'lg-paper': 'whoosh', 'lg-murmur': 'gasp', 'lg-bus': 'trombone', 'lg-shutter': 'thunder', 'lg-cash': 'bell',
     // BID-COIN!
@@ -149,7 +155,13 @@ window.AV = (() => {
     'rg-sting': 'sting', 'rg-house': 'dundun', 'rg-question': 'blip', 'rg-ding': 'ding', 'rg-buzzer': 'buzzer', 'rg-tick': 'tick', 'rg-pass': 'blip', 'rg-fuse': 'fuse',
     'rg-boom': 'boom', 'rg-reveal': 'sting', 'rg-wheel': 'wheel', 'rg-card': 'fanfare', 'rg-swap': 'whoosh', 'rg-cash': 'cash', 'rg-fanfare': 'fanfare', 'rg-go': 'fanfare',
     'rg-climb': 'blip', 'rg-slip': 'scratch', 'rg-shield': 'freeze', 'rg-copy': 'scratch', 'rg-fog': 'whoosh', 'rg-shuffle': 'scratch', 'rg-mirror': 'whoosh',
-    'rg-tiny': 'blip', 'rg-quake': 'thunder', 'rg-spam': 'blip', 'rg-freeze': 'freeze' };
+    'rg-tiny': 'blip', 'rg-quake': 'thunder', 'rg-spam': 'blip', 'rg-freeze': 'freeze',
+    // Last Night in the Mansion
+    'mn-scare': 'sting', 'mn-creak': 'door', 'mn-creak2': 'door', 'mn-heartbeat': 'heartbeat', 'mn-breath': 'whoosh', 'mn-candle-out': 'whoosh', 'mn-slam': 'stamp',
+    'mn-scream': 'gasp', 'mn-whisper': 'whoosh', 'mn-moan': 'boo', 'mn-candle-light': 'ding', 'mn-thunder': 'thunder', 'mn-wind': 'whoosh', 'mn-steps': 'thud',
+    'mn-floor': 'door', 'mn-tick': 'tick', 'mn-chime': 'bell', 'mn-bell': 'bell', 'mn-bubble': 'blip', 'mn-switch': 'stamp', 'mn-spark': 'fuse', 'mn-giggle': 'laugh',
+    'mn-chomp': 'gavel', 'mn-bottle': 'ding', 'mn-page': 'whoosh', 'mn-rope': 'scratch', 'mn-chains': 'fuse', 'mn-unlock': 'ding', 'mn-clear': 'fanfare', 'mn-fail': 'dundun',
+    'mn-drip': 'drip', 'mn-note0': 'note0', 'mn-note1': 'note1', 'mn-note2': 'note2', 'mn-note3': 'note3', 'mn-note4': 'note4', 'mn-note5': 'note5', 'mn-note6': 'note6', 'mn-note7': 'note7' };
   const lastPlayed = {};
   const buffers = {};
   async function loadBuf(name) {
@@ -200,5 +212,11 @@ window.AV = (() => {
     toggleSfx() { sfxOn = !sfxOn; return sfxOn; },
     toggleVoice() { voiceVol = voiceVol ? 0 : 1; if (voiceEl) voiceEl.volume = voiceVol; return voiceVol > 0; },
     speakingId: () => speaking,
+    // pause everything (music, voice, effects) and pick up where it left off
+    hold(on) {
+      if (!ctx) return;
+      if (on) { try { ctx.suspend(); } catch (e) { /* fine */ } if (current.el) current.el.pause(); if (voiceEl) voiceEl.pause(); if ('speechSynthesis' in window) speechSynthesis.pause(); }
+      else { try { ctx.resume(); } catch (e) { /* fine */ } if (current.el && musicOn) current.el.play().catch(() => {}); if (voiceEl) voiceEl.play().catch(() => {}); if ('speechSynthesis' in window) speechSynthesis.resume(); }
+    },
   };
 })();
