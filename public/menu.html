@@ -66,9 +66,9 @@
   .lg { --c1: #34D399; --c2: #0B8A7C; --glass: rgba(0,50,40,.4); }
   .wr { --c1: #4F8CFF; --c2: #2335A8; --glass: rgba(10,20,70,.42); }
   .mn { --c1: #8B5CF6; --c2: #2A1468; --glass: rgba(25,10,60,.48); }
-  .feature { grid-row: span 2; }
-  .feature .fallback { font-size: clamp(7rem, 13vw, 15rem); }
-  .new { position: absolute; top: 16px; left: 16px; padding: .35em .9em; border-radius: 99px; background: #fff; color: var(--c2); font-weight: 800; font-size: clamp(.8rem, .95vw, 1.05rem); box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+  .soon { cursor: default; }
+  .soon .play { background: rgba(255,255,255,.18); color: #fff; }
+  .soon .art { filter: saturate(.85); }
 
   /* how it works: a plain white card */
   .how { background: var(--card); color: var(--ink); border-radius: var(--r); padding: clamp(1.2rem, 2vw, 2.4rem); display: flex; flex-direction: column; justify-content: center; gap: clamp(.8rem, 1.6vh, 1.4rem); box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 18px 40px -24px rgba(0,0,0,.25); min-height: 200px; }
@@ -84,8 +84,8 @@
 
   /* smaller screens: two columns, then one, and the page scrolls */
   @media (max-height: 820px) and (min-width: 1101px) { .page { gap: 2.4vh; padding-top: 3.5vh; } .lede { margin-top: .6rem; } }
-  @media (max-width: 1100px) { .feature { grid-row: auto; grid-column: 1 / -1; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(280px, auto); } .page { min-height: 0; } }
-  @media (max-width: 680px) { .feature { grid-column: auto; } .grid { grid-template-columns: 1fr; } header { flex-direction: column; align-items: flex-start; } .greet { text-align: left; } .page { width: auto; padding: max(4vh, env(safe-area-inset-top)) 16px 3vh; } .info { grid-template-columns: auto 1fr; } .play { grid-column: 1 / -1; text-align: center; } }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(280px, auto); } .page { min-height: 0; } }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } header { flex-direction: column; align-items: flex-start; } .greet { text-align: left; } .page { width: auto; padding: max(4vh, env(safe-area-inset-top)) 16px 3vh; } .info { grid-template-columns: auto 1fr; } .play { grid-column: 1 / -1; text-align: center; } }
   @media (prefers-reduced-motion: reduce) { .card, .card .art, .play { transition: none; } }
 </style>
 </head>
@@ -102,10 +102,6 @@
   </header>
 
   <main class="grid">
-    <a class="card mn feature" id="gMN" href="/tv/mansion">
-      <div class="art" id="aMN"></div><div class="fallback" aria-hidden="true">🕯️</div><span class="new">New</span>
-      <div class="info"><div class="icon" id="iMN">🕯️</div><div class="txt"><b>Last Night in the Mansion</b><span>Escape a haunted house together before your one candle burns out.</span><small>2 to 8 players, about 20 minutes</small></div><span class="play">Play</span></div>
-    </a>
     <a class="card bc" id="gBC" href="/tv/bidcoin">
       <div class="art" id="aBC"></div><div class="fallback" aria-hidden="true">💰</div>
       <div class="info"><div class="icon" id="iBC">💰</div><div class="txt"><b>BID-COIN!</b><span>Bid on mystery lockers. Pray there's a Rolex inside.</span><small>2 to 8 players, about 20 minutes</small></div><span class="play">Play</span></div>
@@ -117,6 +113,14 @@
     <a class="card lg" id="gLG" href="/tv/landgrab">
       <div class="art" id="aLG"></div><div class="fallback" aria-hidden="true">🏡</div>
       <div class="info"><div class="icon" id="iLG">🏡</div><div class="txt"><b>Land Grab</b><span>Save the village. Someone here is the Puppet.</span><small>5 to 10 players, about 25 minutes</small></div><span class="play">Play</span></div>
+    </a>
+    <div class="card mn soon" id="gMN" aria-label="Last Night in the Mansion, coming soon">
+      <div class="art" id="aMN"></div><div class="fallback" aria-hidden="true">🕯️</div>
+      <div class="info"><div class="icon" id="iMN">🕯️</div><div class="txt"><b>The Mansion</b><span>Escape before your one candle burns out.</span><small>2 to 8 players, about 20 minutes</small></div><span class="play">Soon</span></div>
+    </div>
+    <a class="card wr" id="gWR" href="/tv/writers">
+      <div class="art" id="aWR"></div><div class="fallback" aria-hidden="true">✍️</div>
+      <div class="info"><div class="icon" id="iWR">✍️</div><div class="txt"><b>Writers' Room</b><span>Write a whole TV season in one night.</span><small>2 to 12 players, about 30 minutes</small></div><span class="play">Play</span></div>
     </a>
     <section class="how" aria-label="How it works">
       <h2>How it works</h2>
@@ -132,7 +136,7 @@
 </div>
 <script>
   const q = new URLSearchParams(location.search);
-  if (q.has('test')) { ['gLG', 'gBC', 'gRG', 'gMN'].forEach((id) => { const a = document.getElementById(id); a.href += '?test'; }); document.getElementById('test').hidden = false; }
+  if (q.has('test')) { ['gLG', 'gBC', 'gRG'].forEach((id) => { const a = document.getElementById(id); a.href += '?test'; }); document.getElementById('test').hidden = false; }
   // a friendly clock in the corner
   const tick = () => { const d = new Date(); const h = d.getHours(); document.getElementById('hello').textContent = h < 5 ? 'Up late?' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; document.getElementById('clock').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   tick(); setInterval(tick, 15000);
@@ -141,7 +145,7 @@
     const find = (n) => ['webp', 'png', 'jpg'].map((e) => `${n}.${e}`).find((f) => m.img.includes(f));
     const art = (id, ...names) => { for (const n of names) { const f = find(n); if (f) { const el = document.getElementById(id); el.style.backgroundImage = `url(/assets/img/${f})`; el.nextElementSibling.hidden = true; return; } } };
     const icon = (id, n) => { const f = find(n); if (f) document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; };
-    art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title');
+    art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aWR', 'title'); art('aMN', 'mn-title');
     icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn');
     const logo = find('gn-logo'); if (logo) document.getElementById('brand').innerHTML = `<img src="/assets/img/${logo}" alt="Vishnu's Game Night">`;
   }).catch(() => {});
