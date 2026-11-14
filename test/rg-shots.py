@@ -29,29 +29,21 @@ with sync_playwright() as p:
     seen = {}; last = None; t0 = time.time(); k = 0
     while time.time() - t0 < float(os.environ.get('MAXS', '900')):
         try:
-            st = tv.evaluate('window.__S && [__S.phase, __S.kind||"", __S.step||"", (__S.x.step||"")].join("|")')
+            st = tv.evaluate('window.__S && [__S.phase, __S.kind||"", __S.step||"", (__S.x.step||""), (__S.sd&&__S.sd.step)||"", (__S.race&&__S.race.step)||""].join("|")')
         except Exception:
             st = None
         # the human phone plays too: types, taps, and now and then plays dirty
         try:
             ph.evaluate("""() => {
-              const q = (s) => document.querySelector(s); const qa = (s) => [...document.querySelectorAll(s)];
-              if (window.__busy) return;
-              const S = window.__S; if (!S || !S.me) return;
+              const qa = (s) => [...document.querySelectorAll(s)].filter((el) => !el.disabled && el.getBoundingClientRect().width > 2 && !el.closest('#gn-ctl'));
+              if (window.__busy) return; const S = window.__S; if (!S || !S.me) return;
               const later = (fn, t = 700) => { window.__busy = true; setTimeout(() => { try { fn(); } finally { window.__busy = false; } }, t); };
-              if (q('#picker:not([hidden])')) { const f = q('#picker .fbtn:not([disabled])') || q('#picker [data-pick=""]'); if (f) later(() => f.click(), 500); return; }
-              if (S.phase === 'DOSSIER') { const t = q('textarea'); if (t) { t.value = ['Half a lemon and a lot of regret', 'I can whistle with my nose', 'Sir Snackalot'][Math.floor(Math.random()*3)]; later(() => t.parentElement.querySelector('button').click(), 600); } return; }
-              if (S.phase === 'Q' && S.me.can) {
-                const tr = qa('#tray .trick:not([disabled])'); if (tr.length && Math.random() < 0.08) { later(() => tr[Math.floor(Math.random()*tr.length)].click(), 400); return; }
-                const tab = qa('#tray .tabs button:not(.on)'); if (tab.length && Math.random() < 0.05) { later(() => tab[0].click(), 300); return; }
-                if (q('#lie')) { q('#lie').value = 'pelicans'; later(() => q('[data-a=lie]').click(), 1500); return; }
-                if (q('#fake')) { q('#fake').value = 'I once fought a swan and lost'; later(() => q('[data-a=fake]').click(), 1500); return; }
-                if (q('.pad')) { later(() => { ['1','2','0','0'].forEach((k) => q(`[data-k="${k}"]`).click()); q('[data-a=numgo]').click(); }, 2500); return; }
-                const bs = qa('[data-a=pick]:not([disabled]), [data-a=bet]:not([disabled])'); if (bs.length) { later(() => bs[Math.floor(Math.random()*bs.length)].click(), 2600); return; }
-                const lk = q('[data-a=lock]'); if (lk) later(() => lk.click(), 600);
-              }
-              if (S.phase === 'WHEEL') { const c = q('[data-a=wheel]') || q('[data-a=veto]'); if (c) later(() => c.click(), 2500); }
-              if (S.phase === 'LADDER') { const v = q('[data-a=catvote]'); if (v) { later(() => v.click(), 500); return; } const c = qa('[data-a=climb]:not([disabled])'); if (c.length) later(() => c[Math.floor(Math.random()*4)].click(), 1600); }
+              const pk = qa('#picker [data-pick]:not([data-pick=""])'); if (pk.length) { later(() => pk[0].click(), 500); return; }
+              const box = qa('textarea, input#lie').find((el) => !el.value); if (box) { later(() => { box.value = ['Half a lemon and a lot of regret', 'pelicans', 'Sir Snackalot'][Math.floor(Math.random()*3)]; const b = box.parentElement.querySelector('button') || document.querySelector('[data-a=lie]'); b && b.click(); }, 900); return; }
+              const sab = qa('[data-a=sab]'); if (sab.length && Math.random() < 0.05) { later(() => sab[0].click(), 400); return; }
+              const race = qa('[data-a=race]'); if (race.length) { const lock = qa('[data-a=raceLock]'); if (Math.random() < 0.25 && lock.length) later(() => lock[0].click(), 900); else later(() => race[Math.floor(Math.random()*race.length)].click(), 700); return; }
+              const bs = qa('[data-a=pick], [data-a=duel], [data-a=bet], [data-a=rule], [data-a=grudge]'); if (bs.length) { later(() => bs[Math.floor(Math.random()*bs.length)].click(), 2200); return; }
+              const lk = qa('[data-a=lock]'); if (lk.length) later(() => lk[0].click(), 600);
             }""")
         except Exception:
             pass

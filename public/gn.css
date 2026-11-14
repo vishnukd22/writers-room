@@ -1,0 +1,43 @@
+/* Shared by every phone and TV screen: the pause, resume and quit controls, and the phone-fit rules that stop iPhones overflowing. */
+
+/* ---------- phones: never wider than the screen, never hiding a button ---------- */
+html.gn-phone { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html.gn-phone, html.gn-phone body { max-width: 100%; overflow-x: hidden; }
+html.gn-phone body { min-height: 100vh; min-height: 100dvh; overflow-wrap: anywhere; }
+html.gn-phone #app { width: 100%; max-width: min(32rem, 100vw); min-height: 100vh; min-height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
+html.gn-phone #app * { min-width: 0; max-width: 100%; }
+html.gn-phone img, html.gn-phone video, html.gn-phone canvas, html.gn-phone svg { max-width: 100%; height: auto; }
+/* Safari zooms into any text box smaller than 16px and leaves the page zoomed, which pushes buttons off screen */
+html.gn-phone input, html.gn-phone textarea, html.gn-phone select { font-size: max(16px, 1em) !important; }
+html.gn-phone button, html.gn-phone .btn { touch-action: manipulation; }
+/* overlays and sheets fit the visible screen, above Safari's bar */
+html.gn-phone .sheet, html.gn-phone .pk { max-height: 85vh; max-height: 85dvh; padding-bottom: calc(1.2rem + env(safe-area-inset-bottom)); }
+html.gn-phone #hud { padding-top: max(.55rem, env(safe-area-inset-top)); padding-right: 3.4rem; }
+/* the main action buttons on a screen stay pinned in reach at the bottom */
+html.gn-phone .gn-dock { position: sticky; bottom: 0; z-index: 4; padding: .6rem 0 calc(.6rem + env(safe-area-inset-bottom)); background: inherit; }
+
+/* ---------- the menu button and its sheet (phones) ---------- */
+#gn-ctl { position: relative; z-index: 900; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.gn-menu { position: fixed; top: max(.45rem, env(safe-area-inset-top)); right: max(.45rem, env(safe-area-inset-right)); z-index: 901; width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 2px solid rgba(255,255,255,.55); background: rgba(0,0,0,.55); color: #fff; font: 800 .85rem/1 system-ui, sans-serif; letter-spacing: -.08em; display: grid; place-items: center; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.gn-over { position: fixed; inset: 0; z-index: 902; display: grid; place-items: center; padding: 1rem max(1rem, env(safe-area-inset-right)) calc(1rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); background: rgba(8,6,12,.82); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); overflow-y: auto; }
+.gn-card { width: min(22rem, 100%); background: #1C1A24; color: #F4F0E8; border: 2px solid rgba(255,255,255,.18); border-radius: 18px; padding: 1.2rem 1.1rem; text-align: center; display: grid; gap: .55rem; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+.gn-card p { margin: 0; line-height: 1.4; }
+.gn-t { font-weight: 800; font-size: 1.5rem; letter-spacing: .01em; }
+.gn-n { opacity: .75; font-size: .95rem; }
+.gn-big { font-weight: 900; font-size: 4rem; line-height: 1; }
+.gn-row { display: flex; gap: .6rem; margin-top: .4rem; }
+.gn-row > * { flex: 1; }
+.gn-col { flex-direction: column; }
+.gn-b { min-height: 3.1rem; border-radius: 12px; border: 2px solid rgba(255,255,255,.3); background: transparent; color: inherit; font: 700 1.05rem/1.2 system-ui, sans-serif; padding: .6rem .8rem; cursor: pointer; touch-action: manipulation; }
+.gn-go { background: #2FA866; border-color: #2FA866; color: #fff; }
+.gn-hot { background: #D2373F; border-color: #D2373F; color: #fff; }
+.gn-ghost { background: rgba(255,255,255,.06); }
+
+/* ---------- the TV ---------- */
+html.gn-tv .gn-over { background: rgba(8,6,12,.78); }
+html.gn-tv .gn-card { width: min(40rem, 80vw); padding: 2.4rem 2rem; gap: 1rem; border-radius: 28px; }
+html.gn-tv .gn-t { font-size: 4rem; }
+html.gn-tv .gn-card p { font-size: 1.6rem; }
+html.gn-tv .gn-big { font-size: 9rem; }
+@media (prefers-reduced-motion: no-preference) { .gn-over .gn-card { animation: gn-in .25s ease-out; } }
+@keyframes gn-in { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }

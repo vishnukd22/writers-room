@@ -173,3 +173,24 @@ body.fx-quake #main { animation: quake .12s infinite; }
 body.fx-freeze #main { pointer-events: none; }
 body.fx-freeze #main::after { content: '🧊 FROZEN'; position: fixed; inset: 0; display: grid; place-items: center; font-family: var(--show); font-size: 3rem; color: #fff; background: radial-gradient(circle, rgba(159,219,255,.55), rgba(159,219,255,.85)); z-index: 30; text-shadow: 0 3px 0 #3A7FA8; }
 @media (prefers-reduced-motion: reduce) { body.fx-quake #main { animation: none; transform: rotate(4deg); } }
+
+/* ---------------------------------------------------------------- v2: one sabotage button, rule chip, Showdowns, the race */
+.sabbtn { width: 100%; border: 0; border-radius: 16px; background: linear-gradient(180deg, #FF6A4A, #D9341B); color: #fff; font-family: var(--show); font-size: 1.35rem; padding: .7rem 1rem; display: grid; gap: .1rem; box-shadow: 0 4px 0 #7A1A0E; touch-action: manipulation; }
+.sabbtn small { font-family: var(--ui); font-weight: 700; font-size: .85rem; opacity: .9; }
+.sabbtn:disabled { opacity: .45; }
+.rulechip { background: rgba(233,185,73,.18); border: 1px solid rgba(233,185,73,.5); border-radius: 99px; padding: .1rem .5rem; font-size: .8rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 9.5rem; }
+.quote { font-family: var(--script); font-size: 1.4rem; font-weight: 700; color: var(--gold-2); margin: 0; }
+.btns.two { grid-template-columns: 1fr 1fr; }
+.btns.two .ab { justify-content: center; text-align: center; flex-direction: column; min-height: 6rem; }
+.btns.six { grid-template-columns: 1fr 1fr; gap: .5rem; }
+.btns.six .ab { padding: .75rem .7rem; font-size: 1rem; gap: .5rem; }
+.ab.tog:not(.sel) { filter: saturate(.55) brightness(.85); }
+.ab.tog.sel { filter: none; transform: scale(1.02); }
+.faces.two .fbtn.big { flex-direction: column; justify-content: center; min-height: 8rem; font-size: 1.1rem; }
+.mytrack { position: relative; height: 1.6rem; border-radius: 99px; background: rgba(255,242,217,.12); overflow: hidden; margin-top: .4rem; }
+.mytrack i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--gold), #FFE08A); transition: width 1s; }
+.mytrack span { position: relative; display: block; text-align: center; font-weight: 800; font-size: .9rem; line-height: 1.6rem; color: var(--cream); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+/* the sabotage button sits under the answers, never on top of them */
+#tray { position: static; border-top: 0; background: transparent; padding: .2rem 14px calc(.8rem + env(safe-area-inset-bottom)); }
+.sabbtn { grid-auto-flow: column; justify-content: center; align-items: center; gap: .6rem; font-size: 1.1rem; padding: .55rem .8rem; }
+.sabbtn small { font-size: .78rem; text-align: left; }

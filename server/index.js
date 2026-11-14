@@ -9,6 +9,7 @@ const { Game } = require('./game');
 const { LandGrab } = require('./landgrab');
 const { BidCoin } = require('./bidcoin');
 const { Rigged } = require('./rigged');
+const { Mansion } = require('./mansion');
 const pausable = require('./pausable');
 const BCI = require('./bc-items');
 const BCP = require('./bc-photos');
@@ -43,6 +44,8 @@ app.get('/tv/bidcoin', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-tv.html')));
 app.get('/bc', (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-play.html')));
 app.get('/tv/rigged', (_q, r) => r.sendFile(path.join(PUBLIC, 'rg-tv.html')));
 app.get('/rg', (_q, r) => r.sendFile(path.join(PUBLIC, 'rg-play.html')));
+app.get('/tv/mansion', (_q, r) => r.sendFile(path.join(PUBLIC, 'mn-tv.html')));
+app.get('/mn', (_q, r) => r.sendFile(path.join(PUBLIC, 'mn-play.html')));
 // every BID-COIN! item with its photo and who took it, for checking the photos and for the credits
 app.get(['/bidcoin/gallery', '/bidcoin/credits'], (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-gallery.html')));
 app.get('/bidcoin/items.json', (_q, r) => {
@@ -76,6 +79,7 @@ app.use('/fonts/kalam', express.static(path.join(NM, '@fontsource', 'kalam'), { 
 app.use('/fonts/bungee', express.static(path.join(NM, '@fontsource', 'bungee'), { maxAge: '30d' }));
 app.use('/fonts/shrikhand', express.static(path.join(NM, '@fontsource', 'shrikhand'), { maxAge: '30d' }));
 app.use('/fonts/inter', express.static(path.join(NM, '@fontsource-variable', 'inter'), { maxAge: '30d' }));
+app.use('/fonts/fell', express.static(path.join(NM, '@fontsource', 'im-fell-english'), { maxAge: '30d' }));
 // Pictures and music can be cached for days. Code is always checked for updates, so a new upload shows up at once.
 app.use('/assets', express.static(path.join(PUBLIC, 'assets'), { maxAge: '7d' }));
 app.use(express.static(PUBLIC, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
@@ -90,8 +94,8 @@ function originOf(socket) {
   return `${proto}://${h['x-forwarded-host'] || h.host}`;
 }
 // kind: 'wr' (Writers' Room), 'lg' (Land Grab), 'bc' (BID-COIN!) or 'rg' (RIGGED!). test: the bot buttons.
-const KINDS = ['wr', 'lg', 'bc', 'rg'];
-const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : `/?room=${code}`);
+const KINDS = ['wr', 'lg', 'bc', 'rg', 'mn'];
+const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : kind === 'mn' ? `/mn?room=${code}` : `/?room=${code}`);
 async function createRoom(socket, kind = 'wr', test = false) {
   const code = newCode();
   const hooks = {
@@ -101,7 +105,7 @@ async function createRoom(socket, kind = 'wr', test = false) {
     menu: () => io.to(`host:${code}`).emit('menu'),
     blast: (ev, data) => io.to(`room:${code}`).emit(ev, data), // tiny instant messages to everyone in the room (bids)
   };
-  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : new Game(code, hooks);
+  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : kind === 'mn' ? new Mansion(code, hooks, { test }) : new Game(code, hooks);
   game.kind = kind;
   // pause, resume and quit from any phone (every game except the old Writers' Room)
   if (kind !== 'wr') pausable.install(game, { shift: (dt) => game.shiftClock?.(dt) });

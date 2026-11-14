@@ -25,6 +25,10 @@ const SAY = {
   cursed: ['Oh no. {item}. That one is cursed.', '[nervously] {item}. Nobody wants that. It costs you at the end.'],
   sealed: 'A {item}! Sealed tight. We open it at the very end.',
   plant: 'Hold on. Where is the {item} everyone saw? It was planted by {name}!',
+  disaster: ['[gasps] Wait. That is not a {look}. That is a {item}! That will cost you AED {cost}.', 'Oh dear. Oh dear oh dear. {item}. The bill? AED {cost}.', '[nervously] Everyone step back. {item}. That is an AED {cost} problem.'],
+  disasterPct: ['[gasps] {item}! That takes {pct} percent of everything you have. Gone.', 'Oh no. {item}. Say goodbye to {pct} percent of your cash.'],
+  car: ['[gasps] There is a car back there! {item}!', 'Is that... a whole car? {item}!'],
+  locked: 'Blocked! {name} had a Lock.',
   boom: ['[excited] BOOM! {name} made {profit} dirhams!', 'BOOM! {profit} dirhams of profit for {name}!'],
   bust: ['Ouch. BUST! {name} lost {loss} dirhams.', '[sighs] Bust. {name} is down {loss} dirhams on that one.'],
   even: '{name} roughly broke even. Boring, but safe.',
@@ -45,7 +49,7 @@ const TUTORIAL = [
   { key: 'peek', title: 'Peek', line: 'First, the peek. Each of you sees something different on your phone. Keep it to yourself. Or lie about it.' },
   { key: 'bid', title: 'Bid', line: "Then the auction. Tap plus five hundred, plus a thousand, or plus five thousand. Five seconds with no bids, and it's sold!" },
   { key: 'bet', title: 'Boom or bust', line: 'Everyone else bets. Will the winner make money? Then we open the locker, one thing at a time.' },
-  { key: 'cards', title: 'Power cards', line: "And you each get power cards. Freeze a rival. Plant a fake treasure. Steal a locker. Use them well. Let's go!" },
+  { key: 'cards', title: 'Power cards', line: "And you each get power cards. Freeze a rival. Steal a locker. Everyone gets one free Lock to block an attack. And watch out: some lockers hide a disaster. Let's go!" },
 ];
 
 module.exports = { SAY, TUTORIAL };

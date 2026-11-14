@@ -229,50 +229,28 @@ const HECKLES = [
 
 // ---------------------------------------------------------------- the rules of the show
 // Lasting cards stay on the rule board (up to 3). Instant cards happen once.
+// Rule cards. Only one is live at a time. Last place picks the next one from three.
 const RULES = {
-  opposite: { name: 'Opposite Day', type: 'lasting', emoji: '🙃', text: 'Wrong answers score what right answers would. Right answers score nothing.' },
-  copycat: { name: 'Copycat', type: 'lasting', emoji: '🐈', text: "Before you lock in, your phone shows one random rival's current answer." },
-  robin: { name: 'Robin Hood', type: 'lasting', emoji: '🏹', text: 'After every question, the leader pays $200 to last place.' },
-  speedtax: { name: 'Speed Tax', type: 'lasting', emoji: '🐌', text: 'The slowest correct answer on each question scores nothing.' },
-  double: { name: 'Double or Nothing', type: 'lasting', emoji: '🎲', text: 'Right answers score double. Wrong answers cost $300.' },
-  sale: { name: 'Sabotage Sale', type: 'lasting', emoji: '🏷️', text: 'Every sabotage costs half.' },
-  snitches: { name: 'Snitches', type: 'lasting', emoji: '🐀', text: "Every bribe is announced on the TV with the briber's name." },
-  taxman: { name: 'Taxman', type: 'lasting', emoji: '🧾', text: 'Everything you buy costs 50% more. Vince keeps the change.' },
-  hothands: { name: 'Hot Hands', type: 'lasting', emoji: '🔥', text: "Lock in during the first 3 seconds and your answer scores double, but you can't change it." },
-  bounty: { name: 'Bounty', type: 'lasting', emoji: '🤠', text: 'Anyone who answers correctly faster than the leader steals $150 from them.' },
-  amnesia: { name: 'Amnesia', type: 'lasting', emoji: '🌀', text: "The scoreboard is hidden. Only Vince knows who's winning, and he lies about it." },
-  blind: { name: 'Blind Buttons', type: 'lasting', emoji: '🙈', text: 'Phones only show A, B, C and D. The answers are only on the TV, so everyone has to look up.' },
-  lastlaugh: { name: 'Last Laugh', type: 'lasting', emoji: '🤡', text: 'The player in last place scores triple.' },
-  chairs: { name: 'Musical Chairs', type: 'instant', emoji: '🪑', text: 'Every score moves one seat to the left.' },
-  switch: { name: 'Switcheroo', type: 'instant', emoji: '🔀', text: 'Two random players swap their Bucks.' },
-  passphone: { name: 'Pass the Phone', type: 'instant', emoji: '📱', text: "For the next question, everyone hands their phone to the person on their left. Whatever they answer counts for the phone's owner." },
-  alliance: { name: 'Alliance', type: 'instant', emoji: '🤝', text: 'Players are paired at random for the next round and share everything they win.' },
-  jackpot: { name: 'Jackpot', type: 'instant', emoji: '💰', text: 'The next question is worth $1,000 to whoever gets it right fastest.' },
-  house: { name: 'The House Always Wins', type: 'instant', emoji: '🎰', text: 'Vince takes 10% from everyone. The next correct answer takes the whole pot.' },
+  double: { name: 'Double or Nothing', emoji: '🎲', text: 'Right answers score double. Wrong answers cost $200.' },
+  speedtax: { name: 'Speed Tax', emoji: '🐌', text: 'The slowest right answer on each question scores nothing.' },
+  robin: { name: 'Robin Hood', emoji: '🏹', text: 'After every question, the leader pays $200 to last place.' },
+  bounty: { name: 'Bounty', emoji: '🤠', text: 'Answer right faster than the leader and steal $150 from them.' },
+  lastlaugh: { name: 'Last Laugh', emoji: '🤡', text: 'Whoever is in last place scores triple.' },
+  blind: { name: 'Blind Buttons', emoji: '🙈', text: 'Phones only show A, B, C and D. The answers are on the TV, so look up.' },
+  hothands: { name: 'Hot Hands', emoji: '🔥', text: "Lock in during the first 3 seconds and score double, but you can't change it." },
+  copycat: { name: 'Copycat', emoji: '🐈', text: "Before you lock in, your phone shows one rival's current answer." },
 };
 
-// While a question is open: tap one, tap a face.
+// One sabotage per player for the whole game. Tap a face; what it does is a surprise.
 const SABOTAGE = {
-  fog: { name: 'Fog', cost: 150, secs: 3, emoji: '🌫️', text: 'Their answer buttons blur for 3 seconds.' },
-  shuffle: { name: 'Shuffle', cost: 150, secs: 4, emoji: '🔀', text: 'Their buttons swap places every second for 4 seconds.' },
-  mirror: { name: 'Mirror', cost: 100, secs: 5, emoji: '🪞', text: 'All their text flips backwards for 5 seconds.' },
-  tiny: { name: 'Tiny Text', cost: 100, secs: 5, emoji: '🐜', text: 'Everything on their phone shrinks to ant size for 5 seconds.' },
-  quake: { name: 'Earthquake', cost: 150, secs: 4, emoji: '🌋', text: 'Their screen shakes violently for 4 seconds.' },
-  spam: { name: 'Spam', cost: 200, secs: 0, emoji: '📨', text: "A convincing fake fifth answer appears on their phone. Pick it and they're wrong.", mcOnly: true },
-  freeze: { name: 'Freeze', cost: 250, secs: 3, emoji: '🧊', text: 'They cannot tap anything for 3 seconds.' },
+  fog: { name: 'Fog', secs: 3, emoji: '🌫️', text: 'Their answer buttons blur for 3 seconds.' },
+  shuffle: { name: 'Shuffle', secs: 4, emoji: '🔀', text: 'Their buttons swap places every second for 4 seconds.' },
+  mirror: { name: 'Mirror', secs: 5, emoji: '🪞', text: 'All their text flips backwards for 5 seconds.' },
+  tiny: { name: 'Tiny Text', secs: 5, emoji: '🐜', text: 'Everything on their phone shrinks to ant size for 5 seconds.' },
+  quake: { name: 'Earthquake', secs: 4, emoji: '🌋', text: 'Their screen shakes violently for 4 seconds.' },
+  freeze: { name: 'Freeze', secs: 3, emoji: '🧊', text: 'They cannot tap anything for 3 seconds.' },
 };
-const SHIELD = { name: 'Shield', cost: 200, emoji: '🛡️', text: 'Blocks the next attack on you this round and bounces it back to the attacker.' };
 
-// Secret. Only you see what you bought, but Vince always drops a guilty hint.
-const BRIBES = {
-  hint: { name: 'Hint', cost: 300, emoji: '💡', text: 'Two wrong answers disappear from your phone.', when: ['mc'] },
-  peek: { name: 'Peek', cost: 400, emoji: '👀', text: 'See which answer most people have picked so far.', when: ['mc', 'vote', 'who'] },
-  stopwatch: { name: 'Stopwatch', cost: 350, emoji: '⏱️', text: 'Pick a rival. Their next question has half the time.', target: true, when: ['mc', 'vote', 'who', 'num', 'write'] },
-  veto: { name: 'Veto', cost: 500, emoji: '✋', text: 'The next time the Rule Wheel spins, you can cancel the card that gets picked.', when: ['mc', 'vote', 'who', 'num', 'write'] },
-  fix: { name: 'Fix the Fact', cost: 400, emoji: '🖋️', text: 'Lie Detector only. Your lie is shown first and in bold, so it looks official.', when: ['write'] },
-};
-const COPY = { blind: 250, name: 400, royalty: 100 };
+const AWARD_TITLES = { hit: 'Most Sabotaged', liar: 'Best Liar', comeback: 'Comeback Kid', duelist: 'Showdown King', brain: 'The Brain', saboteur: 'Chief Saboteur' };
 
-const AWARD_TITLES = { briber: 'Biggest Briber', hit: 'Most Sabotaged', liar: 'Best Liar', comeback: 'Comeback Kid', attacker: 'Chief Saboteur', brain: 'The Brain' };
-
-module.exports = { CATS, MC, TF, NUM, LIES, DOSSIER, HECKLES, RULES, SABOTAGE, SHIELD, BRIBES, COPY, AWARD_TITLES };
+module.exports = { CATS, MC, TF, NUM, LIES, DOSSIER, HECKLES, RULES, SABOTAGE, AWARD_TITLES, RACE: require('./rg-race').RACE };

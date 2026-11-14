@@ -111,6 +111,7 @@ input { font: inherit; font-size: 1.15rem; padding: .75rem .9rem; border-radius:
 .found li:first-child { animation: up .3s; }
 .found .t { width: 2.6rem; height: 2.6rem; border-radius: 6px; overflow: hidden; display: grid; place-items: center; background: #E8E1D0; } .found .t img { width: 100%; height: 100%; object-fit: cover; } .found .noph { font-size: 1.4rem; }
 .found em { font-style: normal; font-family: var(--sign); font-size: .9rem; }
+.found .r-z { border-color: #E5484D; background: #3A1518; } .found .r-z em { color: #FF8A8A; } .found .r-c { border-color: #2FB36B; } .found .r-c em { color: #6BE3A4; }
 .found .r-d { border-color: #2F7BD8; } .found .r-r { border-color: #1C9A5E; } .found .r-l { border-color: var(--gold); } .found .r-x { border-color: var(--curse); } .found .r-x em { color: var(--curse); } .found .r-l em { color: var(--gold); }
 
 /* sheets: cards drawer and target picker */
@@ -139,3 +140,13 @@ html, body { overflow-x: hidden; }
 .cardsrow > *, .pcard { min-width: 0; }
 .pcard { overflow: hidden; }
 .pcard .art { max-width: 100%; display: block; }
+
+/* someone is attacking you: block it with a Lock */
+#incoming { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem 14px calc(1rem + env(safe-area-inset-bottom)); background: rgba(40,4,8,.82); }
+#incoming[hidden] { display: none; }
+#incoming .atk { width: min(24rem, 100%); background: var(--steel); border: 3px solid #E5484D; border-radius: 18px; padding: 1.1rem 1rem; display: grid; gap: .7rem; text-align: center; animation: sheet .2s ease-out; }
+#incoming .atk h3 { margin: 0; font-family: var(--sign); font-size: 1.35rem; color: #FF8A8A; }
+#incoming .atk p { margin: 0; }
+#incoming .atk .secs { font-family: var(--sign); font-size: 2.6rem; color: var(--hazard); line-height: 1; }
+#incoming .btn { width: 100%; }
+#hud .lk { font-style: normal; }

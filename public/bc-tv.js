@@ -4,6 +4,8 @@
   const esc = W.esc;
   const TEST = new URLSearchParams(location.search).has('test');
   const socket = io({ autoConnect: false, transports: ['websocket', 'polling'] });
+  window.__gnSocket = socket;
+  window.__gnTV = true;
   const stage = $('#stage'); const top = $('#top'); const dock = $('#dock'); const caption = $('#caption'); const splashEl = $('#splash');
   let S = null; let P = null;
   const totals = {};
@@ -63,15 +65,15 @@
   const name = (id) => (id === 'phantom' ? 'Mystery bidder' : esc(P_(id)?.name || 'Someone'));
   const rot = (i) => ((i * 47) % 9) - 4;
   const CATS = { tech: '📻', toys: '🧸', sports: '🏏', jewels: '💍', art: '🖼️', cars: '🚗', music: '🎸', fashion: '👢', antiques: '🏺', home: '☕', weird: '🦩', sealed: '🔒' };
-  const RAR = { j: 'Junk', d: 'Decent', r: 'Rare', l: 'Legendary', x: 'Cursed', s: 'Sealed' };
+  const RAR = { j: 'Junk', d: 'Decent', r: 'Rare', l: 'Legendary', x: 'Cursed', s: 'Sealed', c: 'Car', z: 'Disaster' };
   const CARD = {
     xray: ['X-Ray Specs', '🩻'], tip: ['Insider Tip', '🕵️'], plant: ['The Plant', '🪴'], freeze: ['Freeze', '🧊'], phantom: ['Phantom Bidder', '👻'],
-    steal: ['Steal', '🦝'], tax: ['Tax Man', '🧾'], swap: ['Swap Meet', '🔁'], appraise: ['Appraiser', '🔍'], curse: ['Pass the Curse', '🧿'],
+    steal: ['Steal', '🦝'], tax: ['Tax Man', '🧾'], swap: ['Swap Meet', '🔁'], appraise: ['Appraiser', '🔍'], curse: ['Pass the Curse', '🧿'], lock: ['Lock', '🛡️'],
   };
   const photo = (img) => (img ? (/^(https?:)?\//.test(img) ? img : `/assets/bc/items/${img}.webp`) : null);
   const pic = (it) => (photo(it.img) ? `<img src="${esc(photo(it.img))}" alt="" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : `<div class="noph"><span>${CATS[it.cat] || '📦'}</span></div>`);
-  const tagFor = (it) => (it.sealed ? '<b>???</b><i>Sealed</i>' : `<b>${aed(it.value)}</b><i>${RAR[it.rar] || ''}${it.appraised ? ' x2' : ''}</i>`);
-  const itemCard = (it, i, cls = '') => `<div class="item r-${it.rar} ${it.back ? 'back' : ''} ${it.legend ? 'one' : ''} ${it.swapped ? 'swapped' : ''} ${cls}" style="--r:${rot(i)}deg;--i:${i}"><div class="ph">${pic(it)}</div><div class="nm">${esc(it.name)}</div><div class="tag">${tagFor(it)}</div>${it.legend ? '<em class="onebadge">One of a kind</em>' : ''}${it.swapped ? '<em class="stamp sw">Swapped</em>' : ''}</div>`;
+  const tagFor = (it) => (it.sealed ? '<b>???</b><i>Sealed</i>' : `<b>${aed(it.value)}</b><i>${it.pct ? `${Math.round(it.pct * 100)}% of cash` : RAR[it.rar] || ''}${it.appraised ? ' x1.5' : ''}</i>`);
+  const itemCard = (it, i, cls = '') => `<div class="item r-${it.rar} ${it.back ? 'back' : ''} ${it.legend ? 'one' : ''} ${it.swapped ? 'swapped' : ''} ${cls}" style="--r:${rot(i)}deg;--i:${i}"><div class="ph">${pic(it)}</div><div class="nm">${esc(it.name)}</div><div class="tag">${tagFor(it)}</div>${it.legend ? '<em class="onebadge">One of a kind</em>' : ''}${it.was ? `<em class="wasbadge">Looked like: ${esc(it.was)}</em>` : ''}${it.swapped ? '<em class="stamp sw">Swapped</em>' : ''}</div>`;
   const cardArt = (k) => (W.img(`bc-card-${k}`) ? `<img class="full" src="${W.img(`bc-card-${k}`)}" alt="${esc(CARD[k]?.[0] || '')}">` : `<div class="cemo">${CARD[k]?.[1] || '🃏'}</div>`);
 
   // ---------------------------------------------------------------- the yard behind everything (your art if it's there)
@@ -89,7 +91,7 @@
   function topBar() {
     const lk = S.locker;
     const logo = W.img('bc-logo') ? `<img class="logo" src="${W.img('bc-logo')}" alt="BID-COIN!">` : '<div class="logo word">BID-COIN!</div>';
-    const mid = lk ? `<div class="lnum"><span>Locker ${lk.n} of ${lk.total}</span><b>${esc(lk.origin)}</b>${lk.special === 'mega' ? '<em class="sp mega">The billionaire\'s vault: more stuff, better stuff</em>' : lk.special === 'mystery' ? '<em class="sp mys">Mystery locker: no peeking</em>' : ''}</div>` : '<div></div>';
+    const mid = lk ? `<div class="lnum"><span>Locker ${lk.n} of ${lk.total}</span><b>${esc(lk.origin)}</b>${lk.special === 'mega' ? '<em class="sp mega">The billionaire\'s vault: more stuff, better stuff</em>' : lk.special === 'mystery' ? '<em class="sp mys">Mystery locker: no peeking</em>' : lk.special === 'garage' ? '<em class="sp gar">A garage: there\'s a car at the back</em>' : ''}</div>` : '<div></div>';
     return `${S.phase === 'LOBBY' ? '<div></div>' : logo}${mid}<div class="code"><b>${esc(S.code)}</b><small>${esc(host())}/bc${TEST ? ' · test mode' : ''}</small></div>`;
   }
   function dockHtml() {
@@ -137,7 +139,7 @@
     },
     LOCKER() {
       const lk = S.locker;
-      return `<div class="center"><div class="tagline"><span>Locker ${lk.n}</span><b>${esc(lk.origin)}</b></div>${door('shut rolling', lk)}${lk.special ? `<div class="stampbig ${lk.special}">${lk.special === 'mega' ? 'Double value' : 'Mystery'}</div>` : ''}</div>`;
+      return `<div class="center"><div class="tagline"><span>Locker ${lk.n}</span><b>${esc(lk.origin)}</b></div>${door('shut rolling', lk)}${lk.special ? `<div class="stampbig ${lk.special}">${lk.special === 'mega' ? 'Double value' : lk.special === 'garage' ? 'Garage' : 'Mystery'}</div>` : ''}</div>`;
     },
     PEEK() {
       const lk = S.locker; const seen = S.players.filter((p) => p.ready).length;
@@ -234,8 +236,8 @@
     const by = sp.by ? name(sp.by) : 'Someone'; const t = sp.target ? name(sp.target) : '';
     const text = {
       freeze: `${by} froze ${t}! No bidding for 10 seconds.`, phantom: 'A mystery bid! +AED 3,000 from nowhere.', steal: `${by} stole it from ${t} for ${aed(sp.price || 0)}!`,
-      tax: `${by} sends the Tax Man after ${t}. 25% of the profit.`, swap: `${by} swaps ${sp.mine ? esc(sp.mine) : 'some cash'} for the ${esc(sp.item || 'best find')}!`,
-      appraise: `${by} gets the ${esc(sp.item || 'best find')} appraised. Double the value!`, curse: `${by} passes the ${esc(sp.item || 'curse')} to ${t}!`,
+      tax: `${by} sends the Tax Man after ${t}. 15% of the profit.`, lock: `BLOCKED! ${by} locks out ${t}'s ${esc(CARD[sp.blocked]?.[0] || 'card')}.`, swap: `${by} swaps ${sp.mine ? esc(sp.mine) : 'some cash'} for the ${esc(sp.item || 'best find')}!`,
+      appraise: `${by} gets the ${esc(sp.item || 'best find')} appraised. Worth 50% more!`, curse: `${by} passes the ${esc(sp.item || 'curse')} to ${t}!`,
     }[sp.k] || '';
     splashEl.innerHTML = `<div class="sp k-${sp.k}"><div class="pcard big">${cardArt(sp.k)}<b>${esc(sp.name)}</b></div><p>${text}</p></div>`;
     // during the auction the splash stays small, so nobody loses sight of the price

@@ -3,6 +3,7 @@
   const $ = (q) => document.querySelector(q);
   const esc = W.esc;
   const socket = io({ transports: ['websocket', 'polling'] });
+  window.__gnSocket = socket;
   const main = $('#main'); const hud = $('#hud'); const drawer = $('#drawer'); const picker = $('#picker');
   const params = new URLSearchParams(location.search);
   const TEST = params.has('test');
@@ -62,12 +63,13 @@
   const CATS = { tech: '📻', toys: '🧸', sports: '🏏', jewels: '💍', art: '🖼️', cars: '🚗', music: '🎸', fashion: '👢', antiques: '🏺', home: '☕', weird: '🦩', sealed: '🔒' };
   const CARD = {
     xray: ['X-Ray Specs', '🩻', 'See three more things in this locker.'], tip: ['Insider Tip', '🕵️', 'Find out roughly what this locker is worth.'],
-    plant: ['The Plant', '🪴', "Everyone else's peek shows a fake treasure. Exposed at the reveal."], freeze: ['Freeze', '🧊', 'Lock one rival out of bidding for 10 seconds.'],
-    phantom: ['Phantom Bidder', '👻', 'A mystery +3,000 bid. If nobody beats it, nobody gets the locker.'], steal: ['Steal', '🦝', 'After SOLD, take the locker for the price plus 20%.'],
-    tax: ['Tax Man', '🧾', "Take 25% of this locker's profit."], swap: ['Swap Meet', '🔁', "Swap your cheapest find for this locker's best one."],
-    appraise: ['Appraiser', '🔍', 'Your locker only: double the value of its best find.'], curse: ['Pass the Curse', '🧿', 'Give your worst cursed thing to a rival.'],
+    plant: ['The Plant', '🪴', "Next locker, one thing in everyone else's peek is a fake. Exposed at its reveal."], freeze: ['Freeze', '🧊', 'Lock one rival out of bidding for 10 seconds.'],
+    phantom: ['Phantom Bidder', '👻', 'A mystery +3,000 bid. If nobody beats it, nobody gets the locker.'], steal: ['Steal', '🦝', 'After SOLD, take the locker for the price plus 50%.'],
+    tax: ['Tax Man', '🧾', "Take 15% of this locker's profit."], swap: ['Swap Meet', '🔁', "Swap your cheapest find for this locker's second-best one."],
+    appraise: ['Appraiser', '🔍', 'Your locker only: its best find is worth 50% more.'], curse: ['Pass the Curse', '🧿', 'Give your worst cursed thing to a rival.'],
+    lock: ['Lock', '🛡️', 'Block a Steal, Tax, Swap, Curse or Freeze aimed at you.'],
   };
-  const WHEN = { xray: 'Use while peeking', tip: 'Use while peeking', plant: 'Use while peeking', freeze: 'Use during the auction', phantom: 'Use during the auction', steal: 'Use right after SOLD', tax: 'Use after the reveal', swap: 'Use after the reveal', appraise: 'Use after the reveal', curse: 'Use after the reveal' };
+  const WHEN = { xray: 'Use while peeking', tip: 'Use while peeking', plant: 'Use while peeking', freeze: 'Use during the auction', phantom: 'Use during the auction', steal: 'Use right after SOLD', tax: 'Use after the reveal', swap: 'Use after the reveal', appraise: 'Use after the reveal', curse: 'Use after the reveal', lock: 'Pops up when someone attacks you' };
   const TARGET = { freeze: 1, curse: 1 };
   const photo = (img) => (img ? (/^(https?:)?\//.test(img) ? img : `/assets/bc/items/${img}.webp`) : null);
   const pic = (it) => (photo(it.img) ? `<img src="${esc(photo(it.img))}" alt="" referrerpolicy="no-referrer">` : `<span class="noph">${CATS[it.cat] || '📦'}</span>`);
@@ -186,14 +188,15 @@
 
   function hudHtml() {
     const m = me();
-    return `<div class="who" style="--c:${m.color}">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="money">${aed(m.cash)}</div><button class="hcards" data-a="drawer">${m.hand.length ? m.hand.map((c) => `<i>${CARD[c.k][1]}</i>`).join('') : 'No cards'}${m.cursed.length ? `<i class="cu">🧿${m.cursed.length}</i>` : ''}${m.sealed.length ? `<i>🔒${m.sealed.length}</i>` : ''}</button>`;
+    return `<div class="who" style="--c:${m.color}">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="money">${aed(m.cash)}</div><button class="hcards" data-a="drawer">${m.hand.length ? m.hand.map((c) => `<i>${CARD[c.k][1]}</i>`).join('') : 'No cards'}${m.cursed.length ? `<i class="cu">🧿${m.cursed.length}</i>` : ''}${m.sealed.length ? `<i>🔒${m.sealed.length}</i>` : ''}${m.freeLock ? '<i class="lk" title="Free Lock">🛡️</i>' : ''}</button>`;
   }
   function drawerHtml() {
     const m = me();
     const cards = m.hand.length ? m.hand.map((c) => `<div class="dcard">${cardPic(c.k)}<div><b>${CARD[c.k][0]}</b><p>${CARD[c.k][2]}</p><small>${WHEN[c.k]}</small></div></div>`).join('') : '<p class="hint">No power cards. Win a locker or a bet to get one.</p>';
     const curse = m.cursed.length ? `<h3>Cursed things</h3><p class="hint">These cost you money at the end, unless you pass them on.</p>${m.cursed.map((c) => `<p class="row">🧿 ${esc(c.name)}<b>${aed(c.value)}</b></p>`).join('')}` : '';
     const sealed = m.sealed.length ? `<h3>Sealed boxes</h3><p class="hint">Opened at the very end.</p>${m.sealed.map((s) => `<p class="row">🔒 ${esc(s.name)}</p>`).join('')}` : '';
-    return `<div class="sheet"><button class="btn ghost sm close" data-a="closeDrawer">Close</button><h3>Your power cards (${m.hand.length} of ${S.rules.hand})</h3>${cards}${curse}${sealed}</div>`;
+    const lock = `<h3>Locks</h3><p class="hint">${m.locks ? `You have ${m.locks === 1 ? 'one Lock' : `${m.locks} Locks`}${m.freeLock ? ' (one is your free Lock)' : ''}. When someone plays Steal, Tax, Swap, Curse or Freeze on you, you get five seconds to block it.` : 'No Locks left. Win a locker or a bet for a chance at a Lock card.'}</p>`;
+    return `<div class="sheet"><button class="btn ghost sm close" data-a="closeDrawer">Close</button><h3>Your power cards (${m.hand.length} of ${S.rules.hand})</h3>${cards}${lock}${curse}${sealed}</div>`;
   }
 
   // ---------------------------------------------------------------- render
@@ -202,6 +205,7 @@
     if (!S || !S.me) return;
     document.body.dataset.phase = S.phase;
     mount(hud, hudHtml());
+    incomingUi();
     if (!drawer.hidden) mount(drawer, drawerHtml());
     const [key, html] = (R[S.phase] || (() => ['x', '']))();
     if (key !== screenKey) { screenKey = key; main.innerHTML = html; main.__html = html; main.__skel = skeleton(main); main.classList.remove('in'); void main.offsetWidth; main.classList.add('in'); }
@@ -213,6 +217,19 @@
       else t.querySelectorAll('[id]').forEach((n) => { const el = main.querySelector(`#${n.id}`); if (el) mount(el, n.innerHTML); });
       main.__html = html; main.__skel = skel;
     }
+  }
+
+  // ---------------------------------------------------------------- someone played a card on you: five seconds to Lock it
+  const incomingEl = $('#incoming'); let atkTick = null; let atkShown = null;
+  function incomingUi() {
+    const m = me(); const at = (m.incoming || [])[0];
+    if (!at) { incomingEl.hidden = true; atkShown = null; clearInterval(atkTick); return; }
+    if (atkShown === at.id) return;
+    atkShown = at.id; buzz([60, 40, 60]);
+    const left = () => Math.max(0, Math.ceil((at.until - W.now()) / 1000));
+    incomingEl.innerHTML = `<div class="atk"><h3>${esc(at.by)} played ${CARD[at.k][1]} ${CARD[at.k][0]} on you!</h3><p>${CARD[at.k][2]}</p><div class="secs" id="atksecs">${left()}</div><button class="btn big primary" data-a="block" data-id="${at.id}">🛡️ Lock it${m.locks > 1 ? ` (${m.locks} left)` : ''}</button><button class="btn ghost" data-a="letit">Let it happen</button></div>`;
+    incomingEl.hidden = false;
+    clearInterval(atkTick); atkTick = setInterval(() => { const el = $('#atksecs'); if (el) el.textContent = left(); if (!left()) { clearInterval(atkTick); } }, 200);
   }
 
   // ---------------------------------------------------------------- taps
@@ -237,6 +254,8 @@
     if (a === 'card') { const k = b.dataset.k; if (TARGET[k]) openPicker(k); else { b.disabled = true; buzz(25); send('card', { k }, (r) => { if (r.ok) toast(`${CARD[k][0]} played`, 'good'); }); } }
     if (a === 'target') { const k = b.dataset.k; closePicker(); buzz(25); send('card', { k, target: b.dataset.id }, (r) => { if (r.ok) toast(`${CARD[k][0]} played`, 'good'); }); }
     if (a === 'closePicker') closePicker();
+    if (a === 'block') { b.disabled = true; buzz(30); send('block', { id: b.dataset.id }, (r) => { if (r.ok) toast('Blocked!', 'good'); incomingEl.hidden = true; }); }
+    if (a === 'letit') incomingEl.hidden = true;
     if (a === 'drawer') { drawer.hidden = false; mount(drawer, drawerHtml()); }
     if (a === 'closeDrawer') drawer.hidden = true;
   });

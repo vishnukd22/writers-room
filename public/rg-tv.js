@@ -1,9 +1,11 @@
-/* RIGGED! The TV is the studio: the question, the rule board, the podiums, every dirty trick. */
+/* RIGGED! The TV is the studio: the question, the one live rule, the podiums, the Showdowns and the Rigged Race. */
 (() => {
   const $ = (q) => document.querySelector(q);
   const esc = W.esc;
   const TEST = new URLSearchParams(location.search).has('test');
   const socket = io({ autoConnect: false, transports: ['websocket', 'polling'] });
+  window.__gnSocket = socket;
+  window.__gnTV = true;
   const stage = $('#stage'); const top = $('#top'); const dock = $('#dock'); const board = $('#board'); const caption = $('#caption'); const ticker = $('#ticker');
   let S = null; let P = null;
   const totals = {};
@@ -38,7 +40,6 @@
     if (a === 'start') socket.emit('host:start', {}, (r) => { if (r?.error) flash(r.error); });
   });
   function flash(t, ms = 2500) { caption.textContent = t; caption.className = 'show'; setTimeout(() => { caption.className = ''; }, ms); }
-  // if the screen hears nothing for 40 seconds mid-game, reconnect and ask for the latest
   let heard = Date.now();
   socket.on('state', () => { heard = Date.now(); });
   setInterval(() => {
@@ -57,19 +58,16 @@
   const T = (ends) => { if (!ends) return ''; if (!totals[ends]) totals[ends] = Math.max(1, ends - W.now()); return `data-ends="${ends}" data-total="${totals[ends]}"`; };
   const timer = (ends) => (ends ? `<div class="timer"><i ${T(ends)} data-kind="bar"></i></div>` : '');
   const cardArt = (k, cls = 'face') => (W.img(`rg-card-${k}`) ? `<img class="${cls}" src="${W.img(`rg-card-${k}`)}" alt="">` : '');
-  const RULE_EMO = { opposite: '🙃', copycat: '🐈', robin: '🏹', speedtax: '🐌', double: '🎲', sale: '🏷️', snitches: '🐀', taxman: '🧾', hothands: '🔥', bounty: '🤠', amnesia: '🌀', blind: '🙈', lastlaugh: '🤡', chairs: '🪑', switch: '🔀', passphone: '📱', alliance: '🤝', jackpot: '💰', house: '🎰' };
-  const SAB = { fog: ['Fog', '🌫️'], shuffle: ['Shuffle', '🔀'], mirror: ['Mirror', '🪞'], tiny: ['Tiny Text', '🐜'], quake: ['Earthquake', '🌋'], spam: ['Spam', '📨'], freeze: ['Freeze', '🧊'] };
-  const BRIBE = { hint: ['Hint', '💡'], peek: ['Peek', '👀'], stopwatch: ['Stopwatch', '⏱️'], veto: ['Veto', '✋'], fix: ['Fix the Fact', '🖋️'] };
+  const SAB = { fog: ['Fog', '🌫️'], shuffle: ['Shuffle', '🔀'], mirror: ['Mirror', '🪞'], tiny: ['Tiny Text', '🐜'], quake: ['Earthquake', '🌋'], freeze: ['Freeze', '🧊'] };
   const sabIcon = (k) => (W.img(`rg-sab-${k}`) ? `<img src="${W.img(`rg-sab-${k}`)}" alt="" style="width:2.3rem;height:2.3rem;object-fit:contain">` : SAB[k]?.[1] || '💥');
-  const ruleCard = (r, cls = '') => `<div class="rcard ${cls}">${cardArt(r.k) || `<div class="em">${r.emoji || RULE_EMO[r.k] || '🃏'}</div>`}<b>${esc(r.name)}</b><p>${esc(r.text)}</p></div>`;
-  const D = { 1: 'Easy', 2: 'Medium', 3: 'Brutal' };
+  const ruleCard = (r, cls = '') => `<div class="rcard ${cls}">${cardArt(r.k) || `<div class="em">${r.emoji || '🃏'}</div>`}<b>${esc(r.name)}</b><p>${esc(r.text)}</p></div>`;
+  const bigCard = (c, over = '') => (c ? `<div class="bigcard">${cardArt(c.k) || `<div class="em">${c.emoji || '🃏'}</div>`}<span class="type">The rule now</span><b>${esc(c.name)}</b><p>${esc(c.text)}</p>${over}</div>` : '');
+  const vince = () => `<div class="vince">${W.img('rg-vince') ? `<img src="${W.img('rg-vince')}" alt="Vince Velvet">` : '🎩'}</div>`;
 
   // ---------------------------------------------------------------- the studio backdrop (your art if it's there)
   let lastArt = '';
   function setStudio() {
-    const ph = S.phase;
-    const want = ph === 'LADDER' ? 'rg-ladder' : ph === 'WHEEL' ? 'rg-stage' : 'rg-stage';
-    const img = W.img(want) || W.img('rg-stage');
+    const img = W.img('rg-stage');
     const key = `${img}`; if (key === lastArt) return; lastArt = key;
     $('#studio').className = img ? 'has-art' : '';
     $('#art').style.backgroundImage = img ? `url(${img})` : 'none';
@@ -79,37 +77,35 @@
   function topBar() {
     if (S.phase === 'LOBBY') return '<div></div><div></div>' + codeBox();
     const logo = W.img('rg-logo') ? `<div class="logo"><img src="${W.img('rg-logo')}" alt="RIGGED!"></div>` : '<div class="logo">RIGGED!</div>';
-    const mid = S.round ? `<div class="rname"><span>${S.round === 8 ? 'Tonight\'s show' : S.round === 7 ? 'The finale' : `Round ${S.round} of 6`}</span><b>${esc(S.roundName)}</b></div>` : '<div></div>';
+    const sub = S.round === 7 ? "Tonight's show" : S.round === 6 ? 'The finale' : S.round === 5 ? 'Before the finale' : S.round ? `Round ${S.round} of 4` : '';
+    const mid = S.round ? `<div class="rname"><span>${sub}</span><b>${esc(S.roundName)}</b></div>` : '<div></div>';
     return logo + mid + codeBox();
   }
   const codeBox = () => `<div class="code"><b>${esc(S.code)}</b><small>${esc(host())}/rg${TEST ? ' · test mode' : ''}</small></div>`;
+  let lastRule = null; let ruleNew = false;
   function boardHtml() {
-    const live = S.rules.map((r) => ruleCard(r, newRules.has(r.k) ? 'new' : '')).join('');
-    const pend = [];
-    if (S.pending.jackpot) pend.push('<div class="pend">💰 Jackpot: $1,000 to the fastest right answer</div>');
-    if (S.pending.pot) pend.push(`<div class="pend">🎰 The House pot: ${$$(S.pending.pot)} to the next right answer</div>`);
-    if (S.pending.passphone) pend.push('<div class="pend">📱 Pass the Phone on the next question</div>');
-    if (S.alliance) pend.push('<div class="pend">🤝 Alliance: partners share their winnings this round</div>');
-    return `<div class="rb-title">The rules tonight</div>${live || '<div class="rb-empty">No funny business yet. Last place picks a rule card after every round.</div>'}${pend.join('')}`;
+    const r = S.rule;
+    if (r && r.k !== lastRule) { ruleNew = lastRule !== null || P !== null; lastRule = r.k; } else if (!r) lastRule = null;
+    const sabs = S.players.filter((p) => !p.house);
+    return `<div class="rb-title">The rule right now</div>${r ? ruleCard(r, ruleNew ? 'new' : '') : '<div class="rb-empty">No rule yet. After each round, last place picks one. Only one rule at a time.</div>'}
+      <div class="rb-title" style="margin-top:1vh">Sabotage left</div><div class="sabs">${sabs.map((p) => `<span class="${p.sab ? 'used' : ''}" title="${esc(p.name)}">${face(p, 'xs')}</span>`).join('')}</div>`;
   }
-  let newRules = new Set(); let prevRules = null;
   function dockHtml() {
     if (S.phase === 'LOBBY') return '';
-    const q = S.q; const rev = S.rev;
-    const locked = new Set(q?.locked || []);
+    const q = S.q; const rev = S.rev; const sd = S.sd; const race = S.race;
+    const locked = new Set(q?.locked || race?.locked || []);
     const holder = q?.kind === 'bomb' ? q.holder : null;
-    const remote = q?.open ? q.remote : S.phase === 'LADDER' ? S.x.remote : null;
+    const duelists = sd ? [sd.a, sd.b] : [];
     return `<div class="podiums">${S.players.map((p) => {
-      const dl = rev?.deltas?.[p.id];
-      const tags = [p.shield ? '🛡️' : '', S.alliance?.[p.id] ? '🤝' : ''].filter(Boolean).map((t) => `<i>${t}</i>`).join('');
-      const cash = p.cash === null ? '???' : $$(p.cash);
-      return `<div class="pod ${locked.has(p.id) ? 'locked' : ''} ${p.connected || p.bot ? '' : 'off'} ${holder === p.id ? 'hasbomb' : ''} ${(p.fx || []).map((f) => `fx-${f}`).join(' ')}" style="--c:${p.color}" id="pod-${p.id}">${tags ? `<div class="tags">${tags}</div>` : ''}<i class="lamp"></i>${face(p, 'md')}<b>${esc(p.name)}</b><div class="cash">${cash}</div>${dl && S.amnesia === false ? `<div class="delta ${dl > 0 ? 'up' : 'down'}">${signed(dl)}</div>` : ''}${remote === p.id ? '<span class="remote-tag" title="Holds the Audience Remote">📺</span>' : ''}</div>`;
+      const dl = rev?.deltas?.[p.id] || sd?.deltas?.[p.id];
+      const inRace = S.phase === 'FINALE';
+      return `<div class="pod ${locked.has(p.id) ? 'locked' : ''} ${p.connected || p.bot ? '' : 'off'} ${holder === p.id ? 'hasbomb' : ''} ${duelists.includes(p.id) ? 'duelist' : ''} ${(p.fx || []).map((f) => `fx-${f}`).join(' ')}" style="--c:${p.color}" id="pod-${p.id}"><i class="lamp"></i>${face(p, 'md')}<b>${esc(p.name)}</b><div class="cash">${inRace ? `${p.pos} of ${race?.len || 15}` : $$(p.cash)}</div>${dl ? `<div class="delta ${dl > 0 ? 'up' : 'down'}">${signed(dl)}</div>` : ''}</div>`;
     }).join('')}</div>`;
   }
 
   // ---------------------------------------------------------------- the stage
   const frame = (inner, live = false, hot = false) => `<div class="marquee ${live ? 'live' : ''} ${hot ? 'hot' : ''}"><div class="inner">${inner}</div></div>`;
-  const qMeta = (q, extra = '') => `<div class="meta">${q.cat ? `<span class="chip gold">${esc(q.cat)}</span>` : ''}${q.of ? `<span class="chip">Question ${q.n} of ${q.of}</span>` : ''}${q.dt ? '<span class="chip dt">Double Trouble: everything x2</span>' : ''}${q.pass ? '<span class="chip hot">📱 Phones passed left!</span>' : ''}${extra}<span class="count" id="cnt">${q.open && q.eligible ? `${q.locked.length} of ${q.eligible.length} locked` : ''}</span></div>`;
+  const qMeta = (q, extra = '') => `<div class="meta">${q.cat ? `<span class="chip gold">${esc(q.cat)}</span>` : ''}${q.of ? `<span class="chip">Question ${q.n} of ${q.of}</span>` : ''}${extra}<span class="count" id="cnt">${q.open && q.eligible ? `${q.locked.length} of ${q.eligible.length} locked` : ''}</span></div>`;
   const whoPicked = (ids) => (ids.length ? `<div class="who">${ids.map((id) => face(P_(id), 'xs')).join('')}</div>` : '');
   const R = {
     LOBBY() {
@@ -119,75 +115,82 @@
       const test = TEST ? `<div class="testbar"><button data-tv="bot">Add a bot</button><button data-tv="fill">Fill to 4</button><button class="ghost" data-tv="nobots">Remove bots</button><button data-tv="start">Start</button></div>` : '';
       return `<div class="lobby"><div>${art ? `<img class="title-img" src="${art}" alt="RIGGED!">` : '<h1 class="title">RIGGED!</h1>'}<p class="tag">The quiz show where the questions are fair and nothing else is.</p>
         <div class="joiners">${people || '<p class="sub">Nobody here yet. Scan the code to join.</p>'}</div>
-        <p class="lnote">${n === 2 ? 'Two players: the House will join as a third contestant.' : n < 2 ? 'You need 2 to 8 players. The first phone can add bots.' : `${n} players. The first phone starts the show.`}${S.settings.passPhone ? '' : ' Pass the Phone is switched off.'}</p>${test}</div>
+        <p class="lnote">${n === 2 ? 'Two players: the House will join as a third contestant.' : n < 2 ? 'You need 2 to 8 players. The first phone can add bots.' : `${n} players. The first phone starts the show.`} About 20 minutes.</p>${test}</div>
         <div class="joinbox"><div class="url">Join at ${esc(host())}/rg</div>${S.qr ? `<img src="${S.qr}" alt="">` : ''}<div class="c">${esc(S.code)}</div></div></div>`;
     },
     INTRO() { return frame(`<div class="center">${vince()}<p class="big-note">Live from the studio that never got cancelled</p></div>`); },
     DOSSIER() {
       const done = S.players.filter((p) => !p.bot);
-      return frame(`<div class="folder"><span class="conf">CONFIDENTIAL</span><h2>The Dossier</h2><p class="dq">Answer the questions on your phone. Honestly, if you can manage it.</p>
+      return frame(`<div class="folder"><span class="conf">CONFIDENTIAL</span><h2>The Dossier</h2><p class="dq">Three questions on your phone. Sixty seconds. Vince will use every word against you.</p>
         <div class="done-list" id="dl">${done.map((p) => `<div class="p ${p.done ? 'ok' : ''}">${face(p, 'md')}<span>${esc(p.name)}</span></div>`).join('')}</div></div>${timer(S.endsAt)}`, true);
     },
     ROUND() {
       const x = S.x;
-      const blurb = { 1: 'Four trivia questions. The first one is clean.', 2: 'Write a fake answer. Find the real one.', 3: x.lay ? 'Write a fake Dossier answer. Spot the real one.' : 'Guess who wrote each Dossier answer.', 4: 'True or false, passed phone to phone. Wrong answer: boom.', 5: 'Closest guess wins. Bet on who will be furthest off.', 6: 'Everything x2. Sabotage half price.', 7: 'Race up seven rungs. The room picks your questions.' }[x.n];
-      return frame(`<div class="center"><div class="rnum">${x.n === 7 ? 'The finale' : `Round ${x.n}`}</div><h2 class="rtitle">${esc(x.lay ? 'Lie About Yourself' : x.name)}</h2><p class="sub">${esc(blurb || '')}</p></div>`);
+      const blurb = { 1: 'Five trivia questions and one from the Dossier. Only the first one is easy.', 2: 'Write a fake answer. Find the real one.', 3: 'Harder trivia, and another Dossier question.', 4: 'True or false, passed phone to phone. Wrong answer: boom.' }[x.n];
+      return frame(`<div class="center"><div class="rnum">Round ${x.n}</div><h2 class="rtitle">${esc(x.name)}</h2><p class="sub">${esc(blurb || '')}</p><p class="sub small">A Showdown ends every round: the leader against last place.</p></div>`);
     },
     DEMO() {
-      const k = S.x.key;
-      const rows = {
-        sab: Object.entries(SAB).map(([s, v]) => `<div class="d"><span>${sabIcon(s)}</span><b>${v[0]}</b></div>`).join('') + '<div class="d"><span>🛡️</span><b>Shield</b><small>bounces it back</small></div>',
-        remote: '<div class="d"><span>👎</span><b>Boo</b><small>-5 seconds</small></div><div class="d"><span>📣</span><b>Cheer</b><small>x2 next right answer</small></div><div class="d"><span>🎡</span><b>Spin</b><small>new rule now</small></div><div class="d"><span>🗯️</span><b>Heckle</b><small>Vince reads it</small></div>',
-        bribe: Object.entries(BRIBE).map(([b, v]) => `<div class="d"><span>${v[1]}</span><b>${v[0]}</b></div>`).join(''),
-        copy: '<div class="d"><span>🙈</span><b>Blind copy</b><small>$250, random</small></div><div class="d"><span>👉</span><b>Name copy</b><small>$400, you choose</small></div><div class="d"><span>💸</span><b>Royalty</b><small>+$100 to them</small></div>',
-      }[k];
-      const title = { sab: 'Sabotage is open', remote: 'The Audience Remote', bribe: 'Bribes are open', copy: 'Copying is open' }[k];
-      return frame(`<div class="center"><h2 class="rtitle" style="font-size:4rem">${title}</h2><div class="demo-row">${rows}</div><p class="sub">${k === 'remote' ? 'Whoever is in last place holds it. Free, once per question.' : 'Look at the tray at the bottom of your phone.'}</p></div>`);
+      const rows = Object.entries(SAB).map(([s, v]) => `<div class="d"><span>${sabIcon(s)}</span><b>${v[0]}</b></div>`).join('');
+      return frame(`<div class="center"><h2 class="rtitle" style="font-size:4rem">One sabotage each</h2><div class="demo-row">${rows}</div><p class="sub">Tap the big button on your phone, then a face. You get one of these at random. Once per game.</p></div>`);
     },
-    Q() {
-      const q = S.q; if (!q) return '';
-      return (QK[q.kind] || (() => ''))(q);
-    },
-    WHEEL() {
-      const x = S.x; const pk = P_(x.picker);
-      const wheel = `<div class="wheel ${x.step === 'pick' ? 'spin' : ''}">${W.img('rg-wheel') ? `<img src="${W.img('rg-wheel')}" alt="">` : ''}</div>`;
-      if (x.step === 'pick') return frame(`<div class="wheelzone">${wheel}<div style="display:grid;gap:2vh"><div class="picker">${face(pk, 'md')}<span>${name(x.picker)} is in last place, so ${x.spun ? 'they spun the wheel and ' : ''}they pick the new rule</span></div><div class="offer">${x.offer.map((r) => ruleCard(r)).join('')}</div>${timer(S.endsAt)}</div></div>`, true);
-      if (x.step === 'veto') return frame(`<div class="wheelzone">${wheel}<div style="display:grid;gap:2vh;justify-items:center">${bigCard(x.cardInfo)}<p class="big-note">Somebody bought a Veto... will they use it?</p>${timer(S.endsAt)}</div></div>`, true, true);
-      if (x.step === 'vetoed') return frame(`<div class="center">${bigCard(x.cardInfo, `<div class="vstamp">VETOED</div>`)}<p class="big-note">${name(x.by)} paid to kill it</p></div>`);
-      if (x.step === 'off') return frame(`<div class="center">${bigCard(x.cardInfo, '<div class="vstamp" style="color:var(--mute)">OFF</div>')}<p class="sub">Only three rules fit on the board. The oldest one goes.</p></div>`);
-      if (x.step === 'did') {
-        let extra = '';
-        if (x.card === 'switch') extra = `<div class="picker">${face(P_(x.a), 'md')} <span>⇄</span> ${face(P_(x.b), 'md')}</div>`;
-        if (x.card === 'alliance' && x.pairs) extra = `<div class="demo-row">${x.pairs.map(([a, b]) => `<div class="d">${face(P_(a), 'sm')}${face(P_(b), 'sm')}<b>${name(a)} + ${name(b)}</b></div>`).join('')}</div>`;
-        if (x.card === 'house') extra = `<p class="big-note">Pot: ${$$(x.pot || 0)}</p>`;
-        return frame(`<div class="center">${bigCard(x.cardInfo)}${extra}</div>`);
-      }
-      return frame(`<div class="center">${bigCard(x.cardInfo)}<p class="sub">${pk ? `Picked by ${name(x.picker)}` : ''}</p></div>`);
-    },
-    LADDER() {
-      const x = S.x; const n = x.climbers.length;
-      const cols = x.climbers.map((c) => {
-        const p = P_(c.id); const pct = (c.rung / x.rungs) * 84 + 4;
-        const v = x.votes.find((y) => y.for === c.id);
-        return `<div class="lcol ${x.winner === c.id ? 'win' : ''}"><div class="top">🏆</div>${v ? `<div class="voting">The room is picking...</div>` : ''}<div class="climber" style="bottom:${pct}%">${face(p, 'md')}${c.lock ? '<span class="lockz">🔒 locked</span>' : ''}${c.cat && !v ? `<small>${esc(c.cat)}</small>` : ''}</div><div class="name">${esc(p.name)} ${c.rung}/${x.rungs}</div></div>`;
-      }).join('');
-      const head = x.step === 'top' ? `<span class="chip gold">${name(x.winner)} reached the top!</span>` : x.step === 'time' ? '<span class="chip hot">Time is up</span>' : '<span class="chip gold">$250 a rung · $2,000 for the top</span><span class="chip">Lift $800 · Grease $600</span>';
-      return frame(`<div class="meta">${head}<span class="count" id="lt">${x.step === 'climb' ? `<span data-ends="${x.ends}"></span>s left` : ''}</span></div>${x.step === 'climb' ? timer(x.ends) : ''}<div class="ladder" style="grid-template-columns:repeat(${n},1fr);padding:4vh 2vw 6vh">${cols}</div>`, x.step === 'climb');
+    Q() { const q = S.q; if (!q) return ''; return (QK[q.kind] || (() => ''))(q); },
+    RULE() {
+      const x = S.x;
+      if (x.step === 'pick') return frame(`<div class="center" style="gap:2.4vh"><div class="picker">${face(P_(x.picker), 'md')}<span>${name(x.picker)} is in last place, so they pick the next rule</span></div><div class="offer">${x.offer.map((r) => ruleCard(r)).join('')}</div><p class="sub small">Only one rule at a time. The new one replaces the old one.</p>${timer(S.endsAt)}</div>`, true);
+      return frame(`<div class="center">${bigCard(x.card)}<p class="sub">Picked by ${name(x.picker)}${x.old ? `. Goodbye, ${esc(x.old.name)}.` : ''}</p></div>`);
     },
     SCORES() {
-      const x = S.x; const hide = S.amnesia;
-      const rows = (hide ? [...x.order].sort(() => Math.random() - 0.5) : x.order).map((id, i) => { const p = P_(id); return `<div class="rank ${!hide && i === 0 ? 'first' : ''}"><span class="n">${hide ? '?' : i + 1}</span>${face(p, 'sm')}<span>${esc(p.name)}${!hide && id === x.last ? ' <span class="chip hot" style="font-size:.8rem">picks the next rule</span>' : ''}</span><span class="v">${hide ? '$???' : $$(p.cash)}</span></div>`; }).join('');
-      return frame(`<div class="meta"><span class="chip gold">After round ${x.n}</span>${hide ? '<span class="chip hot">Amnesia: only Vince knows</span>' : ''}</div><div class="ranks" style="max-width:60vw;margin:auto;width:100%">${rows}</div>`);
+      const x = S.x;
+      const rows = x.order.map((id, i) => { const p = P_(id); return `<div class="rank ${i === 0 ? 'first' : ''}"><span class="n">${i + 1}</span>${face(p, 'sm')}<span>${esc(p.name)}${id === x.last && S.round < 4 ? ' <span class="chip hot" style="font-size:.8rem">picks the next rule</span>' : ''}</span><span class="v">${$$(p.cash)}</span></div>`; }).join('');
+      const roast = x.roast ? `<div class="roast"><div class="folder small"><span class="conf">FROM THE FILE OF ${esc(P_(x.roast.who)?.name || '').toUpperCase()}</span><p class="dq">${esc(x.roast.q)}</p><p class="da">"${esc(x.roast.a)}"</p></div></div>` : '';
+      return frame(`<div class="meta"><span class="chip gold">After round ${x.n}</span><span class="chip">Bucks buy a head start in the final race</span></div><div class="scoregrid ${roast ? 'with-roast' : ''}"><div class="ranks">${rows}</div>${roast}</div>`);
+    },
+    SHOWDOWN() {
+      const sd = S.sd; if (!sd) return '';
+      const a = P_(sd.a); const b = P_(sd.b); const q = S.q;
+      const res = sd.step === 'result';
+      const backers = (id) => Object.entries(sd.bets || {}).filter(([, on]) => on === id).map(([pid]) => face(P_(pid), 'xs')).join('');
+      const side = (p, k) => `<div class="side ${res ? (sd.winner === p.id ? 'won' : 'lost') : ''}">${face(p, sd.step === 'q' || res ? 'md' : 'lg')}<b>${esc(p.name)}</b><small>${$$(p.cash)}</small>${res && sd.picks ? `<em class="pk">${sd.picks[p.id] === null || sd.picks[p.id] === undefined ? 'No answer' : esc(q?.answers?.[sd.picks[p.id]] || '')}</em>` : ''}${res ? `<div class="backers">${backers(p.id)}</div>` : ''}</div>`;
+      const title = sd.grudge ? 'Grudge Match' : 'Showdown';
+      const prize = sd.grudge ? 'Winner gets a head start in the race' : `Winner takes ${$$(sd.pot)} from the loser`;
+      let mid = '';
+      if (sd.step === 'bet') mid = `<p class="big-note">Everyone else: bet ${$$(200)} on a winner</p><p class="count" id="nb">${sd.nBets} bet${sd.nBets === 1 ? '' : 's'} in</p>${timer(S.endsAt)}`;
+      if (sd.step === 'ready') mid = '<p class="big-note">Get ready...</p>';
+      if ((sd.step === 'q' || res) && q) {
+        const ans = q.answers.map((t, i) => `<div class="ans ${res ? (i === sd.correct ? 'win' : 'dim') : ''}"><span class="l">${L[i]}</span><span>${esc(t)}</span></div>`).join('');
+        mid = `<div class="meta"><span class="chip gold">${esc(q.cat || '')}</span></div><p class="qtext md">${esc(q.text)}</p>${q.quote ? `<p class="quote">"${esc(q.quote)}"</p>` : ''}${q.open ? timer(q.ends) : ''}<div class="answers ${q.answers.length === 2 ? 'two' : ''}">${ans}</div>`;
+      }
+      return frame(`<div class="duel"><div class="dtitle"><span>${title}</span><small>${prize}</small></div>${side(a, 'a')}<div class="vs">VS</div>${side(b, 'b')}<div class="dmid">${mid}</div></div>`, sd.step === 'q', sd.step === 'q');
+    },
+    GRUDGE() {
+      const x = S.x;
+      if (x.step === 'pick') return frame(`<div class="center"><h2 class="rtitle" style="font-size:4.4rem">Grudge Match</h2><div class="picker">${face(P_(x.picker), 'lg')}<span>${name(x.picker)} is in last place. They pick anyone to duel. The winner gets a head start in the race.</span></div>${timer(S.endsAt)}</div>`, true);
+      return frame(`<div class="center"><h2 class="rtitle" style="font-size:4.4rem">Grudge Match</h2><div class="picker big">${face(P_(x.picker), 'lg')}<span class="vs">VS</span>${face(P_(x.target), 'lg')}</div><p class="big-note">${name(x.picker)} picked ${name(x.target)}</p></div>`);
+    },
+    FINALE() {
+      const r = S.race; if (!r) return '';
+      const lanes = [...S.players].map((p) => {
+        const pct = Math.min(100, (p.pos / r.len) * 100);
+        const dl = r.deltas?.[p.id];
+        return `<div class="lane ${r.winner === p.id ? 'win' : ''}" style="--c:${p.color}"><span class="ln">${esc(p.name)}</span><div class="track"><i class="finish"></i><div class="runner" style="left:calc(${pct}% - 1.6rem)">${face(p, 'sm')}${dl ? `<em class="${dl > 0 ? 'up' : 'down'}">${dl > 0 ? '+' : ''}${dl}</em>` : ''}</div></div><b class="pos">${p.pos}</b></div>`;
+      }).join('');
+      if (r.step === 'intro') return frame(`<div class="center"><h2 class="rtitle" style="font-size:4.4rem">The Rigged Race</h2><p class="sub">Tap every answer that fits. Right taps move you forward, wrong taps move you back. First to ${r.len} wins the show.</p><div class="race">${lanes}</div><p class="sub small">Your Bucks bought your head start. Last place got the most.</p></div>`);
+      if (r.step === 'win') return frame(`<div class="center"><h2 class="rtitle" style="font-size:4.6rem">${name(r.winner)} wins!</h2><div class="race">${lanes}</div></div>`);
+      const show = r.step === 'reveal';
+      const opts = r.opts.map((t, i) => {
+        const ok = show && r.right.includes(i);
+        const by = show ? Object.entries(r.picks || {}).filter(([, ks]) => ks.includes(i)).map(([pid]) => pid) : [];
+        return `<div class="ans ${show ? (ok ? 'win' : 'dim') : ''}"><span class="l">${L[i]}</span><span>${esc(t)}</span>${show ? whoPicked(by) : ''}</div>`;
+      }).join('');
+      return frame(`<div class="meta"><span class="chip gold">${r.room ? 'The Room' : 'Tap every one that fits'}</span><span class="chip">Question ${r.n} of ${r.of}</span><span class="count" id="rcnt">${r.step === 'q' ? `${r.locked.length} of ${S.players.length} locked` : ''}</span></div><p class="qtext md">${esc(r.text)}</p>${r.step === 'q' ? timer(S.endsAt) : ''}<div class="answers six">${opts}</div><div class="race compact">${lanes}</div>`, r.step === 'q');
     },
     END() {
-      const x = S.x; if (!x.ranks) return frame('<div class="center"><p class="big-note">Counting the money...</p></div>');
-      const ranks = x.ranks.map((r, i) => `<div class="rank ${i === 0 ? 'first' : ''}"><span class="n">${i + 1}</span>${face(r, 'sm')}<span>${esc(r.name)}</span><span class="v">${$$(r.cash)}</span></div>`).join('');
+      const x = S.x; if (!x.ranks) return frame('<div class="center"><p class="big-note">And the winner is...</p></div>');
+      const ranks = x.ranks.map((r, i) => `<div class="rank ${i === 0 ? 'first' : ''}"><span class="n">${i + 1}</span>${face(r, 'sm')}<span>${esc(r.name)}</span><span class="v">${i === 0 ? 'Winner' : `${r.pos} steps`}</span></div>`).join('');
       const awards = x.awards.map((a) => `<div class="award">${face(P_(a.who), 'sm')}<div><b>${esc(a.title)}</b><small>${name(a.who)}: ${esc(a.text)}</small></div></div>`).join('');
       return frame(`<div class="meta">${x.houseWon ? '<span class="chip hot">The House wins. Nobody wins.</span>' : `<span class="chip gold">${esc(x.ranks[0]?.name || '')} wins RIGGED!</span>`}</div><div class="endgrid"><div class="ranks">${ranks}</div><div class="awards">${awards}</div></div>`);
     },
   };
-  const vince = () => `<div class="vince">${W.img('rg-vince') ? `<img src="${W.img('rg-vince')}" alt="Vince Velvet">` : '🎩'}</div>`;
-  const bigCard = (c, over = '') => (c ? `<div class="bigcard">${cardArt(c.k) || `<div class="em">${c.emoji || RULE_EMO[c.k]}</div>`}<span class="type">${c.type === 'lasting' ? 'Lasting rule' : 'Happens now'}</span><b>${esc(c.name)}</b><p>${esc(c.text)}</p>${over}</div>` : '');
 
   // each question format
   const QK = {
@@ -202,13 +205,13 @@
     },
     vote(q) {
       const rv = S.rev; const reveal = S.step === 'reveal' && rv;
-      const shown = new Set(reveal ? rv.shown : []); const at = S.x?.at || null;
+      const shown = new Set(reveal ? rv.shown : []);
       const tiles = q.opts.map((o, i) => {
         const gr = reveal ? rv.groups.find((x) => x.id === o.id) : null;
         const isShown = gr && shown.has(o.id);
         const stamp = isShown ? (gr.truth ? '<span class="stamp truth">TRUTH</span>' : gr.vince ? `<span class="stamp vince">${gr.authors.length && P_(gr.authors[0])?.house ? 'THE HOUSE' : "VINCE'S LIE"}</span>` : `<span class="stamp lie">${gr.authors.map((a) => name(a)).join(' + ')}</span>`) : '';
         const cls = reveal ? (isShown ? (gr.truth ? 'win' : '') : 'dim') : '';
-        return `<div class="ans ${o.bold ? 'bold' : ''} ${cls}"><span class="l">${L[i] || i + 1}</span><span>${esc(o.text)}</span>${stamp}${isShown ? whoPicked(gr.voters) : ''}</div>`;
+        return `<div class="ans ${cls}"><span class="l">${L[i] || i + 1}</span><span>${esc(o.text)}</span>${stamp}${isShown ? whoPicked(gr.voters) : ''}</div>`;
       }).join('');
       return frame(`${qMeta(q, '<span class="chip hot">Find the truth</span>')}<p class="qtext md">${esc(q.text).replace('___', '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>')}</p>${q.open ? timer(q.ends) : ''}<div class="answers opts">${tiles}</div>`, q.open);
     },
@@ -217,15 +220,6 @@
       const guesses = reveal ? Object.entries(rv.picks) : [];
       return frame(`${qMeta(q, '<span class="chip hot">Who wrote this?</span>')}<div class="folder" style="width:100%;transform:rotate(-.6deg)"><span class="conf">${reveal ? 'EXPOSED' : 'CONFIDENTIAL'}</span><h2>From the Dossier</h2><p class="dq">${esc(q.text)}</p><p class="da">${esc(q.answer)}</p>
         ${reveal ? `<div class="by">Written by ${face(P_(rv.author), 'md')} ${name(rv.author)}</div><div class="by" style="font-size:1rem">${guesses.map(([g, v]) => `${face(P_(g), 'xs')} guessed ${name(v)}${v === rv.author ? ' ✔' : ''}`).join(' · ')}</div>` : ''}</div>${q.open ? timer(q.ends) : ''}`, q.open);
-    },
-    laywrite(q) {
-      return frame(`<div class="center"><h2 class="rtitle" style="font-size:4.2rem">Lie About Yourself</h2><p class="sub">Everyone has one of their own Dossier answers on their phone. Write a fake one to sit beside it.</p><div class="done-list">${S.players.filter((p) => !p.bot).map((p) => `<div class="p ${q.locked.includes(p.id) ? 'ok' : ''}">${face(p, 'md')}<span>${esc(p.name)}</span></div>`).join('')}</div>${timer(q.ends)}</div>`, true);
-    },
-    lay(q) {
-      const rv = S.rev; const reveal = S.step === 'reveal' && rv;
-      const by = { 0: [], 1: [] }; if (reveal) Object.entries(rv.picks).forEach(([id, v]) => by[v].push(id));
-      const cards = q.pair.map((a, i) => `<div class="card ${reveal && i !== rv.real ? 'dim' : ''}"><span class="l">${L[i]}</span>"${esc(a)}"${reveal && i === rv.real ? '<span class="stamp">REAL</span>' : ''}${reveal ? whoPicked(by[i]).replace('class="who"', 'class="who"') : ''}</div>`).join('');
-      return frame(`${qMeta(q, `<span class="chip hot">Which did ${name(q.owner)} really write?</span>`)}<p class="qtext md">${face(P_(q.owner), 'sm')} ${esc(q.text)}</p>${q.open ? timer(q.ends) : ''}<div class="pair">${cards}</div>`, q.open);
     },
     bomb(q) {
       const h = P_(q.holder); const step = S.step;
@@ -238,39 +232,17 @@
       const ring = S.players.map((p) => `<span class="s ${p.id === q.holder ? 'on' : ''}">${face(p, 'xs')}${esc(p.name)}</span>`).join('');
       return frame(`<div class="meta"><span class="chip hot">Bomb ${q.n} of ${q.of}</span><span class="chip">Passes: ${q.passes}</span><span class="chip">Fuse: ${q.fuse}s</span></div><div class="bombzone"><div class="${bc}">${bombArt}<span class="spark"></span><span class="secs" data-ends="${q.ends}"></span></div><div><div class="holder">${face(h, 'md')}<b>${esc(h.name)}</b></div><p class="qtext">${esc(q.text)}</p><div class="tf"><span>TRUE</span><span>FALSE</span></div></div></div>${timer(q.ends)}<div class="seat-ring">${ring}</div>`, true, true);
     },
-    num(q) {
-      const rv = S.rev; const reveal = S.step === 'reveal' && rv;
-      if (!reveal) return frame(`${qMeta(q, '<span class="chip hot">Closest Number</span>')}<p class="qtext">${esc(q.text)}</p>${timer(q.ends)}<p class="big-note" style="margin-top:auto">Type a number on your phone</p>`, true);
-      const fmt = (v) => (q.unit && Math.abs(v) >= 1000 ? Math.round(v).toLocaleString('en-US') : String(v));
-      const rows = rv.list.map((r) => {
-        const best = rv.closest.includes(r.id); const worst = rv.furthest.includes(r.id) && rv.list.length > 1;
-        const bettors = Object.entries(rv.bets || {}).filter(([, on]) => on === r.id).map(([b]) => face(P_(b), 'xs')).join('');
-        return `<div class="numrow ${best ? 'best' : ''} ${worst ? 'worst' : ''}">${face(P_(r.id), 'sm')}<span>${name(r.id)} ${best ? '<em style="background:var(--velvet-2)">Closest</em>' : ''} ${worst ? '<em>Most wrong</em>' : ''}</span><span style="display:flex;gap:.2rem">${bettors}</span><span class="v">${fmt(r.v)}</span></div>`;
-      }).join('');
-      return frame(`<p class="qtext md">${esc(q.text)}</p><div class="bigans">${fmt(rv.answer)}<small>${esc(q.unit || '')}</small></div><div class="numlist">${rows || '<p class="sub">Nobody guessed. Incredible.</p>'}</div>`);
-    },
-    bet(q) {
-      return frame(`${qMeta(q, '<span class="chip hot">Side bet</span>')}<p class="qtext md">${esc(q.text)}</p><p class="big-note">Bet $100 on who will be the furthest off. Winning bets pay $400.</p>${timer(q.ends)}<div class="seat-ring">${S.players.map((p) => `<span class="s">${face(p, 'xs')}${esc(p.name)}</span>`).join('')}</div>`, true);
-    },
   };
 
-  // ---------------------------------------------------------------- ticker: every attack, bribe and copy
+  // ---------------------------------------------------------------- ticker: sabotage and Robin Hood
   let lastSplash = 0;
   function showSplash() {
     const sp = S.splash; if (!sp || sp.id === lastSplash) return;
     const fresh = P !== null; lastSplash = sp.id; if (!fresh) return;
     const by = sp.by ? name(sp.by) : 'Someone'; const t = sp.target ? name(sp.target) : '';
     let e = '💥'; let text = ''; let cls = 'bad';
-    if (sp.k === 'sab') { e = sabIcon(sp.s); text = sp.bounced ? `${t}'s own ${SAB[sp.s]?.[0]} bounced back off ${by}'s shield!` : `${by} hit ${t} with ${SAB[sp.s]?.[0]}!`; }
-    if (sp.k === 'bribe') { e = BRIBE[sp.b]?.[1] || '💰'; cls = 'cash'; text = sp.by ? `${by} bribed Vince: ${BRIBE[sp.b]?.[0]}` : 'Someone just slipped Vince an envelope...'; }
-    if (sp.k === 'copy') { e = '📋'; cls = 'good'; text = `${by} paid to copy ${t}`; }
-    if (sp.k === 'boo') { e = '👎'; text = `${by} booed ${t}!`; }
-    if (sp.k === 'cheer') { e = '📣'; cls = 'good'; text = sp.by === sp.target ? `${by} is cheering for themselves` : `${by} is cheering for ${t}`; }
-    if (sp.k === 'spin') { e = '🎡'; cls = 'cash'; text = `${by} spun the Rule Wheel!`; }
-    if (sp.k === 'heckle') { e = '🗯️'; text = `${by} to ${t}: "${esc(sp.text)}"`; }
+    if (sp.k === 'sab') { e = sabIcon(sp.s); text = `${by} hit ${t} with ${SAB[sp.s]?.[0]}!`; }
     if (sp.k === 'robin') { e = '🏹'; cls = 'cash'; text = `Robin Hood: ${by} pays $200 to ${t}`; }
-    if (sp.k === 'lift') { e = '🛗'; cls = 'cash'; text = `${by} bought a Lift!`; }
-    if (sp.k === 'grease') { e = '🧈'; text = `${by} greased ${t}'s rung!`; }
     const el = document.createElement('div'); el.className = `tk ${cls}`; el.innerHTML = `<span class="e">${e}</span><span>${text}</span>`;
     ticker.prepend(el); while (ticker.children.length > 4) ticker.lastChild.remove();
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 450); }, 3600);
@@ -282,13 +254,11 @@
   function render() {
     if (!S) return;
     document.body.dataset.phase = S.phase;
-    document.body.classList.toggle('wide', ['LOBBY', 'END', 'LADDER', 'INTRO', 'SCORES'].includes(S.phase) || (S.phase === 'ROUND' && S.round === 7));
-    const now = S.rules.map((r) => r.k);
-    if (prevRules) newRules = new Set(now.filter((k) => !prevRules.includes(k))); prevRules = now;
+    document.body.classList.toggle('wide', ['LOBBY', 'END', 'INTRO', 'SCORES', 'SHOWDOWN', 'GRUDGE', 'FINALE'].includes(S.phase));
     setStudio(); mount(top, topBar()); mount(dock, dockHtml()); mount(board, boardHtml());
     const html = (R[S.phase] || (() => ''))();
     const q = S.q;
-    const key = `${S.phase}|${S.step}|${q?.kind || ''}|${q?.seq || ''}|${S.x?.step || ''}|${S.x?.at || ''}|${S.x?.card || ''}`;
+    const key = `${S.phase}|${S.step}|${q?.kind || ''}|${q?.seq || ''}|${S.x?.step || ''}|${S.x?.at || ''}|${S.sd?.step || ''}|${S.race?.n || ''}|${S.race?.step || ''}`;
     if (key !== lastKey) {
       lastKey = key; stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter');
       stage.innerHTML = html; stage.__html = html; stage.__skel = skeleton(stage);
@@ -308,10 +278,10 @@
     let key = 'rg-lobby'; let mood = 'lobby';
     if (ph === 'Q' && k === 'bomb') { key = 'rg-bomb'; mood = 'tense'; }
     else if (ph === 'Q' || ph === 'DOSSIER') { key = 'rg-question'; mood = 'pitch'; }
-    else if (ph === 'WHEEL') { key = 'rg-wheel'; mood = 'ratings'; }
-    else if (ph === 'LADDER' || ph === 'END') { key = 'rg-finale'; mood = 'finale'; }
+    else if (ph === 'RULE' || ph === 'SHOWDOWN' || ph === 'GRUDGE') { key = 'rg-wheel'; mood = 'ratings'; }
+    else if (ph === 'FINALE' || ph === 'END') { key = 'rg-finale'; mood = 'finale'; }
     else if (ph === 'ROUND' || ph === 'DEMO' || ph === 'INTRO') { key = 'rg-lobby'; mood = 'show'; }
-    AV.setBed(ph === 'Q' ? 0.4 : 0.5);
+    AV.setBed(ph === 'Q' || ph === 'FINALE' ? 0.4 : 0.5);
     const id = `${key}|${mood}`;
     if (id !== lastMusic) { lastMusic = id; AV.music(key, mood); }
   }

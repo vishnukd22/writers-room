@@ -1,0 +1,55 @@
+'use strict';
+// RIGGED! The finale race. One question at a time on the TV, six options, tap EVERY one that fits.
+// Each row: [question, [the ones that fit], [the ones that don't]]. Six options in total, two to four that fit.
+// Keep facts that don't change over time.
+
+const ROWS = [
+  ['Which of these are real chess pieces?', ['Bishop', 'Rook', 'Knight'], ['Duke', 'Archer', 'Jester']],
+  ['Which of these are planets in our solar system?', ['Mercury', 'Neptune', 'Saturn'], ['Pluto', 'Titan', 'Ceres']],
+  ['Which of these are mammals?', ['Dolphin', 'Bat', 'Platypus'], ['Shark', 'Penguin', 'Crocodile']],
+  ['Which of these countries are in South America?', ['Peru', 'Uruguay', 'Ecuador'], ['Honduras', 'Panama', 'Cuba']],
+  ['Which of these are primary colours of light?', ['Red', 'Green', 'Blue'], ['Yellow', 'Orange', 'Purple']],
+  ['Which of these were Beatles?', ['Ringo', 'George', 'Paul'], ['Keith', 'Brian', 'Mick']],
+  ['Which of these are noble gases?', ['Neon', 'Argon', 'Krypton'], ['Nitrogen', 'Hydrogen', 'Chlorine']],
+  ['Which of these are Olympic sports?', ['Curling', 'Skeleton', 'Handball'], ['Darts', 'Snooker', 'Dodgeball']],
+  ['Which of these are official languages of Switzerland?', ['German', 'French', 'Italian', 'Romansh'], ['Dutch', 'Swiss']],
+  ['Which of these are Harry Potter houses?', ['Hufflepuff', 'Ravenclaw'], ['Dragonclaw', 'Wolfsbane', 'Thornfield', 'Pendragon']],
+  ['Which of these are capital cities?', ['Canberra', 'Ottawa', 'Wellington'], ['Sydney', 'Toronto', 'Auckland']],
+  ['Which of these are types of pasta?', ['Orecchiette', 'Farfalle', 'Rigatoni'], ['Tiramisu', 'Bruschetta', 'Panettone']],
+  ['Which of these are bones in the human body?', ['Femur', 'Stapes', 'Clavicle'], ['Cortex', 'Larynx', 'Aorta']],
+  ['Which of these animals are marsupials?', ['Kangaroo', 'Koala', 'Wombat'], ['Sloth', 'Lemur', 'Armadillo']],
+  ['Which of these are real Pixar films?', ['Ratatouille', 'Coco', 'Luca'], ['Shrek', 'Madagascar', 'Megamind']],
+  ['Which of these are moons of Jupiter?', ['Europa', 'Io', 'Ganymede'], ['Phobos', 'Titan', 'Triton']],
+  ['Which of these are Shakespeare plays?', ['Coriolanus', 'The Tempest', 'Twelfth Night'], ['Doctor Faustus', 'Volpone', 'The Duchess of Malfi']],
+  ['Which of these instruments are woodwind?', ['Oboe', 'Bassoon', 'Clarinet'], ['Trombone', 'Cello', 'Tuba']],
+  ['Which of these are in the G7?', ['Japan', 'Canada', 'Italy'], ['China', 'Russia', 'Spain']],
+  ['Which of these countries have no coastline?', ['Bolivia', 'Mongolia', 'Switzerland'], ['Chile', 'Vietnam', 'Croatia']],
+  ['Which of these are real units of measurement?', ['Furlong', 'Fathom', 'Parsec'], ['Grindle', 'Spanner', 'Kilosnap']],
+  ['Which of these are Greek letters?', ['Omicron', 'Upsilon', 'Rho'], ['Zelta', 'Gimel', 'Thorn']],
+  ['Which of these cheeses come from Italy?', ['Gorgonzola', 'Pecorino', 'Taleggio'], ['Gruyère', 'Manchego', 'Roquefort']],
+  ['Which of these are James Bond films?', ['Skyfall', 'Moonraker', 'Thunderball'], ['Sky Captain', 'Moonfall', 'Thunderheart']],
+  ['Which of these are real dog breeds?', ['Vizsla', 'Shiba Inu', 'Basenji'], ['Tortelli', 'Kalamari', 'Brussels Pointer']],
+  ['Which of these are elements on the periodic table?', ['Tungsten', 'Bismuth', 'Hafnium'], ['Adamantium', 'Kryptonite', 'Vibranium']],
+  ['Which of these are Grand Slam tennis tournaments?', ['Wimbledon', 'US Open', 'Australian Open'], ['Indian Wells', 'Miami Open', 'Davis Cup']],
+  ['Which of these were Roman emperors?', ['Hadrian', 'Nero', 'Caligula'], ['Pericles', 'Hannibal', 'Leonidas']],
+  ['Which of these are real social media apps, past or present?', ['Vine', 'Myspace', 'Snapchat'], ['Flickster', 'Grumblr', 'Tweeter']],
+  ['Which of these are citrus fruits?', ['Yuzu', 'Kumquat', 'Pomelo'], ['Lychee', 'Persimmon', 'Guava']],
+  ['Which of these are real constellations?', ['Orion', 'Cassiopeia', 'Andromeda'], ['Draconus', 'Leviathan', 'Pegasia']],
+  ['Which of these are among the Seven Wonders of the Ancient World?', ['Colossus of Rhodes', 'Great Pyramid of Giza', 'Lighthouse of Alexandria'], ['Colosseum', 'Stonehenge', 'Great Wall of China']],
+  ['Which of these languages use the Cyrillic alphabet?', ['Russian', 'Bulgarian', 'Serbian'], ['Greek', 'Polish', 'Georgian']],
+  ['Which of these are real Disney princesses?', ['Merida', 'Tiana', 'Mulan'], ['Rosalind', 'Aurelia', 'Isadora']],
+  ['Which of these islands belong to Greece?', ['Crete', 'Rhodes', 'Corfu'], ['Malta', 'Sardinia', 'Cyprus']],
+  ['Which of these are types of cloud?', ['Cumulus', 'Cirrus', 'Nimbostratus'], ['Fulgurus', 'Stratovolcanus', 'Cumbersome']],
+  ['Which of these are blood types?', ['AB', 'O', 'B'], ['C', 'D', 'AO']],
+  ['Which of these have been the currency of Japan, China or Korea?', ['Yen', 'Yuan', 'Won'], ['Baht', 'Ringgit', 'Rupee']],
+  ['Which of these are real yoga poses?', ['Downward Dog', 'Warrior II', 'Cobra'], ['Angry Badger', 'Flying Toaster', 'Sleepy Walrus']],
+  ['Which of these are prime numbers?', ['17', '29', '41'], ['27', '39', '51']],
+  ['Which of these are Star Wars planets?', ['Tatooine', 'Hoth', 'Dagobah'], ['Vulcan', 'Arrakis', 'Gallifrey']],
+  ['Which of these are real coffee drinks?', ['Cortado', 'Macchiato', 'Flat white'], ['Brevetto', 'Cappuzzo', 'Lungetto doppio-mio']],
+  ['Which of these animals can fly?', ['Flying fox', 'Hummingbird', 'Albatross'], ['Flying squirrel', 'Kiwi', 'Ostrich']],
+  ['Which of these are Nobel Prize categories?', ['Physics', 'Literature', 'Peace'], ['Mathematics', 'Architecture', 'Music']],
+  ['Which of these are real Olympic host cities?', ['Sarajevo', 'Lillehammer', 'Nagano'], ['Prague', 'Cape Town', 'Lisbon']],
+];
+
+const RACE = ROWS.map(([q, right, wrong], i) => ({ id: `r${i}`, q, right, wrong }));
+module.exports = { RACE };

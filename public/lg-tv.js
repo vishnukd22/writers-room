@@ -4,6 +4,8 @@
   const esc = W.esc;
   const TEST = new URLSearchParams(location.search).has('test');
   const socket = io({ autoConnect: false });
+  window.__gnSocket = socket;
+  window.__gnTV = true;
   const stage = $('#stage'); const top = $('#top'); const board = $('#board'); const reg = $('#reg'); const dock = $('#dock'); const caption = $('#caption');
   let S = null; let P = null;
   const totals = {};

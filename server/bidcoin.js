@@ -40,16 +40,28 @@ const T = { peek: 18, bet: 9, after: 8, result: 4, idle: [2, 3.6, 5.2], opening:
 const CARDS = {
   xray: { name: 'X-Ray Specs', when: 'peek', text: 'See three more things in this locker.' },
   tip: { name: 'Insider Tip', when: 'peek', text: 'Find out roughly what this locker is worth.' },
-  plant: { name: 'The Plant', when: 'peek', text: "Everyone else's peek shows a fake treasure. Revealed at the end." },
+  plant: { name: 'The Plant', when: 'peek', text: "Next locker, one thing in everyone else's peek is a fake. Exposed at its reveal." },
   freeze: { name: 'Freeze', when: 'auction', text: 'Lock one rival out of bidding for 10 seconds.', target: true },
   phantom: { name: 'Phantom Bidder', when: 'auction', text: 'A mystery bid of +3,000. If it wins, nobody gets the locker.' },
-  steal: { name: 'Steal', when: 'bet', text: 'After SOLD, take the locker for the price plus 20%.' },
-  tax: { name: 'Tax Man', when: 'after', text: "Take 25% of this locker's profit." },
-  swap: { name: 'Swap Meet', when: 'after', text: "Swap your cheapest find for this locker's best one." },
-  appraise: { name: 'Appraiser', when: 'after', text: 'Your locker only: double the value of its best find.' },
+  steal: { name: 'Steal', when: 'bet', text: 'After SOLD, take the locker for the price plus 50%.' },
+  tax: { name: 'Tax Man', when: 'after', text: "Take 15% of this locker's profit." },
+  swap: { name: 'Swap Meet', when: 'after', text: "Swap your cheapest find for this locker's second-best one." },
+  appraise: { name: 'Appraiser', when: 'after', text: 'Your locker only: its best find is worth 50% more.' },
   curse: { name: 'Pass the Curse', when: 'after', text: 'Give your worst cursed thing to a rival.', target: true },
+  lock: { name: 'Lock', when: 'held', text: 'Block a Steal, Tax, Swap, Curse or Freeze aimed at you.' },
 };
-const CARD_WEIGHT = { xray: 10, tip: 10, plant: 9, freeze: 10, phantom: 8, steal: 8, tax: 9, swap: 8, appraise: 7, curse: 6 };
+const CARD_WEIGHT = { xray: 10, tip: 10, plant: 9, freeze: 10, phantom: 8, steal: 8, tax: 9, swap: 8, appraise: 7, curse: 6, lock: 8 };
+// the cards a Lock can stop, and how long the target has to stop them (seconds)
+const LOCKABLE = ['steal', 'tax', 'swap', 'curse', 'freeze']; const LOCK_WINDOW = 5;
+const STEAL_MARKUP = 1.5; const TAX_CUT = 0.15; const APPRAISE = 1.5;
+// disasters: about one locker in four hides one behind something innocent. Garages and the mega locker are riskier.
+const DISASTER_CHANCE = { normal: 0.22, mystery: 0.25, garage: 0.35, mega: 0.45 };
+const GARAGES = [
+  { name: "A lock-up garage nobody has opened since 2009", bias: ['cars'] },
+  { name: "A car collector's back garage", bias: ['cars', 'jewels'] },
+  { name: 'A repair shop that never reopened', bias: ['cars', 'tech', 'office'] },
+  { name: "A racing team's old workshop", bias: ['cars', 'sports'] },
+];
 
 // How good a locker is, secretly. mix: what most things are. back: the thing at the back.
 const GRADES = {
@@ -77,7 +89,7 @@ class BidCoin {
     [L.SAY.welcome, ...L.TUTORIAL.map((t) => t.line), L.SAY.once, L.SAY.twice, L.SAY.sold].forEach((t) => this.prefetch(t, true));
     for (const t of Object.values(L.SAY)) for (const x of [].concat(t)) if (!x.includes('{')) this.prefetch(x);
   }
-  reset() { Object.assign(this, { lockers: [], li: -1, lk: null, auc: null, log: [], legends: [] }); }
+  reset() { Object.assign(this, { lockers: [], li: -1, lk: null, auc: null, log: [], legends: [], atk: [] }); }
 
   // ------------------------------------------------------------ plumbing (same as the other games)
   P(id) { return this.players.find((p) => p.id === id); }
@@ -157,7 +169,7 @@ class BidCoin {
     const free = this.busts.filter((b) => !this.players.some((x) => x.bust === b));
     return { id: uid(), token: uid(), name, color: COLORS.find((c) => !used.has(c)) || pick(COLORS), connected: true, bot, bust: free.length ? pick(free) : pick(this.busts), notes: [], noteSeq: 0, ...this.fresh() };
   }
-  fresh() { return { cash: START_CASH, hand: [], shelf: [], cursed: [], sealed: [], peek: [], tip: null, bids: 0, played: 0, wins: 0, ready: false, est: 0, nextBot: 0 }; }
+  fresh() { return { cash: START_CASH, freeLock: true, hand: [], shelf: [], cursed: [], sealed: [], peek: [], tip: null, bids: 0, played: 0, wins: 0, ready: false, est: 0, nextBot: 0 }; }
   // bots: from the TV in test mode, or from the first player's phone in any game (to make up the numbers)
   addBot(fromVip = false) {
     if ((!this.test && !fromVip) || this.phase !== 'LOBBY' || this.players.length >= MAX) return { error: 'No room for more bots' };
@@ -204,6 +216,24 @@ class BidCoin {
     const value = roundTo(item.value * (0.85 + Math.random() * 0.3));
     return { uid: uid(), id: item.id, img: item.img || item.id, name: item.name, cat: item.cat, rar: item.rar, value, line: item.line, ...extra };
   }
+  pickCar(used, grail) {
+    let pool = C.ITEMS.filter((i) => i.rar === 'c' && !used.has(i.id)); if (!pool.length) pool = C.ITEMS.filter((i) => i.rar === 'c');
+    // cheap wrecks turn up most; grails are rare (except in the vault)
+    const w = (v) => (grail ? (v >= 60000 ? 3 : 1) : v <= 20000 ? 10 : v <= 60000 ? 6 : v <= 120000 ? 2.5 : 0.8);
+    let r = Math.random() * pool.reduce((t, i) => t + w(i.value), 0);
+    for (const it of pool) { r -= w(it.value); if (r <= 0) { used.add(it.id); return it; } }
+    return pool[0];
+  }
+  makeDisaster(garage, used) {
+    let pool = C.DISASTERS.filter((d) => !used.has(d.id) && (!garage || d.garage !== false));
+    if (garage && Math.random() < 0.6) { const car = pool.filter((d) => d.garage); if (car.length) pool = car; }
+    if (!pool.length) pool = C.DISASTERS;
+    const d = pick(pool); used.add(d.id);
+    const look = C.BY_ID[pick(d.looks)] || C.BY_ID[d.looks[0]];
+    const value = d.pct ? -10000 : -roundTo(d.cost * (0.9 + Math.random() * 0.2));
+    return { uid: uid(), id: d.id, img: d.id, name: d.name, cat: d.cat, rar: 'z', value, pct: d.pct || 0, line: d.line,
+      look: { id: look.id, img: look.img || look.id, name: look.name, cat: look.cat, line: look.line, value: look.value } };
+  }
   pickItem(rar, bias, used) {
     let pool = C.ITEMS.filter((i) => i.rar === rar && !used.has(i.id));
     if (!pool.length) pool = C.ITEMS.filter((i) => i.rar === rar);
@@ -215,16 +245,19 @@ class BidCoin {
     const total = LOCKERS(); const used = new Set();
     const origins = shuffle(C.ORIGINS);
     const mysteryAt = total >= 4 ? 3 + Math.floor(Math.random() * (total - 4)) : -1; // never the first or the last
+    // most games get one garage with a car at the back (never the first, the last or the mystery one)
+    const spots = []; for (let n = 2; n < total; n++) if (n !== mysteryAt) spots.push(n);
+    const garageAt = spots.length && Math.random() < 0.75 ? pick(spots) : -1;
     this.lockers = [];
     for (let n = 1; n <= total; n++) {
-      const special = n === total ? 'mega' : n === mysteryAt ? 'mystery' : null;
-      const mega = special === 'mega';
-      const origin = mega ? { name: "A billionaire's private vault", bias: ['jewels', 'art', 'cars', 'antiques'] } : special === 'mystery' ? { name: 'Nobody knows', bias: [] } : origins[(n - 1) % origins.length];
+      const special = n === total ? 'mega' : n === mysteryAt ? 'mystery' : n === garageAt ? 'garage' : null;
+      const mega = special === 'mega'; const garage = special === 'garage';
+      const origin = mega ? { name: "A billionaire's private vault", bias: ['jewels', 'art', 'cars', 'antiques'] } : special === 'mystery' ? { name: 'Nobody knows', bias: [] } : garage ? pick(GARAGES) : origins[(n - 1) % origins.length];
       const gname = mega ? roll({ fair: 35, jackpot: 65 }) : roll(Object.fromEntries(Object.entries(GRADES).map(([k, v]) => [k, v.w])));
       const gr = GRADES[gname];
       const mix = { ...gr.mix }; const backT = { ...gr.back };
       if (origin.curse) { mix.x *= 2.2; backT.x = (backT.x || 0) * 2; }
-      const count = mega ? 10 : 6 + Math.floor(Math.random() * 3);
+      const count = mega ? 10 : garage ? 5 : 6 + Math.floor(Math.random() * 3);
       const items = [];
       for (let i = 0; i < count; i++) items.push(this.inst(this.pickItem(roll(mix), origin.bias, used), { mega }));
       // a sealed box swaps in for one of them, now and then
@@ -232,8 +265,14 @@ class BidCoin {
         const box = pick(C.CONTAINERS); const inner = this.pickItem(roll({ d: 35, r: 33, l: 15, x: 17 }), [], used);
         items[Math.floor(Math.random() * items.length)] = { ...this.inst({ ...box, rar: 's', value: 0 }), img: box.id, sealed: true, inner: this.inst(inner, { mega }) };
       }
-      const back = this.inst(this.pickItem(roll(backT), origin.bias, used), { mega, back: true });
-      items.push(back);
+      // the thing at the back: a car in a garage (and sometimes in the mega locker)
+      const backItem = garage || (mega && Math.random() < 0.2) ? this.pickCar(used, mega) : this.pickItem(roll(backT), origin.bias, used);
+      items.push(this.inst(backItem, { mega: mega && backItem.rar !== 'c', back: true }));
+      // a disaster, dressed up as something harmless
+      if (Math.random() < DISASTER_CHANCE[special || 'normal']) {
+        const spots2 = items.map((it, i) => i).filter((i) => !items[i].sealed && (!items[i].back || Math.random() < 0.25));
+        if (spots2.length) { const i = pick(spots2); const dz = this.makeDisaster(garage, used); if (items[i].back) dz.back = true; items[i] = dz; }
+      }
       this.lockers.push({ n, total, origin: origin.name, special, grade: gname, items, price: 0, owner: null, phantom: false, plants: [], bets: {}, shown: 0, stolen: null, effects: [], result: null });
     }
     // one or two one-of-a-kind legends, written by the AI when it can (with a fallback)
@@ -247,7 +286,7 @@ class BidCoin {
     const want = 1 + (Math.random() < 0.5 ? 1 : 0);
     const slots = shuffle(this.lockers.filter((l) => l.special !== 'mystery').map((l) => l.n)).slice(0, want);
     let found = null;
-    try { found = await timeout(ai.bcLegends?.(want, C.ITEMS.filter((i) => i.rar !== 'x').map((i) => i.id)), 9000); } catch (e) { found = null; }
+    try { found = await timeout(ai.bcLegends?.(want, C.ITEMS.filter((i) => 'jdrl'.includes(i.rar)).map((i) => i.id)), 9000); } catch (e) { found = null; }
     const pool = shuffle(C.LEGENDS);
     slots.forEach((n, i) => {
       const lk = this.lockers[n - 1]; if (!lk || this.li >= n - 1) return; // too late for that one
@@ -264,6 +303,8 @@ class BidCoin {
     if (it.sealed) return fill(L.SAY.sealed, { item: it.name });
     if (it.rar === 'l') return fill(pick(L.SAY.legend), { item: it.name });
     if (it.rar === 'x') return fill(pick(L.SAY.cursed), { item: it.name });
+    if (it.rar === 'z') return it.pct ? fill(pick(L.SAY.disasterPct), { item: it.name, pct: Math.round(it.pct * 100) }) : fill(pick(L.SAY.disaster), { item: it.name, look: it.look.name, cost: money(-it.value) });
+    if (it.rar === 'c') return fill(pick(L.SAY.car), { item: it.name });
     return null;
   }
   prefetchLocker(lk) {
@@ -284,6 +325,13 @@ class BidCoin {
     } else { this.setPhase('INTRO', { step: 'how' }); await this.say(g, L.SAY.how); }
     for (let i = 0; i < this.lockers.length; i++) { this.li = i; this.prefetchLocker(this.lockers[i + 1]); await this.locker(g, this.lockers[i]); }
     await this.finale(g);
+  }
+  // after a pause, every deadline moves forward by the time spent paused
+  shiftClock(dt) {
+    const a = this.auc;
+    if (a) { a.start += dt; a.last += dt; for (const id of Object.keys(a.frozen)) a.frozen[id] += dt; }
+    for (const p of this.players) if (p.nextBot) p.nextBot += dt;
+    for (const at of this.atk || []) at.until += dt;
   }
   // a safety net: if nothing has moved for two minutes, nudge the game on
   startWatchdog(g) {
@@ -331,7 +379,8 @@ class BidCoin {
       if (lk.phantom) await this.say(g, L.SAY.phantomWins);
       else this.sayOver(g, fill(pick(L.SAY.soldTo), { name: this.nameOf(lk.owner), price: money(lk.price) }));
       this.prefetchVerdict(lk);
-      await this.wait(ms(T.bet), () => this.players.every((p) => p.bet || p.id === lk.owner || !p.connected || p.cash < STAKE)); this.guard(g);
+      await this.wait(ms(T.bet), () => !this.atk.length && this.players.every((p) => p.bet || p.id === lk.owner || !p.connected || p.cash < STAKE)); this.guard(g);
+      await this.settleAttacks(g);
     }
     if (lk.owner) this.giveCard(this.P(lk.owner), 'you won a locker');
 
@@ -343,7 +392,8 @@ class BidCoin {
       this.players.forEach((p) => { p.passed = false; });
       this.setPhase('AFTER', {}, T.after);
       this.sayOver(g, L.SAY.after);
-      await this.wait(ms(T.after), () => this.afterCards(lk).length === 0); this.guard(g);
+      await this.wait(ms(T.after), () => !this.atk.length && this.afterCards(lk).length === 0); this.guard(g);
+      await this.settleAttacks(g);
     }
 
     // 7. pay out and show the money
@@ -354,6 +404,7 @@ class BidCoin {
 
   dealPeeks(lk) {
     const pool = lk.items.filter((it) => !it.back);
+    const fakes = lk.plants || [];
     const last = this.standings()[this.standings().length - 1];
     const order = shuffle(pool); let k = 0;
     if (lk.special === 'mystery') return;
@@ -361,13 +412,19 @@ class BidCoin {
       const n = p === last && this.li > 0 ? 2 : 1;
       for (let i = 0; i < n; i++) { const it = order[k % order.length]; k++; if (!p.peek.some((x) => x.uid === it.uid)) p.peek.push({ uid: it.uid }); }
       if (n === 2) this.note(p, "You're in last place, so you get two peeks.", 'good');
+      // a planted fake takes the place of one real thing they'd have seen, so nothing looks different
+      const mine = fakes.filter((pl) => pl.by !== p.id);
+      if (mine.length) { const pl = pick(mine); const at = Math.floor(Math.random() * p.peek.length); p.peek[at] = { uid: pl.item.uid, fake: true, item: pl.item }; }
     }
   }
+  // the next locker that can take a plant (the mystery locker has no peek)
+  plantTarget() { for (let i = this.li + 1; i < this.lockers.length; i++) if (this.lockers[i].special !== 'mystery') return this.lockers[i]; return null; }
   peekPub(p) {
     const lk = this.lk; if (!lk) return [];
     return p.peek.map((pk) => {
       if (pk.fake) return { uid: pk.uid, name: pk.item.name, img: PH(pk.item.img), cat: pk.item.cat, line: pk.item.line };
       const it = lk.items.find((x) => x.uid === pk.uid); if (!it) return null;
+      if (it.look) return { uid: it.uid, name: it.look.name, img: PH(it.look.img), cat: it.look.cat, line: it.look.line, xray: !!pk.xray };
       return { uid: it.uid, name: it.name, img: PH(it.img), cat: it.cat, line: it.line, sealed: !!it.sealed, xray: !!pk.xray };
     }).filter(Boolean);
   }
@@ -387,7 +444,7 @@ class BidCoin {
     this.sayOver(g, pick(L.SAY.open));
     for (const b of this.players.filter((p) => p.bot)) { b.est = this.botEstimate(b, lk); b.nextBot = Date.now() + ms(0.8 + Math.random() * 2); }
     this.aucTick = setInterval(() => { try {
-      if (g !== this.runId || a.done) return;
+      if (g !== this.runId || a.done || this.pauseInfo) return;
       const idle = Date.now() - a.last; const th = this.thresholds();
       if (idle >= ms(th[2])) { a.done = true; this.check(); return; }
       if (idle >= ms(th[1]) && a.calls < 2 && a.leader) { a.calls = 2; this.callOut('twice'); }
@@ -436,6 +493,9 @@ class BidCoin {
     return profit > 0 ? fill(pick(L.SAY.boom), { name, profit: money(profit) }) : fill(pick(L.SAY.bust), { name, loss: money(-profit) });
   }
   async reveal(g, lk) {
+    const own = this.P(lk.owner);
+    const avg = this.players.reduce((t, p) => t + Math.max(0, p.cash), 0) / Math.max(1, this.players.length);
+    for (const it of lk.items) if (it.rar === 'z' && it.pct) it.value = -roundTo(Math.max(0, own ? own.cash : avg) * it.pct);
     const order = [...shuffle(lk.items.filter((x) => !x.back)), ...lk.items.filter((x) => x.back)];
     lk.items = order; lk.shown = 0;
     this.setPhase('REVEAL', { step: 'open' });
@@ -445,8 +505,8 @@ class BidCoin {
       const it = order[i];
       if (it.back) { this.d = { step: 'back' }; this.sync(); this.sfx('drumroll'); await this.say(g, L.SAY.back); }
       lk.shown = i + 1; this.d = { step: it.back ? 'back' : 'item' }; this.sync();
-      this.sfx(it.sealed ? 'bc-lock' : it.rar === 'x' ? 'bc-curse' : it.rar === 'l' ? 'bc-legend' : it.rar === 'r' ? 'bc-cash' : 'bc-thud');
-      if (it.say && (!quick || it.rar === 'l' || it.legend)) await this.say(g, it.say);
+      this.sfx(it.sealed ? 'bc-lock' : it.rar === 'z' ? 'bc-bust' : it.rar === 'x' ? 'bc-curse' : it.rar === 'l' || it.rar === 'c' ? 'bc-legend' : it.rar === 'r' ? 'bc-cash' : 'bc-thud');
+      if (it.say && (!quick || it.rar === 'l' || it.rar === 'z' || it.rar === 'c' || it.legend)) await this.say(g, it.say);
       else await this.pause(g, quick ? 0.7 : it.rar === 'r' ? 1.5 : 1.15);
     }
     // the plants: things people "saw" that were never there
@@ -490,19 +550,23 @@ class BidCoin {
     const owner = lk.owner;
     const best = this.bestFind(lk);
     switch (k) {
-      case 'xray': case 'tip': case 'plant': return ph === 'PEEK' && !(k === 'plant' && lk.plants.some((x) => x.by === p.id)) && !(k === 'tip' && p.tip) && !(k === 'xray' && p.peek.some((x) => x.xray));
+      case 'xray': case 'tip': return ph === 'PEEK' && !(k === 'tip' && p.tip) && !(k === 'xray' && p.peek.some((x) => x.xray));
+      case 'plant': { const nx = this.plantTarget(); return ph === 'PEEK' && !!nx && !nx.plants.some((x) => x.by === p.id); }
       case 'freeze': return ph === 'AUCTION' && this.auc && !this.auc.done;
       case 'phantom': return ph === 'AUCTION' && this.auc && !this.auc.done && this.auc.leader !== 'phantom' && !this.auc.phantomBy;
-      case 'steal': return ph === 'BET' && this.d.step === 'bet' && owner && owner !== p.id && !lk.stolen && p.cash >= this.stealPrice(lk);
+      case 'steal': return ph === 'BET' && this.d.step === 'bet' && owner && owner !== p.id && !lk.stolen && !this.atk.some((x) => x.k === 'steal') && p.cash >= this.stealPrice(lk);
       case 'tax': return ph === 'AFTER' && owner && owner !== p.id && this.projected(lk).profit > 0 && !lk.effects.some((e) => e.k === 'tax' && e.by === p.id);
-      case 'swap': return ph === 'AFTER' && owner && owner !== p.id && best && !best.swapped;
+      case 'swap': return ph === 'AFTER' && owner && owner !== p.id && !!this.swapFind(lk) && !this.atk.some((x) => x.k === 'swap');
       case 'appraise': return ph === 'AFTER' && owner === p.id && best && !best.appraised;
       case 'curse': return ph === 'AFTER' && p.cursed.length > 0;
       default: return false;
     }
   }
-  stealPrice(lk) { return roundTo(lk.price * 1.2); }
-  bestFind(lk) { return lk.items.filter((it) => !it.sealed && it.rar !== 'x' && !it.swapped).sort((a, b) => b.value - a.value)[0] || null; }
+  stealPrice(lk) { return roundTo(lk.price * STEAL_MARKUP); }
+  finds(lk) { return lk.items.filter((it) => !it.sealed && it.rar !== 'x' && it.rar !== 'z' && !it.swapped).sort((a, b) => b.value - a.value); }
+  bestFind(lk) { return this.finds(lk)[0] || null; }
+  // Swap can never take the single best thing: it takes the second best
+  swapFind(lk) { return this.finds(lk)[1] || null; }
   projected(lk) { const found = lk.items.reduce((s, it) => s + (it.sealed || it.swapped ? 0 : it.value), 0) + lk.effects.filter((e) => e.k === 'swap').reduce((s, e) => s + e.give, 0); return { found, profit: found - lk.price }; }
 
   playCard(me, k, target) {
@@ -524,17 +588,20 @@ class BidCoin {
         break;
       }
       case 'plant': {
-        const real = new Set(lk.items.map((i) => i.id));
-        const fake = this.inst(pick(C.ITEMS.filter((i) => i.rar === 'l' && !real.has(i.id))), { mega: lk.special === 'mega' });
-        const pl = { by: me.id, item: fake }; lk.plants.push(pl);
-        for (const p of this.players) if (p !== me) { const pos = Math.floor(Math.random() * (p.peek.length + 1)); p.peek.splice(pos, 0, { uid: fake.uid, fake: true, item: fake }); }
-        this.note(me, 'Planted. Everyone else now "sees" a treasure that is not there.', 'good');
+        // baked into the next locker's peek from the start, in place of something real, and not always flashy
+        const nx = this.plantTarget(); const real = new Set(nx.items.map((i) => i.id));
+        const rar = roll({ d: 30, r: 42, l: 28 });
+        const fake = this.inst(pick(C.ITEMS.filter((i) => i.rar === rar && !real.has(i.id))), { mega: nx.special === 'mega' });
+        nx.plants.push({ by: me.id, item: fake });
+        this.note(me, `Planted. In locker ${nx.n}, everyone else will "see" a ${fake.name} that isn't there.`, 'good');
         break;
       }
       case 'freeze': {
-        this.auc.frozen[T_.id] = Date.now() + ms(T.freeze);
+        // a freeze lands straight away; a Lock breaks it
+        const a = this.auc; a.frozen[T_.id] = Date.now() + ms(T.freeze);
         this.splashOut('freeze', me.id, { target: T_.id }); this.blastAuc();
         this.note(T_, `${me.name} froze you! No bidding for 10 seconds.`, 'bad');
+        this.attack('freeze', me, T_, null, () => { delete a.frozen[T_.id]; this.blastAuc(); });
         break;
       }
       case 'phantom': {
@@ -543,59 +610,104 @@ class BidCoin {
         break;
       }
       case 'steal': {
-        const old = this.P(lk.owner); const price = this.stealPrice(lk);
-        old.cash += lk.price; me.cash -= price; old.wins--; me.wins++;
-        lk.stolen = { from: old.id, by: me.id, was: lk.price }; lk.owner = me.id; lk.price = price; delete lk.bets[me.id];
-        this.splashOut('steal', me.id, { target: old.id, price });
-        this.note(old, `${me.name} stole your locker! You got your AED ${money(lk.stolen.was)} back.`, 'bad');
-        this.prefetchVerdict(lk);
-        this.later(this.runId, 10, () => this.sayOver(this.runId, fill(L.SAY.stolen, { name: me.name })));
+        this.attack('steal', me, this.P(lk.owner), () => this.doSteal(me, lk));
         break;
       }
-      case 'tax': lk.effects.push({ k, by: me.id }); this.splashOut('tax', me.id, { target: lk.owner }); break;
-      case 'appraise': { const b = this.bestFind(lk); b.appraised = true; b.value *= 2; lk.effects.push({ k, by: me.id, item: b.name, value: b.value }); this.splashOut('appraise', me.id, { item: b.name }); break; }
-      case 'swap': {
-        const b = this.bestFind(lk); const mine = me.shelf.filter((x) => !x.gone).sort((x, y) => x.value - y.value)[0] || null;
-        b.swapped = true; const give = mine ? mine.value : Math.round(b.value / 2);
-        if (mine) { mine.gone = true; this.P(lk.owner).shelf.push({ ...mine, gone: false, from: 'swap' }); }
-        lk.effects.push({ k, by: me.id, take: b.value, give, item: b.name, mine: mine?.name || null });
-        me.shelf.push({ ...b, from: 'swap' }); me.cash += b.value - give;
-        this.splashOut('swap', me.id, { target: lk.owner, item: b.name, mine: mine?.name || null });
-        break;
-      }
-      case 'curse': {
-        const worst = [...me.cursed].sort((a, b) => a.value - b.value)[0];
-        me.cursed = me.cursed.filter((c) => c !== worst); T_.cursed.push(worst);
-        lk.effects.push({ k, by: me.id, target: T_.id, item: worst.name });
-        this.splashOut('curse', me.id, { target: T_.id, item: worst.name });
-        this.note(T_, `${me.name} passed you their ${worst.name}. It costs AED ${money(-worst.value)} at the end.`, 'bad');
-        break;
-      }
+      case 'tax': this.attack('tax', me, this.P(lk.owner), () => { lk.effects.push({ k, by: me.id }); this.splashOut('tax', me.id, { target: lk.owner }); }); break;
+      case 'appraise': { const b = this.bestFind(lk); b.appraised = true; b.value = roundTo(b.value * APPRAISE); lk.effects.push({ k, by: me.id, item: b.name, value: b.value }); this.splashOut('appraise', me.id, { item: b.name }); break; }
+      case 'swap': this.attack('swap', me, this.P(lk.owner), () => this.doSwap(me, lk)); break;
+      case 'curse': this.attack('curse', me, T_, () => this.doCurse(me, T_, lk)); break;
       default: break;
     }
     this.lastActive = Date.now(); this.check(); this.sync(); this.botTurn();
     return { ok: true };
   }
+  doSteal(me, lk) {
+    const old = this.P(lk.owner); const price = this.stealPrice(lk);
+    if (!old || old === me || lk.stolen || me.cash < price) { this.note(me, 'The steal fizzled.', 'bad'); return; }
+    old.cash += lk.price; me.cash -= price; old.wins--; me.wins++;
+    lk.stolen = { from: old.id, by: me.id, was: lk.price }; lk.owner = me.id; lk.price = price; delete lk.bets[me.id];
+    this.splashOut('steal', me.id, { target: old.id, price });
+    this.note(old, `${me.name} stole your locker! You got your AED ${money(lk.stolen.was)} back.`, 'bad');
+    this.prefetchVerdict(lk);
+    this.later(this.runId, 10, () => this.sayOver(this.runId, fill(L.SAY.stolen, { name: me.name })));
+  }
+  doSwap(me, lk) {
+    const b = this.swapFind(lk); if (!b) { this.note(me, 'Nothing left to swap.', 'bad'); return; }
+    const mine = me.shelf.filter((x) => !x.gone).sort((x, y) => x.value - y.value)[0] || null;
+    b.swapped = true; const give = mine ? mine.value : Math.round(b.value / 2);
+    if (mine) { mine.gone = true; this.P(lk.owner).shelf.push({ ...mine, gone: false, from: 'swap' }); }
+    lk.effects.push({ k: 'swap', by: me.id, take: b.value, give, item: b.name, mine: mine?.name || null });
+    me.shelf.push({ ...b, from: 'swap' }); me.cash += b.value - give;
+    this.splashOut('swap', me.id, { target: lk.owner, item: b.name, mine: mine?.name || null });
+  }
+  doCurse(me, T_, lk) {
+    if (!me.cursed.length) return;
+    const worst = [...me.cursed].sort((a, b) => a.value - b.value)[0];
+    me.cursed = me.cursed.filter((c) => c !== worst); T_.cursed.push(worst);
+    lk.effects.push({ k: 'curse', by: me.id, target: T_.id, item: worst.name });
+    this.splashOut('curse', me.id, { target: T_.id, item: worst.name });
+    this.note(T_, `${me.name} passed you their ${worst.name}. It costs AED ${money(-worst.value)} at the end.`, 'bad');
+  }
+
+  // ------------------------------------------------------------ the Lock: a few seconds to block a card aimed at you
+  hasLock(p) { return !!p && (p.freeLock || p.hand.some((c) => c.k === 'lock')); }
+  attack(k, me, target, apply, undo = null) {
+    if (!target || target === me || !this.hasLock(target) || !target.connected) { apply?.(); return; }
+    const g = this.runId;
+    const at = { id: uid(), k, by: me.id, target: target.id, until: Date.now() + ms(LOCK_WINDOW), apply, undo, done: false };
+    this.atk.push(at);
+    this.note(target, `${me.name} played ${CARDS[k].name} on you! Tap Lock to block it.`, 'bad');
+    if (target.bot) this.later(g, ms(0.7 + Math.random() * 1.6), () => { if (Math.random() < 0.6) this.block(target, at.id); });
+    this.later(g, ms(LOCK_WINDOW), () => this.resolveAttack(at));
+    this.sync();
+  }
+  resolveAttack(at) {
+    if (at.done) return; at.done = true; this.atk = this.atk.filter((x) => x !== at);
+    if (!at.undo) at.apply?.();
+    this.check(); this.sync();
+  }
+  block(p, id) {
+    const at = this.atk.find((x) => x.id === id && !x.done);
+    if (!at || at.target !== p.id) return { error: 'Too late to block' };
+    if (!this.hasLock(p)) return { error: 'No Lock left' };
+    if (p.freeLock) p.freeLock = false; else this.takeCard(p, 'lock');
+    at.done = true; at.blocked = true; this.atk = this.atk.filter((x) => x !== at);
+    at.undo?.();
+    this.splashOut('lock', p.id, { target: at.by, blocked: at.k });
+    const by = this.P(at.by); if (by) this.note(by, `${p.name} locked your ${CARDS[at.k].name}. Wasted!`, 'bad');
+    this.check(); this.sync();
+    return { ok: true };
+  }
+  // before the game moves on, every card still in its block window lands (or gets blocked)
+  async settleAttacks(g) {
+    const t0 = Date.now();
+    while (this.atk.length && Date.now() - t0 < ms(LOCK_WINDOW) + 1500) { await this.wait(200); this.guard(g); }
+    for (const at of [...this.atk]) this.resolveAttack(at);
+  }
 
   payout(lk) {
     const o = this.P(lk.owner);
     if (o) {
-      let found = 0;
+      let found = 0; let disaster = 0;
       for (const it of lk.items) {
         if (it.swapped || it.rar === 'x') continue;
+        if (it.rar === 'z') { disaster += it.value; continue; }
         if (it.sealed) { o.sealed.push({ ...it, from: lk.n }); continue; }
         found += it.value; o.shelf.push({ uid: it.uid, id: it.id, img: it.img, name: it.name, value: it.value, rar: it.rar, from: lk.n });
       }
       found += lk.effects.filter((e) => e.k === 'swap').reduce((s, e) => s + e.give, 0);
       let profit = found - lk.price;
       for (const e of lk.effects.filter((x) => x.k === 'tax')) {
-        const cut = profit > 0 ? roundTo(profit * 0.25) : 0; e.cut = cut; found -= cut; profit -= cut;
+        const cut = profit > 0 ? roundTo(profit * TAX_CUT) : 0; e.cut = cut; found -= cut; profit -= cut;
         const t = this.P(e.by); if (t) t.cash += cut;
       }
       o.cash += found;
+      // a disaster is paid on the spot, but it can't take anyone below zero
+      if (disaster) { const hit = Math.min(-disaster, Math.max(0, o.cash)); o.cash -= hit; disaster = -hit; profit = found - lk.price + disaster; }
       // cursed things count against what you found, but are paid for at the end
       const cursed = lk.items.filter((it) => it.rar === 'x').reduce((s, it) => s + it.value, 0);
-      lk.result = { owner: o.id, price: lk.price, paid: found, profit, cursed };
+      lk.result = { owner: o.id, price: lk.price, paid: found, profit, cursed, disaster };
     } else lk.result = { owner: null, price: lk.price, paid: 0, profit: 0, phantom: lk.phantom };
     this.log.push({ n: lk.n, owner: lk.owner, price: lk.price, profit: lk.result.profit, best: [...lk.items].sort((a, b) => b.value - a.value)[0]?.name });
   }
@@ -658,6 +770,7 @@ class BidCoin {
       case 'skipTutorial': if (this.phase === 'TUTORIAL' && this.vip()?.id === pid) { this.skipTut = true; this.cue = null; this.wake('skip'); } return {};
       case 'ready': if (this.phase === 'PEEK') { me.ready = true; this.check(); this.sync(); } return {};
       case 'card': return this.playCard(me, a.k, a.target);
+      case 'block': return this.block(me, a.id);
       case 'bet': {
         if (this.phase !== 'BET' || this.d.step !== 'bet' || !lk || lk.owner === pid || me.bet) return {};
         if (me.cash < STAKE) return { error: `A bet costs AED ${STAKE}` };
@@ -671,9 +784,9 @@ class BidCoin {
 
   // ------------------------------------------------------------ bots (test mode)
   botEstimate(b, lk) {
-    const mult = lk.special === 'mega' ? 1.6 : 1;
+    const mult = lk.special === 'mega' ? 1.6 : lk.special === 'garage' ? 1.5 : 1;
     const seen = this.peekPub(b);
-    const known = b.peek.map((pk) => (pk.fake ? pk.item.value : lk.items.find((x) => x.uid === pk.uid)?.value || 0)).reduce((s, v) => s + Math.max(0, v), 0) + seen.filter((x) => x.sealed).length * 4000;
+    const known = b.peek.map((pk) => { if (pk.fake) return pk.item.value; const it = lk.items.find((x) => x.uid === pk.uid); return it ? (it.look ? it.look.value : it.value) : 0; }).reduce((s, v) => s + Math.max(0, v), 0) + seen.filter((x) => x.sealed).length * 4000;
     let est = known + Math.max(0, lk.items.length - seen.length) * AVG_ITEM * mult;
     if (b.tip) est = (b.tip.lo + b.tip.hi) / 2;
     return Math.round(est * (0.65 + Math.random() * 0.45));
@@ -722,7 +835,7 @@ class BidCoin {
   }
 
   // ------------------------------------------------------------ what each screen sees
-  itemPub(it) { return it ? { uid: it.uid, name: it.name, img: PH(it.img), credit: photos.creditFor(it.img), cat: it.cat, rar: it.sealed ? 's' : it.rar, value: it.sealed ? null : it.value, line: it.line, sealed: !!it.sealed, back: !!it.back, legend: !!it.legend, appraised: !!it.appraised, swapped: !!it.swapped } : null; }
+  itemPub(it) { return it ? { uid: it.uid, name: it.name, img: PH(it.img), credit: photos.creditFor(it.img), cat: it.cat, rar: it.sealed ? 's' : it.rar, value: it.sealed ? null : it.value, line: it.line, sealed: !!it.sealed, back: !!it.back, legend: !!it.legend, appraised: !!it.appraised, swapped: !!it.swapped, was: it.look ? it.look.name : null, pct: it.pct || 0 } : null; }
   lockerPub() {
     const lk = this.lk; if (!lk) return null;
     const out = { n: lk.n, total: lk.total, origin: lk.origin, special: lk.special, count: lk.items.length, owner: lk.owner, price: lk.price, phantom: lk.phantom, stolen: lk.stolen, result: lk.result };
@@ -752,7 +865,9 @@ class BidCoin {
       v.me = { ...this.pub(me), vip: this.vip()?.id === me.id, cash: me.cash, notes: me.notes, ready: !!me.ready, bet: me.bet || null, passed: !!me.passed,
         hand: me.hand.map((c) => ({ id: c.id, k: c.k, usable: this.cardUsable(me, c.k) })),
         cursed: me.cursed.map((c) => ({ name: c.name, value: c.value })), sealed: me.sealed.map((s) => ({ name: s.name })), shelf: me.shelf.filter((s) => !s.gone).length,
-        peek: ['PEEK', 'AUCTION', 'BET'].includes(ph) ? this.peekPub(me) : [], tip: me.tip };
+        peek: ['PEEK', 'AUCTION', 'BET'].includes(ph) ? this.peekPub(me) : [], tip: me.tip,
+        freeLock: !!me.freeLock, locks: (me.freeLock ? 1 : 0) + me.hand.filter((c) => c.k === 'lock').length,
+        incoming: this.atk.filter((x) => x.target === me.id && !x.done).map((x) => ({ id: x.id, k: x.k, by: this.nameOf(x.by), until: x.until })) };
       if (lk && ph === 'BET') { x.canBet = lk.owner !== me.id && !me.bet && me.cash >= STAKE && d.step === 'bet'; x.stealPrice = lk.owner ? this.stealPrice(lk) : 0; }
     }
     if (ph === 'TUTORIAL') { x.slide = d.step; x.slides = L.TUTORIAL.length; x.key = L.TUTORIAL[d.step]?.key; x.title = L.TUTORIAL[d.step]?.title; }

@@ -3,6 +3,7 @@
   const $ = (q) => document.querySelector(q);
   const esc = W.esc;
   const socket = io();
+  window.__gnSocket = socket;
   const main = $('#main'); const hud = $('#hud');
   const params = new URLSearchParams(location.search);
   // In test mode every tab is its own player, so one laptop can be several people.

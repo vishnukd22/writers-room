@@ -326,10 +326,13 @@ const CATS = {
   music: { name: 'Music', icon: '🎸' }, fashion: { name: 'Fashion', icon: '👢' }, antiques: { name: 'Antiques', icon: '🏺' },
   home: { name: 'Kitchen and home', icon: '☕' }, office: { name: 'Office and desk', icon: '🖊️' }, weird: { name: 'Weird stuff', icon: '🦩' }, sealed: { name: 'Sealed', icon: '🔒' },
 };
-const RARITY = { j: 'Junk', d: 'Decent', r: 'Rare', l: 'Legendary', x: 'Cursed' };
+const RARITY = { j: 'Junk', d: 'Decent', r: 'Rare', l: 'Legendary', x: 'Cursed', c: 'Car', z: 'Disaster' };
 
-const ITEMS = ROWS.map(([id, name, cat, rar, value, line, q]) => ({ id, name, cat, rar, value, line, q }));
+const M = require('./bc-items-more');
+const ALL = [...ROWS, ...M.MORE, ...M.CARS, ...M.COVERS, ...M.DISASTERS.map((d) => [d.id, d.name, d.cat, 'z', d.pct ? 0 : -d.cost, d.line, d.q])];
+const ITEMS = ALL.map(([id, name, cat, rar, value, line, q]) => ({ id, name, cat, rar, value, line, q }));
+const DISASTERS = M.DISASTERS;
 const BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 const CONTAINERS = SEALED.map(([id, name, line, q]) => ({ id: `sealed-${id}`, name, line, q, cat: 'sealed' }));
 
-module.exports = { ITEMS, BY_ID, CONTAINERS, ORIGINS, LEGENDS, CATS, RARITY };
+module.exports = { ITEMS, BY_ID, CONTAINERS, ORIGINS, LEGENDS, CATS, RARITY, DISASTERS };
