@@ -62,7 +62,7 @@ async function request(text, voice, model, speed) {
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
       method: 'POST', signal: ctrl.signal,
       headers: { 'xi-api-key': KEY(), 'content-type': 'application/json', accept: 'audio/mpeg' },
-      body: JSON.stringify(speed && speed !== 1 ? { text, model_id: model, voice_settings: { speed } } : { text, model_id: model }),
+      body: JSON.stringify((() => { const vs = {}; if (speed && speed !== 1) vs.speed = speed; if (voice === MN() && model === 'eleven_v3' && process.env.ELEVENLABS_MN_STABILITY !== 'off') vs.stability = Number(process.env.ELEVENLABS_MN_STABILITY || 0); return Object.keys(vs).length ? { text, model_id: model, voice_settings: vs } : { text, model_id: model }; })()),
     });
     if (!res.ok) { const body = (await res.text()).slice(0, 300); return { error: res.status, body }; }
     return { buf: Buffer.from(await res.arrayBuffer()) };

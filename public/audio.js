@@ -194,9 +194,22 @@ window.AV = (() => {
     const fail = () => setTimeout(finish, Math.max(0, readMs - (Date.now() - t0)));
     if (cue.audio) {
       voiceEl = new Audio(cue.audio); voiceEl.volume = voiceVol;
+      if (cue.hall) hall(voiceEl);
       voiceEl.onended = finish; voiceEl.onerror = fail;
       voiceEl.play().catch(fail);
     } else setTimeout(finish, readMs); // no clip ready: show the words only. Never the browser's robot voice.
+  }
+  // a big empty hall around the voice: an echo tail, and the voice a touch slower and deeper
+  let hallIR = null;
+  function hall(el) {
+    try {
+      if (!ctx) return; el.crossOrigin = 'anonymous'; el.preservesPitch = false; el.mozPreservesPitch = false; el.webkitPreservesPitch = false; el.playbackRate = 0.95;
+      if (!hallIR) { const len = Math.floor(ctx.sampleRate * 2.4); hallIR = ctx.createBuffer(2, len, ctx.sampleRate); for (let c = 0; c < 2; c++) { const d = hallIR.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); } }
+      const src = ctx.createMediaElementSource(el); const conv = ctx.createConvolver(); conv.buffer = hallIR;
+      const dry = ctx.createGain(); dry.gain.value = 1; const wet = ctx.createGain(); wet.gain.value = 0.32;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+      src.connect(dry).connect(ctx.destination); src.connect(lp).connect(conv).connect(wet).connect(ctx.destination);
+    } catch (e) { /* plain voice is fine */ }
   }
   function stopVoice() { if (voiceEl) { voiceEl.onended = null; voiceEl.pause(); voiceEl = null; } if ('speechSynthesis' in window) speechSynthesis.cancel(); if (speaking) { speaking = null; duck(false); } }
 

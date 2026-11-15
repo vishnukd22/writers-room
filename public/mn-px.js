@@ -202,7 +202,7 @@ window.PX = (() => {
     ctx.fillText(line, x, yy);
   }
   function tv(S, root) {
-    const on = ['HUB', 'PX', 'STORY', 'BOSS'].includes(S.phase);
+    const on = ['HUB', 'PX', 'BOSS', 'COLLAPSE'].includes(S.phase) && !!S.x.px && !S.x.px.ui && ['walk', 'play', 'won', 'lost', 'practice', 'demo'].includes(S.step);
     document.body.classList.toggle('pxmode', on);
     if (!on) { tvS = null; return; }
     if (!tvEl) tvSetup(root);
@@ -217,7 +217,7 @@ window.PX = (() => {
   let drag = null; let boxCanvas = null; let phRaf = 0;
   function phone(S, root, sendFn) {
     send = sendFn; phS = S; const m = S.me || {}; const px = m.px; const st = S.step;
-    const active = ['HUB', 'PX', 'BOSS'].includes(S.phase) && px && ['walk', 'play', 'practice'].includes(st);
+    const active = !!(['HUB', 'PX', 'BOSS', 'COLLAPSE'].includes(S.phase) && px && !px.ui && ['walk', 'play', 'practice'].includes(st));
     root.hidden = !active; document.body.classList.toggle('pxphone', active);
     if (!active) { phKey = ''; stopHold(); return false; }
     phEl = root; heart.c = m.color || '#f33';

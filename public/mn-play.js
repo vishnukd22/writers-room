@@ -97,13 +97,18 @@
       const list = `<div class="faces">${S.players.map((p) => `<div class="f">${W.bust(p, 'md')}<span>${esc(p.name)}${p.bot ? ' (guest)' : ''}</span></div>`).join('')}</div>`;
       if (!m.vip) return `${tv("You're inside.", 'Watch the TV. The first player starts the night.', '🕯️')}${W.picker(S, m.id)}${list}`;
       const why = n < 2 ? 'You need at least 2. Add a guest if you are short.' : n === 2 ? 'Just two of you? Two more guests will join to fill the jobs.' : `${n} guests ready.`;
+      const lvl = S.x.scareLevel || 'spooky';
+      const scares = `<div class="scarelvl"><b>How scary?</b>${[['mild', 'Mild'], ['spooky', 'Spooky'], ['nightmare', 'Nightmare']].map(([k, l]) => `<button class="${lvl === k ? 'on' : ''}" data-x='{"type":"scareLevel","v":"${k}"}'>${l}</button>`).join('')}</div>`;
       return `<h2 class="h">You hold the candle</h2><p class="lead">${why} About 25 minutes. Everyone wins together or loses together.</p>
-        ${W.picker(S, m.id)}<button class="mainbtn" data-a="start" ${n < 2 ? 'disabled' : ''}>Begin the night</button>
+        ${W.picker(S, m.id)}${scares}<button class="mainbtn" data-a="start" ${n < 2 ? 'disabled' : ''}>Begin the night</button>
         <div class="row"><button class="ghostbtn" data-a="addBot">Add a guest</button>${S.players.some((p) => p.bot) ? '<button class="ghostbtn" data-a="removeBots">Remove guests</button>' : ''}</div>${list}`;
     },
     HUB() { return tv('The hallway', 'Look at the TV.', '🚪'); },
     STORY() { return `${tv('A memory', esc(S.x.story?.mem || ''), '📜')}${skipBtn()}`; },
+    DOORS() { return MP.phone(S); },
+    COLLAPSE() { return MP.phone(S); },
     PX() {
+      if (S.x.room && (S.x.room.style === 'paint' || S.step !== 'play')) return MP.phone(S);
       const r = S.x.room || {}; const st = S.step; const k = S.x.kind;
       if (st === 'intro') return `${tv(esc(r.name || ''), esc(r.how || ''), r.style === 'tale' ? '♥' : '🎮')}${skipBtn()}`;
       if (st === 'demo') return `${tv("Watch Mortimer's ghost", esc(r.how || ''), '👻')}<p class="lead">You play next.</p>`;
@@ -164,6 +169,7 @@
     document.body.classList.toggle('mine', S.phase === 'POSSESS' && S.x.who === S.me.id);
     mount(hud, hudHtml());
     // the 8-bit rooms run their own controls (D-pad, the heart, the battle menu)
+    MP.setState(S); MP.scarePhone(S);
     const pxOn = PX.phone(S, document.getElementById('px'), (type, data) => { if (type === 'px' && (data.a === 'pos' || data.a === 'hit')) socket.emit('act', { type, ...data }, () => {}); else send(type, data); });
     main.hidden = pxOn; if (pxOn) return;
     // don't redraw under a finger that is rubbing dust or tracing a path: it would drop the touch
@@ -172,6 +178,9 @@
     mount(main, html);
   }
   let pendingHtml = null;
+  window.__mnRender = () => render();
+  // painted rooms: quiet sends for the fast taps (sneaking, pulling, holding)
+  MP.bind((type, data) => { if (type === 'px' && ['sneak', 'pull', 'hold', 'moved', 'mode'].includes(data.a)) socket.emit('act', { type, ...data }, () => {}); else send(type, data); });
 
   // ---------------------------------------------------------------- touching things
   document.addEventListener('click', (e) => {

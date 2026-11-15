@@ -1,0 +1,163 @@
+/* Last Night in the Mansion: painted rooms, doors, The Collapse and the scares. TV rules first, then the phone. */
+
+/* ---------------------------------------------------------------- shared cards (TV) */
+.pc { margin: 0 auto; width: min(100%, 72vw); background: rgba(13, 10, 18, .82); border: 2px solid rgba(243, 230, 196, .25); border-radius: 2.2vh; padding: 3.4vh 3.4vw; text-align: center; box-shadow: 0 3vh 8vh rgba(0, 0, 0, .55); backdrop-filter: blur(6px); }
+.pc h2 { font: 400 8vh/1 var(--fell); margin: .5vh 0 1.6vh; color: var(--wax); }
+.pc .pc-k { display: block; color: var(--flame); font-weight: 700; font-size: 2.2vh; }
+.pc p { font-size: 2.6vh; margin: 0; color: var(--wax2); }
+.pc p.goal { font-size: 3.4vh; line-height: 1.35; color: var(--wax); text-wrap: balance; }
+.pc.intro { display: grid; grid-template-columns: 34vh 1fr; gap: 3vw; text-align: left; align-items: center; }
+.pc-art { width: 34vh; height: 34vh; object-fit: cover; border-radius: 1.6vh; border: 2px solid rgba(243, 230, 196, .3); }
+.pc.won h2 { color: #9BE7A0; } .pc.lost h2 { color: #FF8A80; }
+.pc-key { height: 14vh; margin-bottom: 1vh; }
+.pc.collapse h2 { color: var(--flame); animation: shake .35s infinite; }
+.pc.collapse.quake { border-color: var(--flame); }
+@keyframes shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-.4vh, .2vh); } 50% { transform: translate(.3vh, -.3vh); } 75% { transform: translate(-.2vh, -.2vh); } }
+
+/* ---------------------------------------------------------------- choosing a door (TV) */
+.doors { display: grid; gap: 2.4vh; }
+.doors-h { font: 400 6vh/1 var(--fell); margin: 0; text-align: center; }
+.doors-h small { font: 700 3vh var(--ui); color: var(--flame); margin-left: 1vw; }
+.door-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.4vw; }
+.door-row.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.door { background: rgba(13, 10, 18, .85); border: 3px solid rgba(243, 230, 196, .25); border-radius: 2vh; overflow: hidden; transition: transform .5s, opacity .5s, border-color .5s; }
+.door.on { border-color: var(--flame); transform: scale(1.04); box-shadow: 0 0 6vh rgba(255, 180, 67, .35); }
+.door.off { opacity: .3; transform: scale(.96); }
+.door.mercy { border-color: var(--ecto); }
+.door-art { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.door-txt { padding: 2vh 1.6vw; }
+.door-txt h3 { font: 400 4.4vh/1.05 var(--fell); margin: 0 0 1vh; color: var(--wax); }
+.door-txt p { margin: 0; font-size: 2.2vh; line-height: 1.35; color: var(--wax2); }
+.door .votes { display: inline-block; margin-top: 1.2vh; color: var(--flame); font-size: 2.6vh; }
+.vchips { display: flex; flex-wrap: wrap; gap: .8vw; justify-content: center; }
+.vchip { padding: .6vh 1vw; border-radius: 99px; border: 2px solid rgba(243, 230, 196, .2); color: var(--wax2); font-weight: 700; font-size: 2vh; }
+.vchip.on { border-color: var(--flame); color: var(--flame); }
+
+/* ---------------------------------------------------------------- Hold Still (TV) */
+.doll { position: relative; height: 100%; min-height: 56vh; display: grid; place-items: center; }
+.doll-fig { transform: scale(var(--s, .6)); transform-origin: 50% 100%; transition: transform .5s ease-out; }
+.doll-img { height: 44vh; display: block; filter: drop-shadow(0 2vh 4vh rgba(0, 0, 0, .7)); }
+.doll.warn .doll-img { animation: shake .18s infinite; }
+.doll.red .doll-img { filter: drop-shadow(0 0 5vh rgba(192, 38, 45, .9)); }
+.doll-fallback { font-size: 30vh; }
+.doll-say { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font: 400 10vh/1 var(--fell); color: #9BE7A0; text-shadow: 0 .6vh 3vh #000; }
+.doll.warn .doll-say { color: var(--flame); }
+.doll.red .doll-say { color: #FF5A50; font-size: 13vh; animation: shake .25s infinite; }
+.doll.red::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(150, 0, 10, .55)); pointer-events: none; }
+.doll-bar { position: relative; width: min(60vw, 900px); height: 4.4vh; border-radius: 99px; background: rgba(243, 230, 196, .12); border: 2px solid rgba(243, 230, 196, .3); overflow: hidden; margin: 1.6vh auto 0; }
+.doll-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8a5a1f, var(--flame)); transition: width .25s; }
+.doll-bar span { position: relative; display: block; text-align: center; line-height: 4.1vh; font-weight: 800; font-size: 2.2vh; color: var(--wax); }
+.doll-log { position: absolute; bottom: 9vh; left: 50%; transform: translateX(-50%); background: #7a0f16; color: #fff; padding: 1.2vh 2vw; border-radius: 1.2vh; font-weight: 800; font-size: 3vh; }
+
+/* ---------------------------------------------------------------- Hide and Seek (TV) */
+.hide { display: grid; gap: 2vh; }
+.hide-h { font: 400 5.6vh/1.05 var(--fell); margin: 0; text-align: center; }
+.hide-h small { font: 700 2.6vh var(--ui); color: var(--flame); margin-left: .8vw; }
+.hide.search .hide-h { color: var(--flame); }
+.spots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.6vh 1.2vw; }
+.spot { position: relative; background: rgba(13, 10, 18, .82); border: 2px solid rgba(243, 230, 196, .2); border-radius: 1.6vh; padding: 2.2vh 1vw; text-align: center; transition: transform .3s, border-color .3s; }
+.spot .em { display: block; font-size: 7vh; line-height: 1; margin-bottom: 1vh; }
+.spot b { font: 400 3vh/1.1 var(--fell); color: var(--wax); }
+.spot em { display: block; margin-top: .8vh; font-style: normal; font-weight: 800; font-size: 2.2vh; }
+.spot.now { border-color: var(--flame); transform: scale(1.06); }
+.spot.got { border-color: #FF5A50; background: rgba(120, 10, 20, .7); animation: shake .3s 4; }
+.spot.got em { color: #FFB3AD; } .spot.empty em { color: var(--wax2); }
+.spot em.rev { color: var(--ecto); font-weight: 700; }
+.hide-foot { display: flex; flex-wrap: wrap; gap: 1vh 2vw; justify-content: center; color: var(--wax2); font-size: 2.3vh; font-weight: 700; }
+.hide-foot .fnd { color: #FF8A80; }
+.heard { display: flex; gap: 1vw; flex-wrap: wrap; justify-content: center; width: 100%; }
+.heard span { color: var(--flame); font-style: italic; font-size: 2.6vh; }
+
+/* ---------------------------------------------------------------- The Séance (TV) */
+.seance { display: grid; gap: 1.6vh; justify-items: center; }
+.sea-top { text-align: center; }
+.riddle { font: italic 400 3vh/1.25 var(--fell); margin: 0 0 .6vh; color: var(--wax); max-width: 60vw; }
+.slots { display: flex; gap: .8vw; justify-content: center; }
+.slots span { min-width: 5vh; padding: .4vh .4vw; border-bottom: .5vh solid rgba(243, 230, 196, .35); font: 400 5vh/1 var(--fell); color: rgba(243, 230, 196, .5); text-align: center; }
+.slots span.got { color: var(--flame); border-color: var(--flame); text-shadow: 0 0 2vh rgba(255, 180, 67, .6); }
+.slots span.next { border-color: var(--wax); color: var(--wax); }
+.board { position: relative; width: min(54vw, 84vh); aspect-ratio: 100 / 60; border-radius: 3vh; background: radial-gradient(ellipse at 50% 40%, #6b4a2a, #3a2412 70%, #24160b); border: .6vh solid #8a6236; box-shadow: inset 0 0 6vh rgba(0, 0, 0, .7), 0 3vh 6vh rgba(0, 0, 0, .6); }
+.board .lt { position: absolute; transform: translate(-50%, -50%); font: 400 5.2vh/1 var(--fell); color: #f1dcae; text-shadow: 0 .3vh 0 #2a1708; transition: color .2s, transform .2s; }
+.board .lt.word { font-size: 4.2vh; }
+.board .lt.on { color: #fff; transform: translate(-50%, -50%) scale(1.25); text-shadow: 0 0 2vh var(--flame); }
+.board .lt.bad { color: #ff6b6b; }
+.board .bye { position: absolute; left: 50%; top: 84%; transform: translate(-50%, -50%); font: italic 400 4vh var(--fell); color: rgba(241, 220, 174, .45); letter-spacing: .3em; }
+.planch { position: absolute; width: 9vh; height: 11vh; transform: translate(-50%, -38%); left: 50%; top: 83%; border-radius: 50% 50% 45% 45%; background: radial-gradient(circle at 50% 38%, transparent 0 1.9vh, rgba(255, 240, 210, .9) 2vh 2.3vh, rgba(214, 180, 120, .85) 2.4vh); box-shadow: 0 1vh 2vh rgba(0, 0, 0, .6); pointer-events: none; }
+.planch i { position: absolute; left: 50%; top: 38%; width: 4.6vh; height: 4.6vh; transform: translate(-50%, -50%); border-radius: 50%; background: conic-gradient(var(--flame) calc(var(--p, 0) * 360deg), transparent 0); mask: radial-gradient(circle, transparent 1.7vh, #000 1.8vh); -webkit-mask: radial-gradient(circle, transparent 1.7vh, #000 1.8vh); }
+.pulls { display: flex; gap: 1.4vw; flex-wrap: wrap; justify-content: center; font-weight: 800; font-size: 2.4vh; color: var(--flame); min-height: 3vh; }
+.pulls .none { color: var(--wax2); font-weight: 600; }
+.mercy-candle { height: 30vh; display: block; margin: 0 auto 1vh; }
+
+/* ---------------------------------------------------------------- TV scares */
+#scare.fake { display: grid; place-items: center; background: #111; }
+#scare .fake { font: 600 4vh system-ui, sans-serif; color: #ddd; }
+
+/* ================================================================ phone */
+.mp { display: grid; gap: .9rem; padding-bottom: 1rem; }
+.mp-h { font: 400 1.7rem/1.1 var(--fell); margin: .2rem 0 0; text-align: center; color: var(--wax); }
+.mp-h small { font: 700 1rem var(--ui); color: var(--flame); margin-left: .3rem; }
+.mp-card { background: rgba(43, 24, 48, .85); border: 2px solid rgba(243, 230, 196, .2); border-radius: 18px; padding: 1.2rem 1rem; text-align: center; }
+.mp-card h2 { font: 400 2.1rem/1.05 var(--fell); margin: .2rem 0 .6rem; color: var(--wax); }
+.mp-card p { margin: 0; color: var(--wax2); line-height: 1.4; }
+.mp-card p.goal { color: var(--wax); font-size: 1.1rem; }
+.mp-card.won h2 { color: #9BE7A0; } .mp-card.lost h2 { color: #FF8A80; }
+.mp-card.collapse h2 { color: var(--flame); }
+.mp-art { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; margin-bottom: .6rem; }
+.mp-hint { text-align: center; color: var(--wax2); font-size: .92rem; margin: 0; line-height: 1.4; }
+.mp-big { font: 800 1.25rem var(--ui); padding: 1.1rem; border-radius: 16px; border: 0; background: var(--flame); color: #2A1500; cursor: pointer; }
+.mp-big.on { background: #9BE7A0; }
+.mp-small { font: 700 .95rem var(--ui); padding: .7rem; border-radius: 12px; border: 2px solid rgba(243, 230, 196, .3); background: transparent; color: var(--wax); }
+.mp-door { display: grid; grid-template-columns: 34% 1fr; gap: .8rem; align-items: center; text-align: left; padding: .5rem; border-radius: 16px; border: 3px solid rgba(243, 230, 196, .2); background: rgba(43, 24, 48, .85); color: var(--wax); cursor: pointer; font: inherit; }
+.mp-door.on { border-color: var(--flame); background: rgba(255, 180, 67, .16); }
+.mp-door.mercy { border-color: var(--ecto); }
+.mp-door-art { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
+.mp-door b { display: block; font: 400 1.35rem/1.1 var(--fell); margin-bottom: .25rem; }
+.mp-door small { display: block; color: var(--wax2); font-size: .82rem; line-height: 1.35; }
+/* Hold Still */
+.mp.doll { min-height: 62vh; align-content: center; }
+.mp.doll.red, .mp.doll.warn { border-radius: 22px; padding: 1rem; }
+.mp.doll.red { background: radial-gradient(ellipse at 50% 40%, #a1121c, #3d0408); }
+.mp.doll.warn { background: radial-gradient(ellipse at 50% 40%, #8a5a10, #2a1500); }
+.mp-sneak { width: 100%; min-height: 44vh; border-radius: 26px; border: 4px solid #9BE7A0; background: radial-gradient(circle at 50% 40%, #2f5a35, #12241a); color: #CFF7D2; font: 400 3.4rem var(--fell); touch-action: manipulation; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.mp-sneak.down { transform: scale(.97); background: #3b7a44; }
+.mp-freeze { text-align: center; font: 400 4rem/1 var(--fell); color: #fff; text-shadow: 0 .3rem 1rem #000; }
+.mp-freeze.warn { font-size: 2.8rem; color: #FFD58A; }
+.mp-scream { text-align: center; font: 400 3rem/1 var(--fell); color: #fff; }
+.mp-pad { min-height: 30vh; border-radius: 22px; border: 4px dashed #fff; display: grid; place-items: center; text-align: center; font-weight: 800; font-size: 1.2rem; color: #fff; padding: 1rem; touch-action: none; user-select: none; -webkit-user-select: none; }
+.mp-pad.down { background: rgba(255, 255, 255, .15); border-style: solid; }
+.wobble { height: 22px; border-radius: 99px; background: rgba(0, 0, 0, .4); overflow: hidden; border: 2px solid rgba(255, 255, 255, .5); }
+.wobble i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd, #ff5a50); }
+.mp-bar { width: 100%; margin: 0; height: 30px; }
+.mp-bar span { line-height: 26px; font-size: .95rem; }
+/* Hide and Seek */
+.mp-spots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.mp-spot { position: relative; display: grid; justify-items: center; gap: .2rem; padding: .8rem .4rem; border-radius: 14px; border: 2px solid rgba(243, 230, 196, .2); background: rgba(43, 24, 48, .85); color: var(--wax); font: inherit; cursor: pointer; }
+.mp-spot span { font-size: 2rem; line-height: 1; }
+.mp-spot b { font: 400 1.05rem/1.15 var(--fell); }
+.mp-spot small { position: absolute; top: .3rem; right: .45rem; font-size: .7rem; font-weight: 800; color: var(--ecto); }
+.mp-spot.on { border-color: var(--flame); background: rgba(255, 180, 67, .18); }
+.mp-spot.mine { border-color: var(--ecto); }
+.mp-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.mp-tabs button { font: 700 .92rem var(--ui); padding: .7rem .3rem; border-radius: 12px; border: 2px solid rgba(243, 230, 196, .25); background: transparent; color: var(--wax); }
+.mp-tabs button.on { background: var(--wax); color: var(--ink); border-color: var(--wax); }
+/* Séance */
+.mp-riddle { font: italic 400 1.25rem/1.35 var(--fell); text-align: center; margin: 0; color: var(--wax); }
+.mp-slots span { min-width: 2.2rem; font-size: 2rem; }
+.mp-pulls { display: grid; gap: .6rem; }
+.mp-pulls.n2 { grid-template-columns: 1fr 1fr; }
+.mp-pull { min-height: 34vh; border-radius: 24px; border: 4px solid var(--flame); background: radial-gradient(circle at 50% 40%, #5a3a12, #22140a); color: #FFE2B0; font: 800 1.15rem var(--ui); display: grid; place-content: center; gap: .4rem; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.mp-pulls.n2 .mp-pull { min-height: 28vh; }
+.mp-pull span { font-size: 4rem; line-height: 1; }
+.mp-pull.down { background: radial-gradient(circle at 50% 40%, #b97a22, #5a3a12); transform: scale(.98); }
+/* Mercy */
+.mp-flame { min-height: 46vh; border-radius: 26px; border: 4px solid var(--ecto); background: radial-gradient(circle at 50% 40%, #234a44, #0d1d1b); color: var(--wax); font: 800 1.2rem var(--ui); display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.mp-flame.on, .mp-flame.down { border-color: var(--flame); background: radial-gradient(circle at 50% 40%, #6b4a12, #22140a); }
+.mp-flame-img { height: 26vh; pointer-events: none; }
+.mp-flame span { pointer-events: none; }
+/* phone scares */
+#mpScare { position: fixed; inset: 0; z-index: 999; display: none; background: #000; }
+#mpScare.black, #mpScare.face { display: grid; place-items: center; }
+#mpScare img { width: 100%; height: 100%; object-fit: cover; animation: lunge .7s ease-out; }
+#mpScare .fake { color: #ccc; font: 600 1.1rem system-ui, sans-serif; }
+#mpScare .boo { color: #fff; font: 400 10rem var(--fell); }
+@keyframes lunge { from { transform: scale(.6); } to { transform: scale(1.15); } }

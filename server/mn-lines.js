@@ -98,4 +98,32 @@ const ROOM_INTRO = {
   chat: 'The Parlour. The ghosts in here love a chat. They will not let you pass until they feel listened to.',
 };
 
-module.exports = { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO };
+// ---------------------------------------------------------------- the painted rooms (with acting directions for the voice)
+const M2 = {
+  welcome: "[slowly] Good evening. [pause] Welcome to Hollowmere House. [chuckles darkly] I am Mortimer, the butler. Dead for a hundred years, give or take. [whispers] The door has locked behind you. It does that.",
+  rules: "[clears throat] One candle, shared by all of you. When it goes out... [whispers] you stay. Forever. [brightly] So. Pick a door, do what your phone tells you, and try not to scream. It excites the house.",
+  doors: ['[whispers] Two doors. Choose wisely. [pause] Or don\'t. I am not your mother.', '[sighs] More doors. The house does love its doors.', '[mischievously] Which one? I know what is behind both. I am not telling.'],
+  lastDoor: '[ominously] One door left. No choice now.',
+  mercyDoor: '[softly] Your candle is very weak. I have left a little door open for you. [whispers] Do not tell the house.',
+  intro: {
+    doll: '[whispering] The nursery. [pause] She hates being watched. But she loves to watch. Move only when her back is turned.',
+    hide: '[gleefully] Hide and seek! The house\'s favourite game. [whispers] It always wins.',
+    seance: '[dramatically] A seance. The spirits wish to speak. [dryly] Badly. They need your help to spell.',
+    ice: '[shivering] The ice hall. Mind your step. [chuckles] You will not be able to stop.',
+    mercy: '[gently] Quickly now. Everyone hold the flame, all at once.',
+  },
+  round: { 1: '[whispers] Round one.', 2: '[ominously] Round two. [pause] It gets worse.' },
+  win: ['[impressed] Well, well.', '[dryly] Beginner\'s luck.', '[sighs] Fine. Well done.', '[surprised] Oh. You actually did it.'],
+  fail: ['[delighted] Oh dear!', '[chuckles] The candle felt that.', '[whispers] The house is pleased.', '[mock sympathy] Never mind. You were doomed anyway.'],
+  key: ['[annoyed] A piece of the key. The house is sulking.', '[grudgingly] A key piece. Do not get cocky.'],
+  noKey: ['[gleefully] No key piece. The house keeps it.', '[tutting] No key. You will regret that later.'],
+  collapse: '[urgently] Oh no. [pause] You have made it angry. The house is coming down! [shouting] Every room, one more time. FAST!',
+  quake: ['[shouting] Faster!', '[panicking] The ceiling!', '[shouting] Keep going!', '[screaming] Run!'],
+  afterScare: ['[chuckles] Sorry. The house does that.', '[innocently] Was that me? No.', '[whispers] Did somebody scream? I heard screaming.'],
+  escape: '[amazed] The front door... is open. [pause] You actually made it. [softly] Go on, then. Before it changes its mind.',
+  candleOut: '[whispers] The candle is out. [pause] Welcome home. [chuckles darkly] Forever.',
+  candleHalf: '[concerned] Your candle is half gone. I would hurry.',
+  candleLow: '[whispers] The candle is nearly out. I can hear the house breathing.',
+};
+
+module.exports = { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO, M2 };

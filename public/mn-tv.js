@@ -69,12 +69,12 @@
   function candleHtml() {
     if (S.phase === 'LOBBY') return '';
     const c = Math.max(0, Math.min(100, S.candle)); const low = c < 20;
-    const kp = W.thumb('mn-job-key'); const keys = [...Array(4).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}">${i < S.keys ? (kp ? `<img src="${kp}" alt="">` : '🗝️') : ''}</i>`).join('');
+    const kp = W.thumb('mn-job-key'); const keys = [...Array(S.rooms || 4).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}">${i < S.keys ? (kp ? `<img src="${kp}" alt="">` : '🗝️') : ''}</i>`).join('');
     return `<div class="cwrap ${low ? 'low' : ''} ${c <= 0 ? 'out' : ''}" style="--h:${c}">
       <div class="flame"><div class="glow"></div><div class="fl"></div></div><div class="wick"></div>
       <div class="wax"><span class="drip d1"></span><span class="drip d2"></span></div><div class="dish"></div></div>
       <div class="cnum"><b>${pct()}%</b><span>of your candle</span></div>
-      <div class="keys" title="Key pieces for the front door">${keys}</div><div class="klab">${S.keys} of 4 key pieces</div>`;
+      <div class="keys" title="Key pieces for the front door">${keys}</div><div class="klab">${S.keys} of ${S.rooms || 4} key pieces</div>`;
   }
 
   // ---------------------------------------------------------------- top bar
@@ -86,6 +86,9 @@
       const t = S.step === 'play' && x.ends ? timer(x.ends, x.start) : '';
       return `<div class="plac"><span class="n">${n}</span><h1>${esc(x.room?.name || '')}</h1></div><div class="tbox">${t}</div>`;
     }
+    if (ph === 'PX') { const r = x.room || {}; return `<div class="plac"><span class="n">${r.key === 'mercy' ? 'A small kindness' : `Room ${S.roomN} of ${S.rooms}`}</span><h1>${esc(r.name || '')}</h1></div><div class="tbox">${S.step === 'play' && x.ends ? timer(x.ends, x.start) : ''}</div>`; }
+    if (ph === 'DOORS') return '<div class="plac"><span class="n">Hollowmere House</span><h1>Choose a door</h1></div>';
+    if (ph === 'COLLAPSE') return `<div class="plac poss"><span class="n">The Collapse${x.collapse?.n ? `: ${x.collapse.n} of ${x.collapse.of}` : ''}</span><h1>${esc(x.room?.name || 'Run!')}</h1></div><div class="tbox">${S.step === 'play' && x.ends ? timer(x.ends, x.start) : ''}</div>`;
     if (ph === 'POSSESS') return `<div class="plac poss"><span class="n">A possession</span><h1>${esc(x.poss?.name || '')}</h1></div><div class="tbox">${S.step === 'play' && x.ends ? timer(x.ends, x.start) : ''}</div>`;
     return `<div class="plac"><span class="n">Hollowmere House</span><h1>${ph === 'HALL' ? 'The hallway' : 'The front hall'}</h1></div>`;
   }
@@ -111,6 +114,9 @@
 
   // ---------------------------------------------------------------- the screens
   const R = {
+    DOORS() { return MP.tv(S); },
+    COLLAPSE() { return MP.tv(S); },
+    PX() { return MP.tv(S); },
     LOBBY() {
       const n = S.players.length;
       const title = pic('mn-title', 'ttl', 'Last Night in the Mansion') || '<h1 class="ttl-t">Last Night<br><span>in the</span> Mansion</h1>';
@@ -125,7 +131,7 @@
     },
     INTRO() {
       if (S.step === 'door') return `<div class="doorslam">${pic('mn-door', 'big') || '<span class="em">🚪</span>'}</div>`;
-      return `<div class="hall ${img('mn-mortimer-full') ? 'wide' : ''}">${mort('big')}<div class="hx"><h2>Good evening.</h2><p>I am Mortimer. I have been the butler here for a hundred and twelve years. Most of them dead.</p><div class="rules"><span>🕯️ One candle for all of you</span><span>🚪 Walk the hallway and pick a door</span><span>🎮 Every room: watch, practise, then 3 stages</span><span>🗝️ Clear 2 stages to win a key piece</span><span>👻 Then face the House itself</span></div></div></div>`;
+      return `<div class="hall ${img('mn-mortimer-full') ? 'wide' : ''}">${mort('big')}<div class="hx"><h2>Good evening.</h2><p>I am Mortimer. I have been the butler here for a hundred and twelve years. Most of them dead.</p><div class="rules"><span>🕯️ One candle for all of you</span><span>🚪 Vote on which door to open</span><span>🗝️ Win a round in each room for a key piece</span><span>🏚️ Then the house comes down</span></div></div></div>`;
     },
     HALL() {
       const doors = (S.night || []).map((r, i) => { const cur = i === S.x.next; const st = r.res || (cur ? 'next' : 'shut'); return `<div class="nd st-${st}"><span class="e">${r.res === 'win' ? '🗝️' : r.res === 'fail' ? '✖' : cur ? '🕯️' : '🚪'}</span><b>${r.res || cur ? esc(r.name) : '?'}</b><small>${r.res === 'win' ? 'Cleared' : r.res === 'fail' ? 'Lost' : cur ? 'Next' : ''}</small></div>`; }).join('');
@@ -175,6 +181,8 @@
   function backdrop() {
     const ph = S.phase; let k = 'mn-house';
     if (ph === 'ROOM' && S.x.room) k = `mn-room-${S.x.room.key}`;
+    if ((ph === 'PX' || ph === 'COLLAPSE') && S.x.room?.art && S.x.room.art.startsWith('mn-room')) k = S.x.room.art;
+    if (ph === 'DOORS') k = 'mn-door';
     if (ph === 'DOOR') k = 'mn-door'; if (ph === 'END') k = S.x.end?.escaped ? 'mn-dawn' : 'mn-lost';
     const src = img(k) || img('mn-house');
     if (src === lastArt) return; lastArt = src;
@@ -194,6 +202,7 @@
     const key = `${S.phase}|${S.step}|${S.x.room?.key || S.x.poss?.key || ''}|${S.roomN}`;
     if (key !== lastKey) { lastKey = key; stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter'); }
     mount(stage, html);
+    MP.after(S);
     PX.tv(S, document.getElementById('px'));
     music();
   }
@@ -205,10 +214,14 @@
     if (ph === 'ROOM') { if (t === 'memory' || k === 'nursery') key = 'mn-memory'; else if (t === 'timing') { key = 'mn-waltz'; mood = 'gentle'; } else if (t === 'speed') { key = 'mn-speed'; mood = 'tense'; } else key = 'mn-talk'; }
     if (ph === 'POSSESS') { key = 'mn-possessed'; mood = 'tense'; }
     if (ph === 'DOOR') { key = 'mn-finale'; mood = 'tense'; }
-    if (['HUB', 'PX', 'BOSS'].includes(ph) && S.x.room?.music) { key = S.x.room.music; mood = 'tense'; }
+    if (['HUB', 'PX', 'BOSS', 'COLLAPSE'].includes(ph) && S.x.room?.music) { key = S.x.room.music; mood = 'tense'; }
+    if (ph === 'COLLAPSE') { key = 'mn-finale'; mood = 'tense'; }
+    if (ph === 'DOORS') { key = 'mn-intro'; mood = 'dark'; }
     if (ph === 'STORY') { key = 'px-story'; mood = 'gentle'; }
     if (ph === 'END') { key = S.x.end?.escaped ? 'mn-dawn' : 'mn-lost'; mood = S.x.end?.escaped ? 'gentle' : 'dark'; }
-    AV.setBed(k === 'music' && ph === 'ROOM' ? 0.12 : ph === 'ROOM' || ph === 'DOOR' ? 0.35 : 0.5);
+    // Hold Still: the music box stops dead when the doll turns
+    const dollStill = S.x.px?.room === 'doll' && S.step === 'play' && S.x.px.phase !== 'green';
+    AV.setBed(dollStill ? 0.02 : k === 'music' && ph === 'ROOM' ? 0.12 : ph === 'ROOM' || ph === 'DOOR' ? 0.35 : 0.5);
     const id = `${key}|${mood}`;
     if (id !== lastMusic) { lastMusic = id; AV.music(key, mood); }
   }
@@ -216,7 +229,7 @@
   let lastBeat = 0; let lastTickSec = null; let nextThunder = Date.now() + 25000;
   setInterval(() => {
     if (!S) return; const now = Date.now();
-    const playing = ['ROOM', 'DOOR', 'POSSESS', 'PX', 'BOSS'].includes(S.phase) && S.step === 'play';
+    const playing = ['ROOM', 'DOOR', 'POSSESS', 'PX', 'BOSS', 'COLLAPSE'].includes(S.phase) && S.step === 'play';
     if (playing && S.candle < 20 && now - lastBeat > 5200) { lastBeat = now; AV.fx('mn-heartbeat'); }
     if (playing && S.x.ends) { const left = Math.ceil((S.x.ends - W.now()) / 1000); if (left <= 10 && left > 0 && left !== lastTickSec) { lastTickSec = left; AV.fx('mn-tick', { gap: 0 }); } }
     if (['LOBBY', 'HALL', 'HUB'].includes(S.phase) && now > nextThunder) { nextThunder = now + 35000 + Math.random() * 40000; AV.fx(Math.random() < 0.6 ? 'mn-thunder' : 'mn-wind'); }
@@ -229,7 +242,7 @@
     if (cue && cue.id !== lastCue) {
       lastCue = cue.id; caption.innerHTML = `${pic('mn-mortimer', 'cm')}<p>${esc(cue.text)}</p>`; caption.className = 'show';
       clearTimeout(capTimer);
-      AV.speak(cue, (id) => { socket.emit('host:cueDone', { id }); capTimer = setTimeout(() => { if (lastCue === id) caption.className = ''; }, 500); });
+      AV.speak({ ...cue, hall: true }, (id) => { socket.emit('host:cueDone', { id }); capTimer = setTimeout(() => { if (lastCue === id) caption.className = ''; }, 500); });
     } else if (!cue) { if (!AV.speakingId()) caption.className = ''; }
     const fresh = (S.fx || []).filter((f) => f.id > lastFx);
     if (P === null) lastFx = Math.max(0, ...(S.fx || []).map((f) => f.id)); else fresh.forEach((f) => { lastFx = Math.max(lastFx, f.id); AV.fx(f.name, { gap: f.name.startsWith('mn-note') ? 0 : 150 }); });
@@ -237,10 +250,17 @@
     lastPlayers = S.players.length;
     // a jump scare: black, then a face for well under a second, then black again
     if (S.scare && S.scare.id !== lastScare) {
-      lastScare = S.scare.id; const el = $('#scare');
-      const face = img(S.scare.img) || img('mn-scare-1');
-      el.innerHTML = face ? `<img src="${face}" alt="">` : '<div class="drawn"><i></i><i></i><b></b></div>';
-      el.className = 'black'; setTimeout(() => { el.className = 'face'; }, 260); setTimeout(() => { el.className = 'black'; }, 980); setTimeout(() => { el.className = ''; }, 1250);
+      lastScare = S.scare.id; const el = $('#scare'); const sc = S.scare;
+      if (sc.kind !== 'personal') {
+        const face = sc.face ? img(sc.img) || img('mn-scare-1') : null;
+        const faceHtml = face ? `<img src="${face}" alt="">` : '<div class="drawn"><i></i><i></i><b></b></div>';
+        // lights out: black, a whisper, then the face. A fake: a "connection lost" screen, then the face.
+        const wait = sc.kind === 'lights' ? 2400 : sc.kind === 'fake' ? 2600 : 260;
+        if (sc.kind === 'fake') { el.innerHTML = '<p class="fake">Connection lost. Reconnecting...</p>'; el.className = 'fake'; } else { el.innerHTML = ''; el.className = 'black'; }
+        if (sc.kind === 'lights') AV.fx('mn-whisper');
+        setTimeout(() => { el.innerHTML = sc.face ? faceHtml : ''; el.className = sc.face ? 'face' : 'black'; AV.fx(sc.face ? 'mn-scream' : 'mn-slam'); }, wait);
+        setTimeout(() => { el.className = 'black'; }, wait + 750); setTimeout(() => { el.className = ''; el.innerHTML = ''; }, wait + 1000);
+      }
     }
     if (S.flash && S.flash.id !== lastFlash) { const first = lastFlash === 0 && P === null; lastFlash = S.flash.id; if (!first && S.flash.kind === 'freeze') { AV.fx('mn-chime'); } }
   }

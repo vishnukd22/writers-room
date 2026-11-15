@@ -6,20 +6,17 @@ Party games for the TV and everyone's phones. Open `/tv` on the TV and pick one.
 
 A spooky, silly co-op game for 2 to 8 players, about 25 to 30 minutes, drawn in 8-bit. Everyone wins together or loses together. Join at `/mn`. With exactly 2 people, two guests (bots) join.
 
-The group shares one candle. Mortimer, the dead butler, locks you in. You walk your little pixel character around the hallway with the arrows on your phone. Stand at a door with most of your group and in you go. The hallway hides three secrets (spare wax, a candle stub, a note).
+The group shares one candle. Mortimer, the dead butler, locks you in. Each turn two doors appear and everyone votes on their phone. Every room has two rounds; win one for a key piece. Every phone shows something different, so people have to talk.
 
-Behind the four doors:
+- **Hold Still**: tap SNEAK while the doll's back is turned. When she turns, freeze: the phone's motion sensor sees any wobble (phones without one use press-and-hold instead).
+- **Hide and Seek**: everyone hides somewhere secret. The ghost searches wherever it hears noise. Stay quiet, sneak, or throw a pebble to send it somewhere else.
+- **The Séance**: each phone can only pull the pointer one way. Spell the word together (round two is a riddle).
+- **The Ice Hall** (8-bit): slide on the ice, hold every red button at once, then everyone out.
+- **Mortimer's Mercy**: when the candle drops below 30%, a third door: everyone holds the flame together to win candle back.
 
-1. **The Ice Hall** (Pokémon-style): you slide on ice until something stops you, including your friends. Stand on every red button at once to open the gate, then everyone slides out.
-2. **The Wine Cellar** (Pokémon-style): push crates onto the red buttons. Grey iron crates need two people, one behind the other. Anyone can reset the crates.
-3. **The Storm Room** (Undertale-style): drag on your phone to move your heart and dodge the ghosts' attacks. Blue bars: stand still. Orange bars: keep moving.
-4. **The Parlour** (Undertale-style): each phone has a secret clue about what the ghost wants. Agree the right ACT in the right order, then choose MERCY.
+The finale is **The Collapse**: every room again, fast, while the house falls down. Jump scares hit the TV and every phone at once (lights out, a fake "connection lost", a face); people caught in a room get a scare on their own phone. The first player picks Mild, Spooky or Nightmare in the lobby. Mortimer uses the expressive voice model with acting directions, and the TV adds a hall echo. `ELEVENLABS_MN_STABILITY` (0, 0.5 or 1, default 0) sets how theatrical he is; `off` turns it off.
 
-Every room goes: Mortimer's ghost shows you how, a practice that costs nothing, then 3 stages. Clear 2 of the 3 to win a key piece. The candle burns during stages and drips when you fail one or get hit. After each room you get a piece of the story, and a memory you will need at the end. If the candle drops below 30%, Mortimer's Mercy opens in the hallway once: light the candle stands to win some back.
-
-The finale is a battle with the House itself. Each turn it remembers something: pick ACT and show it the matching memory. Key pieces weaken its grip. When its name turns yellow, everyone picks MERCY and you escape.
-
-The pixel art, 8-bit music and sounds are from the Ninja Adventure pack by Pixel-boy and AAA (CC0, https://pixel-boy.itch.io/ninja-adventure-asset-pack). The pixel font is Pixelify Sans (SIL Open Font License). The 20 older rooms are still in `server/mn-rooms.js` for the next update.
+The pixel art, 8-bit music and sounds are from the Ninja Adventure pack by Pixel-boy and AAA (CC0, https://pixel-boy.itch.io/ninja-adventure-asset-pack). The pixel font is Pixelify Sans (SIL Open Font License). The painted rooms are in `server/mn-rooms2.js`; the older rooms are still in `server/mn-rooms.js` and `server/mn-px.js`.
 
 The old Writers' Room still works at `/tv/writers`, but it is no longer on the game menu.
 

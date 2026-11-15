@@ -4,7 +4,7 @@ const PXR = require('../server/mn-px');
 const RUNS = Number(process.argv[2] || 10); const N = Number(process.env.N || 4);
 function fakeX(n) {
   let t = 1e6; const seats = []; for (let i = 0; i < n; i++) seats.push({ id: 'b' + i, name: 'Bot' + i, bot: true, connected: true, color: '#fff', mx: {} });
-  const X = { R: {}, seats, n, level: 1, P: (id) => seats.find((p) => p.id === id), now: () => t, wall: (x) => x, drip: (a) => { X.dripped += a; }, gain: () => {}, sfx: () => {}, note: () => {}, buzz: () => {}, dripped: 0,
+  const X = { R: {}, seats, n, level: 1, scare: () => true, P: (id) => seats.find((p) => p.id === id), now: () => t, wall: (x) => x, drip: (a) => { X.dripped += a; }, gain: () => {}, sfx: () => {}, note: () => {}, buzz: () => {}, dripped: 0,
     after: (b, tag, lo, hi) => { if (b.mx[tag] == null) b.mx[tag] = t + (lo + Math.random() * (hi - lo)) * 1000; if (t >= b.mx[tag]) { delete b.mx[tag]; return true; } return false; },
     adv: (ms) => { t += ms; } };
   return X;
@@ -17,9 +17,10 @@ function play(def, kind, n) {
   while (!st.done && el < limit) { X.adv(200); el += 200; def.tick?.(X, st, X.now(), 200); for (const b of bots) def.bot?.(X, b, st, X.now()); }
   return { res: st.done || 'time', secs: Math.round(el / 1000), drip: Math.round(X.dripped) };
 }
-const rooms = { ...PXR.PX_ROOMS, mercy: PXR.MERCY, boss: PXR.BOSS };
+const { ROOMS2, MERCY2 } = require('../server/mn-rooms2');
+const rooms = process.env.OLD ? { ...PXR.PX_ROOMS, mercy: PXR.MERCY, boss: PXR.BOSS } : { ...ROOMS2, mercy: MERCY2 };
 for (const [k, def] of Object.entries(rooms)) {
-  const kinds = k === 'mercy' ? [1] : k === 'boss' ? ['boss'] : ['demo', 'practice', 1, 2, 3];
+  const kinds = k === 'mercy' ? [1] : k === 'boss' ? ['boss'] : process.env.OLD ? ['demo', 'practice', 1, 2, 3] : [1, 2, 'quick'];
   for (const kind of kinds) {
     let w = 0; let secs = 0; let drip = 0; const t = Date.now();
     for (let i = 0; i < RUNS; i++) { const r = play(def, kind, N); if (r.res === 'win') w++; secs += r.secs; drip += r.drip; }

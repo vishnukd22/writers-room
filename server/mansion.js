@@ -8,7 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const { ROOMS, rint, pick, shuffle } = require('./mn-rooms');
 const { POSSESS } = require('./mn-possess');
-const { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO } = require('./mn-lines');
+const { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO, M2 } = require('./mn-lines');
+const { ROOMS2, MERCY2 } = require('./mn-rooms2');
 const PXR = require('./mn-px');
 const voice = require('./voice');
 
@@ -28,6 +29,8 @@ const COLORS = ['#F2C230', '#2FB36B', '#E5484D', '#3E8EDE', '#A970FF', '#FF8A3D'
 const BOT_NAMES = ['Ahmed', 'Bella', 'Carlos', 'Dina', 'Erik', 'Fatima', 'Gopal', 'Hana'];
 const MIN = 2; const MAX = 8; const ROOMS_PER_NIGHT = 4;
 const PX_KEYS = ['ice', 'cellar', 'dodge', 'chat'];
+const NIGHT_KEYS = Object.keys(ROOMS2); const NIGHT_ROOMS = Math.min(5, NIGHT_KEYS.length);
+const SCARES = { mild: 0, spooky: 3, nightmare: 5 };
 const BURN = 0.035; // % of candle per second while a room or the door is in play
 const TYPES = ['talk', 'timing', 'speed', 'memory'];
 const SHAPES = [['◆', 'diamond'], ['▲', 'triangle'], ['●', 'circle'], ['■', 'square'], ['★', 'star'], ['✚', 'cross']];
@@ -116,10 +119,10 @@ class Mansion {
     this.fx = []; this.fxSeq = 0; this.timers = []; this.busts = bustPool();
     this.pausedMs = 0; this.recent = []; this.best = null; this.nights = 0;
     this.reset();
-    [SAY.welcome, PX.rules, PX.hubFirst].forEach((t) => this.prefetch(t, true));
-    [...fixedLines(PX), ...fixedLines(STORY), ...fixedLines(ROOM_INTRO), ...fixedLines({ a: SAY.welcomeBots, b: SAY.candleHalf, c: SAY.candleLow, d: SAY.candleOut, e: SAY.escape, f: SAY.lost })].forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
+    [M2.welcome, M2.rules].forEach((t) => this.prefetch(t, true));
+    [...fixedLines(M2), SAY.welcomeBots, SAY.lost].forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
   }
-  reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false, ctx: null }); }
+  reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false, ctx: null, scareFx: null, bigScares: 0, vote: null }); }
 
   // ------------------------------------------------------------ plumbing (same as the other games)
   P(id) { return this.players.find((p) => p.id === id); }
@@ -160,7 +163,8 @@ class Mansion {
   shiftClock(dt) { this.pausedMs += dt; }
 
   // ------------------------------------------------------------ Mortimer
-  prefetch(text, urgent) { return voice.get(text, VOICE(), urgent, true).catch(() => null); }
+  // Mortimer uses the expressive voice model so his acting directions ([whispers], [chuckles]) work
+  prefetch(text, urgent) { return voice.get(text, VOICE(), urgent, false).catch(() => null); }
   estimate(text) { return Math.min(20000, 700 + strip(text).length * 62); }
   async makeCue(text, opts = {}) {
     let audioId = null;
@@ -269,6 +273,7 @@ class Mansion {
       drip: (a, why, p) => G.drip(a, why, p), gain: (a) => G.gain(a), win: () => { if (!R.done) R.done = 'win'; G.wake('done'); }, fail: () => { if (!R.done) R.done = 'fail'; G.wake('done'); },
       bubble: (p, t) => G.bubble(p, t), sfx: (n) => G.sfx(n), note: (p, t, k) => G.note(p, t, k), buzz: (p, k) => G.buzz(p, k),
       flashAll: (k) => { G.flash = { id: (G.flash?.id || 0) + 1, kind: k }; },
+      scare: (kind, id) => G.scareNow(kind, id),
       role: (p, key, label) => { if (p) R.roles[p.id] = { key, label }; }, roleOf: (p) => R.roles[p.id]?.key, ofRole: (k) => G.players.filter((p) => R.roles[p.id]?.key === k),
       // humans get the jobs that need doing first; bots fill the rest and "speak" on the TV
       cast: () => [...shuffle(G.players.filter((p) => !p.bot)), ...shuffle(G.players.filter((p) => p.bot))],
@@ -304,22 +309,114 @@ class Mansion {
     this.nights++;
     this.setPhase('INTRO', { step: 'door' }); this.sfx('mn-slam');
     await this.hold(g, 1.5);
-    this.setPhase('INTRO', { step: 'welcome' }); this.sfx('mn-thunder');
-    await this.say(g, SAY.welcome);
+    this.setPhase('INTRO', { step: 'welcome' });
+    await this.say(g, M2.welcome);
     if (this.addedBots) await this.say(g, SAY.welcomeBots);
-    await this.say(g, PX.rules);
+    await this.say(g, M2.rules);
     this.sfx('mn-candle-light');
-    this.ctx = { todo: [...PX_KEYS], done: [], left: PX_KEYS.length, mercy: false, mercyUsed: false, stubs: 1, keys: 0, memories: [], secrets: PXR.makeSecrets(), visits: 0 };
-    this.plan = [...PX_KEYS];
-    for (;;) {
-      const choice = await this.hub(g);
-      if (choice === 'front') break;
-      if (choice === 'mercy') { await this.mercyRoom(g); continue; }
-      await this.pxRoom(g, choice);
+    this.ctx = { todo: shuffle(NIGHT_KEYS), done: [], keys: 0, mercyUsed: false, played: [] };
+    for (let i = 0; i < NIGHT_ROOMS; i++) {
+      let key = await this.doors(g, i);
+      if (key === 'mercy') { await this.mercy2(g); key = await this.doors(g, i); }
+      await this.room2(g, key);
       if (this.dead) return this.endNight(false, g);
-      await this.story(g, choice);
     }
-    await this.boss(g);
+    await this.collapse(g);
+  }
+  // ------------------------------------------------------------ scares
+  // big: the TV and every phone. personal: one phone. Scare level (picked in the lobby) limits them.
+  scareNow(kind, target) {
+    const lvl = this.scareLevel || 'spooky';
+    if (kind !== 'personal' && this.bigScares >= SCARES[lvl]) return false;
+    if (kind !== 'personal') this.bigScares++;
+    if (target) { const p = this.P(target); if (p) p.scared = (p.scared || 0) + 1; }
+    const id = (this.scareFx?.id || 0) + 1;
+    const img = `mn-scare-${rint(1, 4)}`;
+    const face = lvl !== 'mild';
+    const variant = kind === 'big' ? pick(['flash', 'lights', 'fake']) : kind;
+    this.scareFx = { id, kind: variant, img, target: target || null, face, until: this.clock() + (variant === 'lights' || variant === 'fake' ? 4200 : 1800), name: target ? this.P(target)?.name : null };
+    if (kind !== 'personal') this.sfx(variant === 'flash' ? 'mn-scare' : 'mn-whisper');
+    this.sync(); return true;
+  }
+  async bigScare(g) {
+    if (!this.scareNow('big')) return;
+    await this.hold(g, this.scareFx.kind === 'flash' ? 1.4 : 4.4);
+    this.sayOver(g, line(M2.afterScare)); await this.hold(g, 1.2);
+  }
+  // ------------------------------------------------------------ choosing a door
+  async doors(g, i) {
+    const c = this.ctx; let opts = c.todo.slice(0, 2);
+    const mercy = this.candle < 30 && !c.mercyUsed; if (mercy) opts = [...opts, 'mercy'];
+    let choice = opts[0];
+    if (opts.length > 1) {
+      this.vote = { opts, votes: {}, until: this.clock() + ms(14) };
+      this.setPhase('DOORS', { step: 'vote' }); this.sfx('mn-creak');
+      this.sayOver(g, mercy ? M2.mercyDoor : line(M2.doors));
+      const voters = () => this.players.filter((p) => p.connected && !p.bot);
+      while (this.clock() < this.vote.until && !(voters().length && voters().every((p) => this.vote.votes[p.id]))) {
+        // bots vote too, a little later
+        this.players.filter((p) => p.bot && !this.vote.votes[p.id] && Math.random() < 0.08).forEach((p) => { this.vote.votes[p.id] = pick(opts.filter((o) => o !== 'mercy')); });
+        await this.wait(250); this.guard(g); this.sync();
+      }
+      const tally = {}; Object.values(this.vote.votes).forEach((k) => { tally[k] = (tally[k] || 0) + 1; });
+      const best = Math.max(0, ...Object.values(tally)); const top = opts.filter((o) => (tally[o] || 0) === best);
+      choice = pick(top); this.vote.choice = choice; this.vote.tally = tally;
+      this.setPhase('DOORS', { step: 'chosen' }); this.sfx('mn-unlock'); await this.hold(g, 2.2);
+    } else { this.vote = { opts, votes: {}, choice }; this.setPhase('DOORS', { step: 'chosen' }); this.sayOver(g, M2.lastDoor); await this.hold(g, 3); }
+    if (choice !== 'mercy' && i > 0 && Math.random() < 0.45) await this.bigScare(g);
+    return choice;
+  }
+  // ------------------------------------------------------------ a room: the goal, then two rounds
+  async room2(g, key) {
+    const def = ROOMS2[key]; const R = this.pxR(key); const X = this.makeX(R); this.active = { px: true, def, X, R };
+    const c = this.ctx; c.todo = c.todo.filter((k) => k !== key); this.roomN = c.done.length + 1;
+    this.setPhase('PX', { step: 'intro', key }); this.sfx(pick(['mn-creak', 'mn-creak2']));
+    await this.say(g, M2.intro[key]); await this.hold(g, 2.5);
+    let wins = 0;
+    for (const n of [1, 2]) {
+      this.setPhase('PX', { step: 'ready', key, kind: n }); this.sayOver(g, M2.round[n]); await this.hold(g, 2.5);
+      const res = await this.pxStage(g, def, n, 'play');
+      if (this.dead) { this.active = null; return; }
+      if (res === 'win') { wins++; this.gain(3); this.sfx('mn-clear'); this.setPhase('PX', { step: 'won', key, kind: n }); this.sayOver(g, line(M2.win)); }
+      else { this.drip(6, null); this.sfx('mn-fail'); this.setPhase('PX', { step: 'lost', key, kind: n }); this.sayOver(g, line(M2.fail)); }
+      if (this.dead) { this.active = null; return; }
+      await this.hold(g, 3);
+    }
+    const gotKey = wins >= 1; if (gotKey) { c.keys++; this.keys++; }
+    c.done.push(key); c.played.push(key); this.results.push({ key, win: gotKey, wins });
+    this.setPhase('PX', { step: 'result', key, wins, gotKey }); this.sfx(gotKey ? 'mn-unlock' : 'mn-fail');
+    await this.say(g, line(gotKey ? M2.key : M2.noKey));
+    this.active = null;
+    if (this.candle < 50 && !this.warned.half) { this.warned.half = true; await this.say(g, M2.candleHalf); }
+    if (this.candle < 20 && !this.warned.low) { this.warned.low = true; await this.say(g, M2.candleLow); }
+  }
+  async mercy2(g) {
+    this.ctx.mercyUsed = true; const def = MERCY2; const R = this.pxR('mercy'); const X = this.makeX(R); this.active = { px: true, def, X, R };
+    this.setPhase('PX', { step: 'intro', key: 'mercy' }); await this.say(g, M2.intro.mercy);
+    await this.pxStage(g, def, 1, 'play');
+    this.setPhase('PX', { step: 'result', key: 'mercy', gained: Math.round((R.st.fed / 1000) * 1.5) }); this.sfx('mn-candle-light'); await this.hold(g, 2.5);
+    this.active = null;
+  }
+  // ------------------------------------------------------------ the finale: every room again, fast, while the house falls down
+  async collapse(g) {
+    this.setPhase('COLLAPSE', { step: 'intro' }); this.sfx('mn-thunder');
+    if (this.ctx.keys) this.gain(this.ctx.keys * 4);
+    await this.say(g, M2.collapse);
+    const list = this.ctx.played.slice(0, 4);
+    for (let i = 0; i < list.length; i++) {
+      const key = list[i]; const def = ROOMS2[key]; const R = this.pxR(key); const X = this.makeX(R); this.active = { px: true, def, X, R };
+      this.setPhase('COLLAPSE', { step: 'quake', key, n: i + 1, of: list.length }); this.sfx(pick(['mn-thunder', 'mn-chains', 'mn-floor']));
+      this.sayOver(g, line(M2.quake)); await this.hold(g, 2.5);
+      if (i === 1) await this.bigScare(g);
+      const res = await this.pxStage(g, def, 'quick', 'play', { key, n: i + 1, of: list.length });
+      if (this.dead) { this.active = null; return this.endNight(false, g); }
+      if (res !== 'win') { this.drip(8, null); this.sfx('mn-fail'); } else this.sfx('mn-clear');
+      if (this.dead) { this.active = null; return this.endNight(false, g); }
+    }
+    this.active = null;
+    this.setPhase('COLLAPSE', { step: 'door' }); await this.hold(g, 1.5);
+    if (this.scareNow('big')) await this.hold(g, 1.6);
+    await this.endNight(!this.dead, g);
   }
   // ------------------------------------------------------------ the 8-bit house
   pxR(key) { return { key, roles: {}, bubbles: [], events: [], evSeq: 0, done: null, burn: false, ends: Infinity, st: null }; }
@@ -517,13 +614,13 @@ class Mansion {
   }
   async endNight(escaped, g) {
     this.active = null;
-    const screamer = [...this.players].filter((p) => p.possFails).sort((a, b) => b.possFails - a.possFails)[0];
+    const screamer = [...this.players].filter((p) => p.scared).sort((a, b) => b.scared - a.scared)[0];
     const clumsy = [...this.players].sort((a, b) => b.slips - a.slips)[0];
     if (escaped) this.best = Math.max(this.best || 0, Math.round(this.candle));
     this.end = { escaped, candle: Math.round(this.candle), rooms: this.results.filter((r) => r.win).length, of: this.results.length, keys: this.keys, screamer: screamer ? screamer.id : null, clumsy: clumsy && clumsy.slips > 0 ? { id: clumsy.id, slips: Math.round(clumsy.slips) } : null, best: this.best, nights: this.nights };
     this.setPhase('END', { step: escaped ? 'escaped' : 'lost' }); this.sfx(escaped ? 'mn-chime' : 'mn-candle-out');
     if (g === undefined) return;
-    try { await this.say(g, escaped ? SAY.escape : this.dead ? SAY.candleOut : SAY.lost); await this.hold(g, 2); this.setPhase('END', { step: 'stats' }); } catch (e) { if (!(e instanceof Cancelled)) throw e; }
+    try { await this.say(g, escaped ? M2.escape : this.dead ? M2.candleOut : SAY.lost); await this.hold(g, 2); this.setPhase('END', { step: 'stats' }); } catch (e) { if (!(e instanceof Cancelled)) throw e; }
   }
 
   // ------------------------------------------------------------ what players do
@@ -539,6 +636,8 @@ class Mansion {
       case 'addBot': if (this.phase === 'LOBBY' && this.vip()?.id === pid) return this.addBot(true); return {};
       case 'removeBots': if (this.phase === 'LOBBY' && this.vip()?.id === pid) this.removeBots(); return {};
       case 'kick': this.kick(pid, a.id); return {};
+      case 'vote': { if (this.phase !== 'DOORS' || this.d.step !== 'vote' || !this.vote || !this.vote.opts.includes(a.k)) return {}; this.vote.votes[pid] = a.k; this.sfx('mn-floor'); this.sync(); return { ok: true }; }
+      case 'scareLevel': { if (this.phase !== 'LOBBY' || this.vip()?.id !== pid || !SCARES.hasOwnProperty(a.v)) return {}; this.scareLevel = a.v; this.sync(); return { ok: true }; }
       case 'px': {
         const A = this.active; if (!A || !A.px || !A.R.st || A.R.st.done) return {};
         const step = this.d.step;
@@ -565,8 +664,8 @@ class Mansion {
     const v = {
       game: 'mn', phase: ph, step: d.step || null, code: this.code, now: Date.now(), vipId: this.vip()?.id, test: this.test,
       players: this.players.map((p) => ({ ...this.pub(p), connected: p.connected, bot: p.bot })),
-      candle: Math.round(this.candle * 10) / 10, keys: this.keys, roomN: this.roomN, rooms: ROOMS_PER_NIGHT,
-      scare: this.scareFx, flash: this.flash, fx: this.fx, x: {},
+      candle: Math.round(this.candle * 10) / 10, keys: this.keys, roomN: this.roomN, rooms: NIGHT_ROOMS,
+      scare: this.scareFx && this.clock() < this.scareFx.until && (!this.scareFx.target || !me || this.scareFx.target === me.id || this.scareFx.kind !== 'personal') ? this.scareFx : null, flash: this.flash, fx: this.fx, x: {},
       night: PX_KEYS.map((k) => { const r = this.results.find((o) => o.key === k); return { key: k, name: PXR.PX_ROOMS[k].name, res: r ? (r.win ? 'win' : 'fail') : null }; }),
     };
     const x = v.x;
@@ -579,12 +678,15 @@ class Mansion {
     if (ph === 'HALL') x.next = d.next;
     if (ph === 'POSSESS') { const def = POSSESS[d.key]; x.who = d.who; x.poss = { key: def.key, name: def.name, how: def.how }; if (A && A.R.key === d.key) { x.ends = A.R.ends === Infinity ? null : this.wall(A.R.ends); x.start = this.wall(A.R.start); } }
     if (ph === 'END') x.end = this.end;
-    if (['HUB', 'PX', 'STORY', 'BOSS'].includes(ph)) {
-      const def = ph === 'HUB' ? PXR.HUB : ph === 'BOSS' ? PXR.BOSS : ph === 'STORY' ? null : d.key === 'mercy' ? PXR.MERCY : PXR.PX_ROOMS[d.key];
-      if (def) x.room = { key: def.key, name: def.name, style: def.style, how: def.how, music: def.music };
+    x.scareLevel = this.scareLevel || 'spooky';
+    if (ph === 'DOORS' && this.vote) x.doors = { opts: this.vote.opts.map((k) => { const df = k === 'mercy' ? MERCY2 : ROOMS2[k]; return { key: k, name: df.name, goal: df.goal, art: df.art, style: df.style }; }), voted: Object.keys(this.vote.votes), mine: me ? this.vote.votes[me.id] || null : null, choice: this.vote.choice || null, tally: d.step === 'chosen' ? this.vote.tally || null : null, until: this.vote.until ? this.wall(this.vote.until) : null };
+    if (ph === 'COLLAPSE') x.collapse = { n: d.n || 0, of: d.of || 0 };
+    if (['HUB', 'PX', 'STORY', 'BOSS', 'COLLAPSE'].includes(ph)) {
+      const def = d.key === 'mercy' ? MERCY2 : ROOMS2[d.key] || (ph === 'HUB' ? PXR.HUB : ph === 'BOSS' ? PXR.BOSS : PXR.PX_ROOMS[d.key]);
+      if (def) x.room = { key: def.key, name: def.name, style: def.style, how: def.goal || def.how, goal: def.goal || def.how, art: def.art, music: def.music };
       x.kind = d.kind ?? null; x.wins = d.wins; x.gotKey = d.gotKey; x.gained = d.gained;
       if (ph === 'STORY') x.story = { key: d.key, mem: PXR.MEMORIES[d.key]?.act || '', text: STORY[d.key] };
-      if (this.ctx) x.ctx = { done: this.ctx.done, left: this.ctx.left, keys: this.ctx.keys, stubs: this.ctx.stubs, memories: this.ctx.memories.map((k) => PXR.MEMORIES[k].act) };
+      if (this.ctx) x.ctx = { done: this.ctx.done, keys: this.ctx.keys };
       if (A && A.px && A.R.st) { x.ends = A.R.ends === Infinity ? null : this.wall(A.R.ends); x.start = this.wall(A.R.start); }
     }
     if (ph === 'LOBBY') { x.min = MIN; x.busts = this.busts.map((n) => ({ n, by: this.players.find((p) => p.bust === n)?.id || null })); }

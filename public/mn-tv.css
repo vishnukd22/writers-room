@@ -107,7 +107,7 @@ body.low .cnum b { color: #FF8C8C; }
 .hall.wide .mort.big img { max-width: 100%; max-height: 64vh; width: auto; height: auto; object-fit: contain; border-radius: 2vh; filter: none; box-shadow: 0 3vh 8vh rgba(0, 0, 0, .7); }
 .mort.big img { max-height: 62vh; max-width: 30vw; border-radius: 2vh; filter: drop-shadow(0 0 4vh rgba(143, 240, 214, .25)); }
 .mort .ghostly { font-size: 26vh; filter: drop-shadow(0 0 4vh var(--flame)); }
-.hx h2 { font: 400 9vh/1 var(--fell); margin: 0 0 2vh; }
+.hx h2 { font: 400 8vh/1.15 var(--fell); margin: 0 0 1.6vh; padding: .1em .15em 0; white-space: nowrap; }
 .hx p { font: italic 400 3.4vh/1.35 var(--fell); max-width: 26em; }
 .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2vh; margin-top: 3vh; }
 .rules span { background: rgba(243, 230, 196, .07); border-radius: 1.2vh; padding: 1.4vh; font-size: 1.05em; }

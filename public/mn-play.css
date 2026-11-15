@@ -83,3 +83,8 @@ body.low #frost { opacity: 1; }
 #flash.freeze { display: flex; background: rgba(143, 240, 214, .25); color: #fff; text-shadow: 0 0 30px var(--ecto); animation: popin .3s; }
 @keyframes scareflash { 0% { background: #fff; } 12% { background: #000; } 24% { background: #C0262D; } 40% { background: #000; } 100% { background: transparent; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+
+.scarelvl { display: grid; grid-template-columns: auto repeat(3, 1fr); gap: .4rem; align-items: center; margin: .4rem 0 .8rem; }
+.scarelvl b { color: var(--wax2); font-size: .9rem; margin-right: .2rem; }
+.scarelvl button { font: 700 .9rem var(--ui); padding: .6rem .2rem; border-radius: 12px; border: 2px solid rgba(243, 230, 196, .25); background: transparent; color: var(--wax); }
+.scarelvl button.on { background: var(--blood); border-color: var(--blood); color: #fff; }
