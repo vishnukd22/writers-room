@@ -143,7 +143,7 @@
       const bots = S.players.filter((p) => p.bot).length;
       const botbar = `<div class="botbar"><button class="btn sm" data-a="addBot" ${n >= 8 ? 'disabled' : ''}>Add a bot</button>${bots ? `<button class="btn ghost sm" data-a="removeBots">Remove bots (${bots})</button>` : ''}</div>`;
       const start = m.vip ? `<div id="startbox"><button class="btn primary big" data-a="start" ${n < 2 ? 'disabled' : ''}>Start BID-COIN!</button><p class="hint center">${n < 2 ? 'One more bidder needed. Add a friend or a bot.' : `${n} bidders${bots ? `, ${bots} of them bots` : ''}. Start when everyone is in.`}</p>${botbar}</div>` : `<p class="hint center" id="startbox">${name(S.vipId)} starts the game.</p>`;
-      return ['lobby', `<div class="hello" style="--c:${m.color}">${W.bust(m, 'lg')}<h2>You're in, ${esc(m.name)}</h2><p>You start with ${aed(S.rules.start)} and two power cards.</p></div>
+      return [`lobby|${n}|${m.vip}|${W.pickKey(S)}`, `<div class="hello" style="--c:${m.color}">${W.bust(m, 'lg')}<h2>You're in, ${esc(m.name)}</h2><p>You start with ${aed(S.rules.start)} and two power cards.</p></div>${W.picker(S, m.id)}
         <div class="howto"><p><b>Peek</b> at the locker on your phone. Everyone sees something different.</p><p><b>Bid</b> with the big buttons. Five seconds of silence and it's sold.</p><p><b>Bet</b> on whether the winner makes money.</p><p>Richest at the end wins.</p></div>${start}`];
     },
     INTRO() { return ['intro', tv('Eyes on the TV', 'The auctioneer is talking.')]; },
@@ -281,6 +281,7 @@
     const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
     const a = b.dataset.a;
     if (a === 'start') send('start');
+    if (a === 'bust') { send('bust', { n: Number(b.dataset.n) }); buzz(10); }
     if (a === 'again') send('again');
     if (a === 'menu') send('menu');
     if (a === 'skipTutorial') send('skipTutorial');

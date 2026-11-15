@@ -4,13 +4,22 @@ Party games for the TV and everyone's phones. Open `/tv` on the TV and pick one.
 
 ## Last Night in the Mansion
 
-A spooky, silly co-op game for 2 to 8 players, about 20 minutes. Everyone wins together or loses together. Join at `/mn`. With exactly 2 people, two guests (bots) join to fill the jobs.
+A spooky, silly co-op game for 2 to 8 players, about 25 to 30 minutes, drawn in 8-bit. Everyone wins together or loses together. Join at `/mn`. With exactly 2 people, two guests (bots) join.
 
-The group shares one candle. It burns slowly while you are in a room, and mistakes melt it faster. Mortimer, the dead butler, leads you through 5 rooms picked from 20 (talking rooms, timing rooms, speed rooms and memory rooms, never the same kind twice in a row). Each room gives every phone a different job. Clear a room to win a key piece. Fail and you lose 15% of the candle and move on.
+The group shares one candle. Mortimer, the dead butler, locks you in. You walk your little pixel character around the hallway with the arrows on your phone. Stand at a door with most of your group and in you go. The hallway hides three secrets (spare wax, a candle stub, a note).
 
-Between rooms the house possesses one person (never the same one twice in a row). Their phone gets a 15-second challenge that everyone watches on the TV: win and the candle grows, lose and it shrinks. There are only 1 or 2 jump scares a night.
+Behind the four doors:
 
-The finale is the Front Door: the Key, the Lock, the Lookout and the Flame all at once, with the key pieces you won. Escape before the candle goes out. Any picture, music or sound named in the art doc can be dropped into `public/assets` at any time; until then the game draws and plays its own.
+1. **The Ice Hall** (Pokémon-style): you slide on ice until something stops you, including your friends. Stand on every red button at once to open the gate, then everyone slides out.
+2. **The Wine Cellar** (Pokémon-style): push crates onto the red buttons. Grey iron crates need two people, one behind the other. Anyone can reset the crates.
+3. **The Storm Room** (Undertale-style): drag on your phone to move your heart and dodge the ghosts' attacks. Blue bars: stand still. Orange bars: keep moving.
+4. **The Parlour** (Undertale-style): each phone has a secret clue about what the ghost wants. Agree the right ACT in the right order, then choose MERCY.
+
+Every room goes: Mortimer's ghost shows you how, a practice that costs nothing, then 3 stages. Clear 2 of the 3 to win a key piece. The candle burns during stages and drips when you fail one or get hit. After each room you get a piece of the story, and a memory you will need at the end. If the candle drops below 30%, Mortimer's Mercy opens in the hallway once: light the candle stands to win some back.
+
+The finale is a battle with the House itself. Each turn it remembers something: pick ACT and show it the matching memory. Key pieces weaken its grip. When its name turns yellow, everyone picks MERCY and you escape.
+
+The pixel art, 8-bit music and sounds are from the Ninja Adventure pack by Pixel-boy and AAA (CC0, https://pixel-boy.itch.io/ninja-adventure-asset-pack). The pixel font is Pixelify Sans (SIL Open Font License). The 20 older rooms are still in `server/mn-rooms.js` for the next update.
 
 The old Writers' Room still works at `/tv/writers`, but it is no longer on the game menu.
 
@@ -151,4 +160,4 @@ npm install
 npm start
 ```
 
-Then open http://localhost:3000/tv. To watch bots play a whole game: `URL=http://localhost:3000 N=6 npm run bots`. For Land Grab: `URL=http://localhost:3000 N=7 GAMES=5 node test/lg-bots.js`. For BID-COIN!: `URL=http://localhost:3000 N=5 GAMES=3 node test/bc-bots.js`. For RIGGED!: `URL=http://localhost:3000 N=3 GAMES=3 node test/rg-bots.js` (start the server with `WR_SPEED=0.1` to make it quick). For the Mansion: `URL=http://localhost:3000 N=4 HUMANS=0 GAMES=2 node test/mn-bots.js`, and every room on its own: `node test/mn-rooms-test.js`. Pause and quit in every game: `node test/pause-test.js`. The iPhone check (every phone screen at four iPhone sizes): `python3 test/phone-fit.py` with the server on `WR_SPEED=0.25`.
+Then open http://localhost:3000/tv. To watch bots play a whole game: `URL=http://localhost:3000 N=6 npm run bots`. For Land Grab: `URL=http://localhost:3000 N=7 GAMES=5 node test/lg-bots.js`. For BID-COIN!: `URL=http://localhost:3000 N=5 GAMES=3 node test/bc-bots.js`. For RIGGED!: `URL=http://localhost:3000 N=3 GAMES=3 node test/rg-bots.js` (start the server with `WR_SPEED=0.1` to make it quick). For the Mansion: `URL=http://localhost:3000 N=4 HUMANS=0 GAMES=1 node test/mn-bots.js`, every 8-bit room on its own: `node test/mn-px-rooms.js`, and a whole night without sockets: `node test/mn-px-sim.js`. Pause and quit in every game: `node test/pause-test.js`. The iPhone check (every phone screen at four iPhone sizes): `python3 test/phone-fit.py` with the server on `WR_SPEED=0.25`.

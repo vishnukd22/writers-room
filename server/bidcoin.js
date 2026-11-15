@@ -187,6 +187,11 @@ class BidCoin {
   }
   removeBots() { if (this.phase !== 'LOBBY') return; this.players = this.players.filter((p) => !p.bot); this.sync(); }
   setConnected(id, on) { const p = this.P(id); if (p) { p.connected = on; this.lastActive = Date.now(); this.check(); this.sync(); } }
+  setBust(id, n) {
+    const p = this.P(id); n = Number(n);
+    if (!p || p.house || !this.busts.includes(n) || this.players.some((x) => x !== p && x.bust === n)) return { error: 'Someone already picked that one' };
+    p.bust = n; this.sync(); return { ok: true };
+  }
   kick(byId, target) { if (this.phase !== 'LOBBY' || this.vip()?.id !== byId) return; this.players = this.players.filter((p) => p.id !== target); this.hooks.kicked?.(target); this.sync(); }
   note(p, text, kind = 'info') { if (!p || p.bot) return; p.noteSeq++; p.notes.push({ id: p.noteSeq, text, kind }); if (p.notes.length > 4) p.notes.shift(); }
 
@@ -929,6 +934,7 @@ class BidCoin {
     switch (a.type) {
       case 'bid': return this.bid(me, a.inc, a.at);
       case 'start': return this.start(pid);
+      case 'bust': if (this.phase !== 'LOBBY') return {}; return this.setBust(pid, a.n);
       case 'again': this.playAgain(pid); return {};
       case 'menu': if (this.phase === 'END' && this.vip()?.id === pid) this.hooks.menu?.(); return {};
       case 'skip': this.skip(pid); return {};
@@ -1071,7 +1077,7 @@ class BidCoin {
     if (ph === 'TUTORIAL') { x.slide = d.step; x.slides = L.TUTORIAL.length; x.key = L.TUTORIAL[d.step]?.key; x.title = L.TUTORIAL[d.step]?.title; }
     if (ph === 'FINALE') { x.step = d.step; x.who = d.who; x.box = d.box; x.inner = d.inner; x.bills = d.bills; }
     if (ph === 'END') { x.ranks = d.ranks; x.awards = d.awards; }
-    if (ph === 'LOBBY') x.min = MIN;
+    if (ph === 'LOBBY') { x.min = MIN; x.busts = this.busts.map((n) => ({ n, by: this.players.find((p) => p.bust === n)?.id || null })); }
     return v;
   }
 }

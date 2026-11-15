@@ -81,9 +81,9 @@
     LOBBY() {
       const m = me(); const n = S.players.length;
       const list = `<div class="faces">${S.players.map((p) => `<div class="fbtn">${face(p)}<span>${esc(p.name)}${p.bot ? ' (bot)' : ''}</span></div>`).join('')}</div>`;
-      if (!m.vip) return `${tv("You're in!", 'Watch the TV. The first player starts the show.', '🎩')}${list}`;
+      if (!m.vip) return `${tv("You're in!", 'Watch the TV. The first player starts the show.', '🎩')}${W.picker(S, m.id)}${list}`;
       return `<h2 class="h">You're the producer</h2><p class="lead">${n < 2 ? 'You need at least 2 players. Add a bot if you are short.' : n === 2 ? 'Two players: the House joins as a third contestant, and it cheats.' : `${n} players ready.`} About 20 minutes.</p>
-        <button class="btn primary big" data-a="start" ${n < 2 ? 'disabled' : ''}>Start the show</button>
+        ${W.picker(S, m.id)}<button class="btn primary big" data-a="start" ${n < 2 ? 'disabled' : ''}>Start the show</button>
         <div class="lockbar"><button class="btn" data-a="addBot">Add a bot</button>${S.players.some((p) => p.bot) ? '<button class="btn ghost" data-a="removeBots">Remove bots</button>' : ''}</div>${list}`;
     },
     INTRO() { return tv('Lights, camera...', 'Vince Velvet is warming up the crowd. Eyes on the TV.', '🎩'); },
@@ -237,6 +237,7 @@
     const a = b.dataset.a; const m = me(); const q = S.q;
     switch (a) {
       case 'start': send('start'); break;
+      case 'bust': send('bust', { n: Number(b.dataset.n) }); break;
       case 'addBot': send('addBot'); break;
       case 'removeBots': send('removeBots'); break;
       case 'again': send('again'); break;

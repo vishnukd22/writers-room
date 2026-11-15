@@ -8,7 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const { ROOMS, rint, pick, shuffle } = require('./mn-rooms');
 const { POSSESS } = require('./mn-possess');
-const { SAY, ROOM_LINES } = require('./mn-lines');
+const { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO } = require('./mn-lines');
+const PXR = require('./mn-px');
 const voice = require('./voice');
 
 const SPEED = Number(process.env.WR_SPEED || 1);
@@ -25,7 +26,8 @@ class Cancelled extends Error {}
 const VOICE = () => voice.MN();
 const COLORS = ['#F2C230', '#2FB36B', '#E5484D', '#3E8EDE', '#A970FF', '#FF8A3D', '#26C6C6', '#F06FB0'];
 const BOT_NAMES = ['Ahmed', 'Bella', 'Carlos', 'Dina', 'Erik', 'Fatima', 'Gopal', 'Hana'];
-const MIN = 2; const MAX = 8; const ROOMS_PER_NIGHT = 5;
+const MIN = 2; const MAX = 8; const ROOMS_PER_NIGHT = 4;
+const PX_KEYS = ['ice', 'cellar', 'dodge', 'chat'];
 const BURN = 0.035; // % of candle per second while a room or the door is in play
 const TYPES = ['talk', 'timing', 'speed', 'memory'];
 const SHAPES = [['◆', 'diamond'], ['▲', 'triangle'], ['●', 'circle'], ['■', 'square'], ['★', 'star'], ['✚', 'cross']];
@@ -114,10 +116,10 @@ class Mansion {
     this.fx = []; this.fxSeq = 0; this.timers = []; this.busts = bustPool();
     this.pausedMs = 0; this.recent = []; this.best = null; this.nights = 0;
     this.reset();
-    [SAY.welcome, SAY.rules].forEach((t) => this.prefetch(t, true));
-    fixedLines(SAY).forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
+    [SAY.welcome, PX.rules, PX.hubFirst].forEach((t) => this.prefetch(t, true));
+    [...fixedLines(PX), ...fixedLines(STORY), ...fixedLines(ROOM_INTRO), ...fixedLines({ a: SAY.welcomeBots, b: SAY.candleHalf, c: SAY.candleLow, d: SAY.candleOut, e: SAY.escape, f: SAY.lost })].forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
   }
-  reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false }); }
+  reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false, ctx: null }); }
 
   // ------------------------------------------------------------ plumbing (same as the other games)
   P(id) { return this.players.find((p) => p.id === id); }
@@ -206,6 +208,11 @@ class Mansion {
   }
   removeBots() { if (this.phase !== 'LOBBY') return; this.players = this.players.filter((p) => !p.bot); this.sync(); }
   setConnected(id, on) { const p = this.P(id); if (p) { p.connected = on; this.lastActive = Date.now(); this.check(); this.sync(); } }
+  setBust(id, n) {
+    const p = this.P(id); n = Number(n);
+    if (!p || p.house || !this.busts.includes(n) || this.players.some((x) => x !== p && x.bust === n)) return { error: 'Someone already picked that one' };
+    p.bust = n; this.sync(); return { ok: true };
+  }
   kick(byId, target) { if (this.phase !== 'LOBBY' || this.vip()?.id !== byId) return; this.players = this.players.filter((p) => p.id !== target); this.hooks.kicked?.(target); this.sync(); }
 
   start(byId) {
@@ -259,7 +266,7 @@ class Mansion {
     const X = {
       R, seats: G.players, n: G.players.length, level: R.level || 1,
       P: (id) => G.P(id), now: () => G.clock(), wall: (t) => G.wall(t), gameTime: (w) => w - (Date.now() - G.clock()),
-      drip: (a, why, p) => G.drip(a, why, p), win: () => { if (!R.done) R.done = 'win'; G.wake('done'); }, fail: () => { if (!R.done) R.done = 'fail'; G.wake('done'); },
+      drip: (a, why, p) => G.drip(a, why, p), gain: (a) => G.gain(a), win: () => { if (!R.done) R.done = 'win'; G.wake('done'); }, fail: () => { if (!R.done) R.done = 'fail'; G.wake('done'); },
       bubble: (p, t) => G.bubble(p, t), sfx: (n) => G.sfx(n), note: (p, t, k) => G.note(p, t, k), buzz: (p, k) => G.buzz(p, k),
       flashAll: (k) => { G.flash = { id: (G.flash?.id || 0) + 1, kind: k }; },
       role: (p, key, label) => { if (p) R.roles[p.id] = { key, label }; }, roleOf: (p) => R.roles[p.id]?.key, ofRole: (k) => G.players.filter((p) => R.roles[p.id]?.key === k),
@@ -276,6 +283,7 @@ class Mansion {
     const now = this.clock(); const dt = Math.min(1000, now - (this.lastTick || now)); this.lastTick = now;
     const A = this.active; if (!A) return;
     const { X, R, def } = A;
+    if (A.px) return this.pxTick(A, now, dt);
     if (R.burn) { this.candle = Math.max(0, this.candle - BURN * dt / 1000); if (this.candle <= 0 && !this.dead) { this.dead = true; R.done = 'dead'; this.wake('dead'); } }
     if (R.done) return;
     try { def.tick?.(X, now, R.st, dt); } catch (e) { console.error('mn room tick', R.key, e); }
@@ -299,18 +307,118 @@ class Mansion {
     this.setPhase('INTRO', { step: 'welcome' }); this.sfx('mn-thunder');
     await this.say(g, SAY.welcome);
     if (this.addedBots) await this.say(g, SAY.welcomeBots);
-    await this.say(g, SAY.rules);
+    await this.say(g, PX.rules);
     this.sfx('mn-candle-light');
-    this.plan = this.pickRooms(); this.recent = [...this.plan];
-    this.plan.forEach((k) => this.prefetch(ROOM_LINES[k]));
-    const possessAfter = new Set([1, 3]);
-    for (let i = 0; i < this.plan.length; i++) {
-      if (i > 0) { this.setPhase('HALL', { next: i }); await this.say(g, line(SAY.roomsLeft)); }
-      await this.room(g, this.plan[i], i + 1);
+    this.ctx = { todo: [...PX_KEYS], done: [], left: PX_KEYS.length, mercy: false, mercyUsed: false, stubs: 1, keys: 0, memories: [], secrets: PXR.makeSecrets(), visits: 0 };
+    this.plan = [...PX_KEYS];
+    for (;;) {
+      const choice = await this.hub(g);
+      if (choice === 'front') break;
+      if (choice === 'mercy') { await this.mercyRoom(g); continue; }
+      await this.pxRoom(g, choice);
       if (this.dead) return this.endNight(false, g);
-      if (possessAfter.has(i) || (i === 2 && this.candle > 70)) { await this.possession(g); if (this.dead) return this.endNight(false, g); }
+      await this.story(g, choice);
     }
-    await this.door(g);
+    await this.boss(g);
+  }
+  // ------------------------------------------------------------ the 8-bit house
+  pxR(key) { return { key, roles: {}, bubbles: [], events: [], evSeq: 0, done: null, burn: false, ends: Infinity, st: null }; }
+  pxTick(A, now, dt) {
+    const { X, R, def } = A; const st = R.st; if (!st) return;
+    if (R.burn) { this.candle = Math.max(0, this.candle - BURN * dt / 1000); if (this.candle <= 0 && !this.dead) { this.dead = true; this.wake('dead'); } }
+    if (!['play', 'walk', 'practice', 'demo'].includes(this.d.step)) return;
+    if (!st.done) {
+      try { def.tick?.(X, st, now, dt); } catch (e) { console.error('mn px tick', R.key, e); }
+      const bots = this.d.step === 'demo' ? [PXR.GHOST] : this.players.filter((p) => p.bot || (!p.connected && R.key !== 'hub'));
+      for (const b of bots) { try { def.bot?.(X, b, st, now); } catch (e) { console.error('mn px bot', R.key, e); } }
+      if (!st.done && now >= R.ends) st.done = st.timeout || 'fail';
+      if (st.done) this.wake('done');
+    }
+    this.progress(); this.sync();
+  }
+  async pxStage(g, def, kind, step, extra = {}) {
+    const A = this.active; const { X, R } = A;
+    PXR.GHOST.mx = {}; this.players.forEach((p) => { p.mx = {}; });
+    const arg = kind === 'boss' || kind === 'hub' ? this.ctx : kind;
+    R.st = def.make(X, arg); R.st.t0 = this.clock(); R.kind = kind;
+    const secs = def.secs ? def.secs[kind] || 120 : 9999;
+    // stage clocks run in real seconds: the attacks and puzzles are played at real speed even in quick tests
+    R.start = this.clock(); R.ends = R.start + secs * 1000;
+    R.burn = typeof kind === 'number' && def !== PXR.MERCY || kind === 'boss';
+    this.setPhase(this.phase, { ...this.d, step, kind, ...extra });
+    while (!R.st.done && !this.dead) { await this.wait(400, () => !!R.st.done || this.dead); this.guard(g); }
+    R.burn = false;
+    return R.st.done;
+  }
+  async hub(g) {
+    const R = this.pxR('hub'); const X = this.makeX(R); this.active = { px: true, def: PXR.HUB, X, R };
+    const c = this.ctx; c.mercy = this.candle < 30 && !c.mercyUsed; c.visits++;
+    this.setPhase('HUB', { step: 'walk' });
+    const line0 = c.visits === 1 ? PX.hubFirst : c.left === 0 ? PX.hubFront : c.mercy ? PX.hubMercy : line(PX.hubAgain);
+    this.sayOver(g, line0);
+    // after a while, Mortimer picks for you
+    const st = PXR.HUB.make(X, c); R.st = st; R.st.t0 = this.clock(); R.start = this.clock(); R.ends = R.start + ms(c.visits === 1 ? 90 : 70);
+    st.timeout = 'slow';
+    while (!st.done && !st.chosen) { await this.wait(300, () => !!st.chosen || !!st.done); this.guard(g); }
+    let choice = st.chosen;
+    if (!choice) { choice = c.left === 0 ? 'front' : st.zone && st.zone !== 'front' ? st.zone : PXR.pick(c.todo); st.chosen = choice; await this.say(g, PX.hubSlow); }
+    this.sfx('mn-creak');
+    if (choice === 'front' && c.left > 0) choice = PXR.pick(c.todo);
+    return choice;
+  }
+  async pxRoom(g, key) {
+    const def = PXR.PX_ROOMS[key]; const R = this.pxR(key); const X = this.makeX(R); this.active = { px: true, def, X, R };
+    this.roomN = this.ctx.done.length + 1;
+    this.setPhase('PX', { step: 'intro', key }); this.sfx(pick(['mn-creak', 'mn-creak2']));
+    await this.say(g, ROOM_INTRO[key]);
+    // the demo: Mortimer's ghost plays while he explains
+    this.sayOver(g, PX.demo[key]);
+    const t0 = this.clock(); await this.pxStage(g, def, 'demo', 'demo');
+    while (this.cue && this.clock() - t0 < 25000) { await this.wait(300); this.guard(g); }
+    // practice
+    this.setPhase('PX', { step: 'ready', key, kind: 'practice' }); this.sayOver(g, line(PX.practice)); await this.hold(g, 3);
+    await this.pxStage(g, def, 'practice', 'practice');
+    let wins = 0;
+    for (const n of [1, 2, 3]) {
+      this.setPhase('PX', { step: 'ready', key, kind: n }); this.sayOver(g, PX.stage[n]); await this.hold(g, 3);
+      const res = await this.pxStage(g, def, n, 'play');
+      if (this.dead) { this.active = null; return; }
+      if (res === 'win') { wins++; this.gain(2); this.sfx('px-clear'); this.setPhase('PX', { step: 'won', key, kind: n }); this.sayOver(g, line(PX.stageWin)); }
+      else { this.drip(6, null); this.sfx('px-fail'); this.setPhase('PX', { step: 'lost', key, kind: n }); this.sayOver(g, line(PX.stageFail)); }
+      if (this.dead) { this.active = null; return; }
+      await this.hold(g, 3);
+    }
+    const gotKey = wins >= 2; const c = this.ctx;
+    if (gotKey) { c.keys++; this.keys++; }
+    c.done.push(key); c.todo = c.todo.filter((k) => k !== key); c.left = c.todo.length; c.memories.push(key);
+    this.results.push({ key, win: gotKey, wins });
+    this.setPhase('PX', { step: 'result', key, wins, gotKey }); this.sfx(gotKey ? 'mn-clear' : 'mn-fail');
+    await this.say(g, line(gotKey ? PX.roomKey : PX.roomNoKey));
+    this.active = null;
+    await this.candleWarn(g);
+  }
+  async story(g, key) {
+    this.setPhase('STORY', { key }); this.sfx('mn-page');
+    await this.say(g, STORY[key]); await this.hold(g, 1);
+  }
+  async mercyRoom(g) {
+    const c = this.ctx; c.mercyUsed = true; c.mercy = false;
+    const def = PXR.MERCY; const R = this.pxR('mercy'); const X = this.makeX(R); this.active = { px: true, def, X, R };
+    this.setPhase('PX', { step: 'intro', key: 'mercy' });
+    await this.say(g, PX.mercy);
+    await this.pxStage(g, def, 1, 'play');
+    this.setPhase('PX', { step: 'result', key: 'mercy', gained: R.st.gained }); this.sfx('px-heal'); await this.hold(g, 2.5);
+    this.active = null;
+  }
+  async boss(g) {
+    const def = PXR.BOSS; const R = this.pxR('boss'); const X = this.makeX(R); this.active = { px: true, def, X, R };
+    this.roomN = 5;
+    this.setPhase('BOSS', { step: 'intro' }); this.sfx('mn-thunder');
+    await this.say(g, PX.boss);
+    await this.say(g, PX.bossKeys[this.ctx.keys] || PX.bossKeys.low);
+    const res = await this.pxStage(g, def, 'boss', 'play');
+    this.active = null;
+    await this.endNight(res === 'win' && !this.dead, g);
   }
   async play(g, R, def) {
     const X = this.makeX(R); R.st = def.setup(X, this.keys, R.who); this.active = { X, R, def };
@@ -424,12 +532,22 @@ class Mansion {
     this.lastActive = Date.now();
     switch (a?.type) {
       case 'start': return this.start(pid);
+      case 'bust': if (this.phase !== 'LOBBY') return {}; return this.setBust(pid, a.n);
       case 'again': this.playAgain(pid); return {};
       case 'menu': if (this.phase === 'END' && this.vip()?.id === pid) this.hooks.menu?.(); return {};
       case 'skip': this.skip(pid); return {};
       case 'addBot': if (this.phase === 'LOBBY' && this.vip()?.id === pid) return this.addBot(true); return {};
       case 'removeBots': if (this.phase === 'LOBBY' && this.vip()?.id === pid) this.removeBots(); return {};
       case 'kick': this.kick(pid, a.id); return {};
+      case 'px': {
+        const A = this.active; if (!A || !A.px || !A.R.st || A.R.st.done) return {};
+        const step = this.d.step;
+        if (a.a === 'skip' && step === 'practice' && this.vip()?.id === pid) { A.R.st.done = 'skip'; this.wake('done'); return {}; }
+        if (!['play', 'walk', 'practice'].includes(step)) return {};
+        try { A.def.act(A.X, me, a, A.R.st); } catch (e) { console.error('mn px act', A.R.key, e); }
+        if (A.R.st.done || A.R.st.chosen) this.wake('done');
+        this.sync(); return { ok: true };
+      }
       case 'r': {
         const A = this.active; if (!A || A.R.done) return {};
         const step = this.d.step; if (step !== 'play') return {};
@@ -449,7 +567,7 @@ class Mansion {
       players: this.players.map((p) => ({ ...this.pub(p), connected: p.connected, bot: p.bot })),
       candle: Math.round(this.candle * 10) / 10, keys: this.keys, roomN: this.roomN, rooms: ROOMS_PER_NIGHT,
       scare: this.scareFx, flash: this.flash, fx: this.fx, x: {},
-      night: this.plan.map((k, i) => ({ name: ROOMS[k].name, type: ROOMS[k].type, res: this.results[i] ? (this.results[i].win ? 'win' : 'fail') : null })),
+      night: PX_KEYS.map((k) => { const r = this.results.find((o) => o.key === k); return { key: k, name: PXR.PX_ROOMS[k].name, res: r ? (r.win ? 'win' : 'fail') : null }; }),
     };
     const x = v.x;
     if (ph === 'ROOM' || ph === 'DOOR') {
@@ -461,16 +579,26 @@ class Mansion {
     if (ph === 'HALL') x.next = d.next;
     if (ph === 'POSSESS') { const def = POSSESS[d.key]; x.who = d.who; x.poss = { key: def.key, name: def.name, how: def.how }; if (A && A.R.key === d.key) { x.ends = A.R.ends === Infinity ? null : this.wall(A.R.ends); x.start = this.wall(A.R.start); } }
     if (ph === 'END') x.end = this.end;
-    if (ph === 'LOBBY') x.min = MIN;
+    if (['HUB', 'PX', 'STORY', 'BOSS'].includes(ph)) {
+      const def = ph === 'HUB' ? PXR.HUB : ph === 'BOSS' ? PXR.BOSS : ph === 'STORY' ? null : d.key === 'mercy' ? PXR.MERCY : PXR.PX_ROOMS[d.key];
+      if (def) x.room = { key: def.key, name: def.name, style: def.style, how: def.how, music: def.music };
+      x.kind = d.kind ?? null; x.wins = d.wins; x.gotKey = d.gotKey; x.gained = d.gained;
+      if (ph === 'STORY') x.story = { key: d.key, mem: PXR.MEMORIES[d.key]?.act || '', text: STORY[d.key] };
+      if (this.ctx) x.ctx = { done: this.ctx.done, left: this.ctx.left, keys: this.ctx.keys, stubs: this.ctx.stubs, memories: this.ctx.memories.map((k) => PXR.MEMORIES[k].act) };
+      if (A && A.px && A.R.st) { x.ends = A.R.ends === Infinity ? null : this.wall(A.R.ends); x.start = this.wall(A.R.start); }
+    }
+    if (ph === 'LOBBY') { x.min = MIN; x.busts = this.busts.map((n) => ({ n, by: this.players.find((p) => p.bust === n)?.id || null })); }
     if (!me) {
       v.cue = this.cue; v.joinUrl = this.joinUrl; v.qr = this.qr; v.voiceOn = voice.enabled();
-      if (A) x.roles = Object.fromEntries(Object.entries(A.R.roles).map(([id, r]) => [id, r.label]));
-      if (A && ((ph === 'ROOM' && ['play', 'win', 'fail'].includes(d.step)) || ph === 'DOOR' || (ph === 'POSSESS' && ['play', 'ready', 'win', 'fail'].includes(d.step)))) { try { x.tv = A.def.tv(A.X, A.R.st); } catch (e) { console.error('mn tv view', A.R.key, e); } }
+      if (A && A.px && A.R.st && ['walk', 'play', 'practice', 'demo', 'won', 'lost'].includes(d.step)) { try { x.px = A.def.tv(A.X, A.R.st); } catch (e) { console.error('mn px tv', A.R.key, e); } }
+      if (A && !A.px) x.roles = Object.fromEntries(Object.entries(A.R.roles).map(([id, r]) => [id, r.label]));
+      if (A && !A.px && ((ph === 'ROOM' && ['play', 'win', 'fail'].includes(d.step)) || ph === 'DOOR' || (ph === 'POSSESS' && ['play', 'ready', 'win', 'fail'].includes(d.step)))) { try { x.tv = A.def.tv(A.X, A.R.st); } catch (e) { console.error('mn tv view', A.R.key, e); } }
       return v;
     }
     const m = { ...this.pub(me), vip: this.vip()?.id === me.id, notes: me.notes, buzz: me.buzz };
     v.me = m;
-    if (A && (ph === 'ROOM' || ph === 'DOOR')) {
+    if (A && A.px && A.R.st && ['walk', 'play', 'practice'].includes(d.step)) { try { m.px = A.def.phone(A.X, me, A.R.st); } catch (e) { console.error('mn px phone', A.R.key, e); } }
+    if (A && !A.px && (ph === 'ROOM' || ph === 'DOOR')) {
       const r = A.R.roles[me.id]; m.role = r?.label || '';
       if (['jobs', 'play'].includes(d.step) || (ph === 'DOOR' && d.step !== 'intro')) { try { const s = A.def.phone(A.X, me, A.R.st); m.role = s.role || m.role; m.job = s.job; if (d.step === 'play') m.w = s.w; } catch (e) { console.error('mn phone view', A.R.key, e); } }
     }

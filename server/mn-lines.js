@@ -59,4 +59,43 @@ const ROOM_LINES = {
   seance: 'The seance room. The spirits forbid talking. Point. Mime. Suffer in silence.',
 };
 
-module.exports = { SAY, ROOM_LINES };
+
+// ---------------------------------------------------------------- the 8-bit house
+const PX = {
+  rules: "You have one candle between you. When it burns out, the house keeps you. Forever. Behind four doors are four rooms, and four pieces of the front door key. Walk the hallway together and choose a door. Every room shows you how first, then lets you practise. Do try to work together. The last guests didn't.",
+  hubFirst: 'This is the hallway. Use the arrows on your phone to walk. Stand at a door with most of your group, and in you go. Do look around. The house hides things.',
+  hubAgain: ['Back in the hallway. Choose the next door.', 'The hallway again. Where to now?', 'Pick a door. Any door. Well. Not any door.'],
+  hubFront: 'All four rooms are done. The front door is waiting. So is the house.',
+  hubMercy: 'Your candle is very low. I have opened a little room for you, on the far left. Do not tell the house.',
+  hubSlow: 'Indecisive. I shall choose for you.',
+  demo: {
+    ice: 'Watch my ghost. On ice, you slide until something stops you. A rock, a friend, or a patch of floor. Someone has to stand on each red button, all at once, to open the gate.',
+    cellar: 'Watch my ghost. Push the crates onto the red buttons. If one gets stuck in a corner, reset them. The grey iron crates are heavy. Two of you must push, one standing behind the other.',
+    dodge: 'Watch. Drag your finger on your phone to move your heart. Dodge everything. A blue bar only hurts if you move, so stand still. An orange bar only hurts if you stand still, so keep moving.',
+    chat: 'This ghost wants something. Each of you has a secret clue on your phone. Read them out, work out the right order, then everyone picks the same act. When the ghost is happy, its name turns yellow. Then choose mercy.',
+  },
+  practice: ['Now you try. This is practice. The candle will not mind.', 'Your turn. Practice first. Nothing counts yet.'],
+  stage: { 1: 'Stage one. The candle is burning.', 2: 'Stage two. A little harder.', 3: 'Final stage. Do not disappoint me. Or do. I enjoy it.' },
+  stageWin: ['Well done.', 'Splendid.', 'Hm. Competent.', 'That will do.'],
+  stageFail: ['Oh dear.', 'Time is up. The candle felt that.', 'The house enjoyed that.'],
+  roomKey: ['A piece of the key. The house is sulking.', 'You found the key piece. How very irritating. For the house, I mean.'],
+  roomNoKey: ['No key piece from that room, I am afraid. The house will be harder to persuade.', 'The key piece stays here. You will miss it at the end.'],
+  mercy: 'A small kindness. Light the candles. Quickly, before the house notices.',
+  boss: 'Oh dear. You have woken the house itself. It does not want you to leave. Nobody ever does. Listen to what it remembers, and show it the memories you found. When its name turns yellow, show it mercy.',
+  bossKeys: { 4: 'All four key pieces. Its grip is already weak.', 3: 'Three key pieces. That will help.', 2: 'Two key pieces. It will hold on tightly.', low: 'Hardly any of the key. It will hold on very tightly indeed.' },
+};
+// one story piece after each room, told in the hallway
+const STORY = {
+  ice: "Every winter, little Lily Hollowmere flooded that hall and let it freeze, so she could skate indoors. The house loved the sound of her laughing. It still listens for it. You found her skates.",
+  cellar: "The night the family left, they went out through the cellar, carrying one lantern. The house watched the light go down the hill. It never came back up. You found the lantern.",
+  dodge: "The ghosts in the storm room were guests too, once. They sheltered from a storm a hundred years ago. The house was so happy to have company, it never let the storm end. You know now that it must.",
+  chat: "Before she left, Lily wrote the house a letter. I never delivered it. I thought it would make the house sad. It says: Thank you for keeping us warm. Let the next people go home. You have the letter now.",
+};
+const ROOM_INTRO = {
+  ice: 'The Ice Hall. The pipes froze a century ago. Nobody fixed them. Nobody ever fixes anything here.',
+  cellar: 'The Wine Cellar. The master kept his wine here. Then he drank it. Then he stacked the crates very badly.',
+  dodge: 'The Storm Room. The ghosts in here are not angry. They are just very, very bored. Mind the lightning.',
+  chat: 'The Parlour. The ghosts in here love a chat. They will not let you pass until they feel listened to.',
+};
+
+module.exports = { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO };

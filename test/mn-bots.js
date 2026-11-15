@@ -22,6 +22,14 @@ function phone(code, name, stop, stats) {
       if (!S || busy || !S.me) continue;
       busy = true;
       try {
+        // the 8-bit rooms: walk about, tap the extra buttons, pick in the battle menus, wiggle the heart
+        const px = S.me.px;
+        if (px) {
+          if (px.pad) { const o = Math.random() < 0.06 && px.btns?.length ? { a: px.btns[0][0] } : { a: 'mv', d: pick(['u', 'd', 'l', 'r', 'u', 'r']) }; await act({ type: 'px', ...o }); }
+          else if (px.menu && !px.mine) await act({ type: 'px', a: 'pick', k: Math.random() < 0.15 ? pick(['FIGHT', 'MERCY']) : pick(px.opts) });
+          else if (px.battle && px.wave) { await act({ type: 'px', a: 'pos', x: 20 + Math.random() * 60, y: 10 + Math.random() * 40, m: 1 }); if (Math.random() < 0.02) await act({ type: 'px', a: 'hit' }); }
+          continue;
+        }
         const ws = S.me.w || []; if (!ws.length || S.step !== 'play') { if (held) { held = false; await act({ type: 'r', a: 'up' }); } continue; }
         const opts = [];
         for (const w of ws) {
@@ -64,7 +72,7 @@ async function one() {
   const t0 = Date.now();
   const r = await new Promise((res) => host.emit('host:start', {}, res));
   if (r?.error) { console.log('start error', r.error); process.exit(1); }
-  while (!(last && last.phase === 'END' && last.step === 'stats') && Date.now() - t0 < 900000) await sleep(500);
+  while (!(last && last.phase === 'END' && last.step === 'stats') && Date.now() - t0 < 2400000) await sleep(500);
   stop.done = true;
   const e = last.x?.end;
   console.log(`players ${last.players.length} (${HUMANS} robot phones), ${Math.round((Date.now() - t0) / 1000)}s: ${e?.escaped ? 'ESCAPED' : 'LOST'} candle ${e?.candle}%, rooms ${e?.rooms}/${e?.of}, keys ${e?.keys}, scares ${scares}, lowest candle ${Math.round(minCandle)}%`);

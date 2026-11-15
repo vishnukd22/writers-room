@@ -86,8 +86,8 @@
     const m = me(); if (!m) return '';
     if (S.phase === 'LOBBY') return `<div class="who">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="room">${esc(S.code)}</div>`;
     const c = Math.max(0, Math.round(S.candle));
-    const keys = [...Array(5).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}"></i>`).join('');
-    return `<div class="who">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="cand ${c < 20 ? 'low' : ''}"><span class="fl"></span><div class="cb"><i style="width:${c}%"></i></div><b>${c}%</b></div><div class="ks" title="${S.keys} of 5 key pieces">${keys}</div>`;
+    const keys = [...Array(4).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}"></i>`).join('');
+    return `<div class="who">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="cand ${c < 20 ? 'low' : ''}"><span class="fl"></span><div class="cb"><i style="width:${c}%"></i></div><b>${c}%</b></div><div class="ks" title="${S.keys} of 4 key pieces">${keys}</div>`;
   }
 
   // ---------------------------------------------------------------- screens
@@ -95,12 +95,25 @@
     LOBBY() {
       const m = me(); const n = S.players.length;
       const list = `<div class="faces">${S.players.map((p) => `<div class="f">${W.bust(p, 'md')}<span>${esc(p.name)}${p.bot ? ' (guest)' : ''}</span></div>`).join('')}</div>`;
-      if (!m.vip) return `${tv("You're inside.", 'Watch the TV. The first player starts the night.', '🕯️')}${list}`;
+      if (!m.vip) return `${tv("You're inside.", 'Watch the TV. The first player starts the night.', '🕯️')}${W.picker(S, m.id)}${list}`;
       const why = n < 2 ? 'You need at least 2. Add a guest if you are short.' : n === 2 ? 'Just two of you? Two more guests will join to fill the jobs.' : `${n} guests ready.`;
-      return `<h2 class="h">You hold the candle</h2><p class="lead">${why} About 20 minutes. Everyone wins together or loses together.</p>
-        <button class="mainbtn" data-a="start" ${n < 2 ? 'disabled' : ''}>Begin the night</button>
+      return `<h2 class="h">You hold the candle</h2><p class="lead">${why} About 25 minutes. Everyone wins together or loses together.</p>
+        ${W.picker(S, m.id)}<button class="mainbtn" data-a="start" ${n < 2 ? 'disabled' : ''}>Begin the night</button>
         <div class="row"><button class="ghostbtn" data-a="addBot">Add a guest</button>${S.players.some((p) => p.bot) ? '<button class="ghostbtn" data-a="removeBots">Remove guests</button>' : ''}</div>${list}`;
     },
+    HUB() { return tv('The hallway', 'Look at the TV.', '🚪'); },
+    STORY() { return `${tv('A memory', esc(S.x.story?.mem || ''), '📜')}${skipBtn()}`; },
+    PX() {
+      const r = S.x.room || {}; const st = S.step; const k = S.x.kind;
+      if (st === 'intro') return `${tv(esc(r.name || ''), esc(r.how || ''), r.style === 'tale' ? '♥' : '🎮')}${skipBtn()}`;
+      if (st === 'demo') return `${tv("Watch Mortimer's ghost", esc(r.how || ''), '👻')}<p class="lead">You play next.</p>`;
+      if (st === 'ready') return tv(k === 'practice' ? 'Practice' : `Stage ${k}`, k === 'practice' ? 'Nothing counts yet.' : 'The candle is burning.', '🕯️');
+      if (st === 'won') return tv('Stage cleared!', 'Well done.', '✨');
+      if (st === 'lost') return tv('Stage failed', 'The candle drips.', '💧');
+      if (st === 'result') return r.key === 'mercy' ? tv(`Candle +${S.x.gained || 0}%`, 'Back to the hallway.', '🕯️') : tv(S.x.gotKey ? 'Key piece found!' : 'No key piece', `${S.x.wins} of 3 stages cleared.`, S.x.gotKey ? '🗝️' : '🔒');
+      return tv('Look at the TV', '', '📺');
+    },
+    BOSS() { return S.step === 'intro' ? `${tv('The House', esc(S.x.room?.how || ''), '🏚️')}${skipBtn()}` : tv('Look at the TV', '', '📺'); },
     INTRO() { return `${tv('Hollowmere House', 'The door has locked behind you. Mortimer is speaking. Look at the TV.', '🚪')}${skipBtn()}`; },
     HALL() { return `${tv('Down the hallway...', `Room ${(S.x.next || 0) + 1} of ${S.rooms} is next. Stay together.`, '🕯️')}${skipBtn()}`; },
     ROOM() {
@@ -150,6 +163,9 @@
     document.body.classList.toggle('low', !['LOBBY', 'END'].includes(S.phase) && S.candle < 20);
     document.body.classList.toggle('mine', S.phase === 'POSSESS' && S.x.who === S.me.id);
     mount(hud, hudHtml());
+    // the 8-bit rooms run their own controls (D-pad, the heart, the battle menu)
+    const pxOn = PX.phone(S, document.getElementById('px'), (type, data) => { if (type === 'px' && (data.a === 'pos' || data.a === 'hit')) socket.emit('act', { type, ...data }, () => {}); else send(type, data); });
+    main.hidden = pxOn; if (pxOn) return;
     // don't redraw under a finger that is rubbing dust or tracing a path: it would drop the touch
     const html = (R[S.phase] || (() => ''))();
     if (dragging && main.__html && main.querySelector('.w-trace, .w-dust')) { pendingHtml = html; return; }
@@ -160,7 +176,7 @@
   // ---------------------------------------------------------------- touching things
   document.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]');
-    if (a) { const t = a.dataset.a; if (['start', 'again', 'menu', 'skip', 'addBot', 'removeBots'].includes(t)) send(t); return; }
+    if (a) { const t = a.dataset.a; if (t === 'bust') { if (!a.disabled) send('bust', { n: Number(a.dataset.n) }); return; } if (['start', 'again', 'menu', 'skip', 'addBot', 'removeBots'].includes(t)) send(t); return; }
     const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
     const id = b.dataset.id; room({ a: b.dataset.act, id, dir: b.dataset.dir || id, i: Number(id) });
     b.classList.add('tapped'); buzz(12);

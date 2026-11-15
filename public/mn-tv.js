@@ -69,12 +69,12 @@
   function candleHtml() {
     if (S.phase === 'LOBBY') return '';
     const c = Math.max(0, Math.min(100, S.candle)); const low = c < 20;
-    const kp = W.thumb('mn-job-key'); const keys = [...Array(5).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}">${i < S.keys ? (kp ? `<img src="${kp}" alt="">` : '🗝️') : ''}</i>`).join('');
+    const kp = W.thumb('mn-job-key'); const keys = [...Array(4).keys()].map((i) => `<i class="${i < S.keys ? 'on' : ''}">${i < S.keys ? (kp ? `<img src="${kp}" alt="">` : '🗝️') : ''}</i>`).join('');
     return `<div class="cwrap ${low ? 'low' : ''} ${c <= 0 ? 'out' : ''}" style="--h:${c}">
       <div class="flame"><div class="glow"></div><div class="fl"></div></div><div class="wick"></div>
       <div class="wax"><span class="drip d1"></span><span class="drip d2"></span></div><div class="dish"></div></div>
       <div class="cnum"><b>${pct()}%</b><span>of your candle</span></div>
-      <div class="keys" title="Key pieces for the front door">${keys}</div><div class="klab">${S.keys} of 5 key pieces</div>`;
+      <div class="keys" title="Key pieces for the front door">${keys}</div><div class="klab">${S.keys} of 4 key pieces</div>`;
   }
 
   // ---------------------------------------------------------------- top bar
@@ -117,15 +117,15 @@
       const faces = S.players.map((p) => `<div class="lg">${W.bust(p, 'lg')}<b>${esc(p.name)}</b>${p.bot ? '<small>guest</small>' : ''}</div>`).join('');
       const tbtn = TEST ? `<div class="tbtns"><button data-tv="bot">Add a bot</button><button data-tv="fill">Fill to 4</button><button data-tv="nobots">No bots</button><button data-tv="start">Start</button></div>` : '';
       return `<div class="lobby">
-        <div class="lt">${title}<p class="tag">Escape Hollowmere House before your one candle burns out. Five rooms, one butler, no refunds.</p>
-          <ul class="facts"><li>2 to 8 players</li><li>About 20 minutes</li><li>Everyone wins or nobody does</li></ul></div>
+        <div class="lt">${title}<p class="tag">Escape Hollowmere House before your one candle burns out. Four rooms, one butler, no refunds.</p>
+          <ul class="facts"><li>2 to 8 players</li><li>About 25 minutes</li><li>Everyone wins or nobody does</li></ul></div>
         <div class="join"><img class="qr" src="${S.qr}" alt="QR code to join"><p>Scan, or go to</p><b class="url">${esc(host())}/mn</b><p>Room code</p><b class="code">${esc(S.code)}</b></div>
         <div class="lfaces">${faces || '<p class="wait">The house is waiting for guests...</p>'}</div>
         <p class="hint">${n < 2 ? 'At least 2 guests, please.' : n === 2 ? 'Two of you? Two more guests will join you. The first phone starts the night.' : 'The first phone starts the night.'}</p>${tbtn}</div>`;
     },
     INTRO() {
       if (S.step === 'door') return `<div class="doorslam">${pic('mn-door', 'big') || '<span class="em">🚪</span>'}</div>`;
-      return `<div class="hall ${img('mn-mortimer-full') ? 'wide' : ''}">${mort('big')}<div class="hx"><h2>Good evening.</h2><p>I am Mortimer. I have been the butler here for a hundred and twelve years. Most of them dead.</p><div class="rules"><span>🕯️ One candle for all of you</span><span>🚪 Five rooms, then the front door</span><span>🗝️ Every room you clear gives you a key piece</span><span>📱 Do what your phone says</span></div></div></div>`;
+      return `<div class="hall ${img('mn-mortimer-full') ? 'wide' : ''}">${mort('big')}<div class="hx"><h2>Good evening.</h2><p>I am Mortimer. I have been the butler here for a hundred and twelve years. Most of them dead.</p><div class="rules"><span>🕯️ One candle for all of you</span><span>🚪 Walk the hallway and pick a door</span><span>🎮 Every room: watch, practise, then 3 stages</span><span>🗝️ Clear 2 stages to win a key piece</span><span>👻 Then face the House itself</span></div></div></div>`;
     },
     HALL() {
       const doors = (S.night || []).map((r, i) => { const cur = i === S.x.next; const st = r.res || (cur ? 'next' : 'shut'); return `<div class="nd st-${st}"><span class="e">${r.res === 'win' ? '🗝️' : r.res === 'fail' ? '✖' : cur ? '🕯️' : '🚪'}</span><b>${r.res || cur ? esc(r.name) : '?'}</b><small>${r.res === 'win' ? 'Cleared' : r.res === 'fail' ? 'Lost' : cur ? 'Next' : ''}</small></div>`; }).join('');
@@ -159,7 +159,7 @@
       if (S.step !== 'stats') return `<div class="endbig ${esc_ ? 'win' : 'lose'}">${art}<h2>${esc_ ? 'You got out.' : 'The house kept you.'}</h2><p>${esc_ ? 'Dawn. Birds. Somewhere, a butler sighs.' : 'Your rooms are ready.'}</p></div>`;
       const scr = e.screamer ? P_(e.screamer) : null; const cl = e.clumsy ? P_(e.clumsy.id) : null;
       return `<div class="stats ${esc_ ? 'win' : 'lose'}">${art}<div class="sx"><h2>${esc_ ? 'You escaped' : 'Lost in the house'}</h2>
-        <div class="sg"><div><b>${e.candle}%</b><span>candle left</span></div><div><b>${e.rooms} of ${e.of}</b><span>rooms cleared</span></div><div><b>${e.keys} of 5</b><span>key pieces</span></div><div><b>${e.best != null ? `${e.best}%` : 'None yet'}</b><span>best escape tonight</span></div></div>
+        <div class="sg"><div><b>${e.candle}%</b><span>candle left</span></div><div><b>${e.rooms} of ${e.of}</b><span>rooms cleared</span></div><div><b>${e.keys} of 4</b><span>key pieces</span></div><div><b>${e.best != null ? `${e.best}%` : 'None yet'}</b><span>best escape tonight</span></div></div>
         <div class="awards">${scr ? `<div class="aw">${W.bust(scr, 'md')}<p><b>Screamed loudest</b>${esc(scr.name)}, the house's favourite</p></div>` : ''}${cl ? `<div class="aw">${W.bust(cl, 'md')}<p><b>Spilled the most wax</b>${esc(cl.name)}, ${e.clumsy.slips}% all by themselves</p></div>` : ''}</div>
         <p class="again">The first phone can play again or go back to the games.</p></div></div>`;
     },
@@ -194,6 +194,7 @@
     const key = `${S.phase}|${S.step}|${S.x.room?.key || S.x.poss?.key || ''}|${S.roomN}`;
     if (key !== lastKey) { lastKey = key; stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter'); }
     mount(stage, html);
+    PX.tv(S, document.getElementById('px'));
     music();
   }
   let lastMusic = null;
@@ -204,6 +205,8 @@
     if (ph === 'ROOM') { if (t === 'memory' || k === 'nursery') key = 'mn-memory'; else if (t === 'timing') { key = 'mn-waltz'; mood = 'gentle'; } else if (t === 'speed') { key = 'mn-speed'; mood = 'tense'; } else key = 'mn-talk'; }
     if (ph === 'POSSESS') { key = 'mn-possessed'; mood = 'tense'; }
     if (ph === 'DOOR') { key = 'mn-finale'; mood = 'tense'; }
+    if (['HUB', 'PX', 'BOSS'].includes(ph) && S.x.room?.music) { key = S.x.room.music; mood = 'tense'; }
+    if (ph === 'STORY') { key = 'px-story'; mood = 'gentle'; }
     if (ph === 'END') { key = S.x.end?.escaped ? 'mn-dawn' : 'mn-lost'; mood = S.x.end?.escaped ? 'gentle' : 'dark'; }
     AV.setBed(k === 'music' && ph === 'ROOM' ? 0.12 : ph === 'ROOM' || ph === 'DOOR' ? 0.35 : 0.5);
     const id = `${key}|${mood}`;
@@ -213,10 +216,10 @@
   let lastBeat = 0; let lastTickSec = null; let nextThunder = Date.now() + 25000;
   setInterval(() => {
     if (!S) return; const now = Date.now();
-    const playing = ['ROOM', 'DOOR', 'POSSESS'].includes(S.phase) && S.step === 'play';
+    const playing = ['ROOM', 'DOOR', 'POSSESS', 'PX', 'BOSS'].includes(S.phase) && S.step === 'play';
     if (playing && S.candle < 20 && now - lastBeat > 5200) { lastBeat = now; AV.fx('mn-heartbeat'); }
     if (playing && S.x.ends) { const left = Math.ceil((S.x.ends - W.now()) / 1000); if (left <= 10 && left > 0 && left !== lastTickSec) { lastTickSec = left; AV.fx('mn-tick', { gap: 0 }); } }
-    if (['LOBBY', 'HALL'].includes(S.phase) && now > nextThunder) { nextThunder = now + 35000 + Math.random() * 40000; AV.fx(Math.random() < 0.6 ? 'mn-thunder' : 'mn-wind'); }
+    if (['LOBBY', 'HALL', 'HUB'].includes(S.phase) && now > nextThunder) { nextThunder = now + 35000 + Math.random() * 40000; AV.fx(Math.random() < 0.6 ? 'mn-thunder' : 'mn-wind'); }
   }, 250);
 
   // ---------------------------------------------------------------- Mortimer, sounds, the scares

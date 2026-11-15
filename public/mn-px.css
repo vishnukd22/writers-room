@@ -1,0 +1,85 @@
+/* Last Night in the Mansion, 8-bit rooms (TV and phone). Pixel font from the Ninja Adventure pack. */
+@font-face { font-family: 'PX'; src: url('/fonts/pixelify/files/pixelify-sans-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'PX'; src: url('/fonts/pixelify/files/pixelify-sans-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: block; }
+
+/* ---------------------------------------------------------------- TV */
+html.gn-tv #px { display: none; }
+html.gn-tv body.pxmode #px { display: block; position: fixed; inset: 0; z-index: 4; background: #0b0710; }
+body.pxmode #app, body.pxmode #backdrop { visibility: hidden; }
+body.pxmode #caption { z-index: 20; }
+body.pxmode #controls { z-index: 21; }
+#pxc { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; }
+#pxhud { position: absolute; inset: 0; pointer-events: none; font-family: 'PX', monospace; color: #fff; }
+.pxtop { position: absolute; left: 2vw; right: 2vw; top: 4.2vh; display: flex; justify-content: space-between; align-items: flex-start; gap: 2vw; }
+.pxtitle { font-size: 2.6vw; text-shadow: 0.25vw 0.25vw 0 #000; line-height: 1.1; }
+.pips { display: flex; gap: .5vw; margin-top: .9vh; }
+.pips span { font-size: 1.1vw; padding: .35vh .6vw; border: 0.18vw solid #5a4a6e; color: #8f82a3; background: rgba(0,0,0,.5); }
+.pips span.on { border-color: #FFD25E; color: #FFD25E; background: rgba(60,40,0,.6); }
+.pxright { display: flex; flex-direction: column; align-items: flex-end; gap: .8vh; }
+.pxcandle { display: flex; align-items: center; gap: .8vw; font-size: 1.3vw; text-shadow: 0.2vw 0.2vw 0 #000; }
+.pxcandle i { display: block; width: 14vw; height: 1.6vh; border: 0.2vw solid #fff; background: #2a1d10; }
+.pxcandle u { display: block; height: 100%; background: linear-gradient(90deg, #FFB443, #FFE08A); }
+.pxcandle.low u { background: #E5484D; animation: pxblink .6s steps(2) infinite; }
+@keyframes pxblink { 50% { opacity: .35; } }
+.pxkeys { display: flex; align-items: center; gap: .45vw; font-size: 1.1vw; color: #cbbfe0; }
+.pxkeys span { width: 1.6vw; height: 1.6vw; background: url('/assets/px/items.png') 0 0 / 700% 100% no-repeat; image-rendering: pixelated; filter: grayscale(1) brightness(.35); }
+.pxkeys span.on { filter: none; }
+.pxkeys b { margin-left: .4vw; font-weight: normal; }
+.pxinfo { position: absolute; left: 50%; bottom: 2.4vh; transform: translateX(-50%); max-width: 80vw; text-align: center; font-size: 1.6vw; background: rgba(0,0,0,.82); border: 0.2vw solid #fff; padding: 1vh 1.4vw; line-height: 1.35; }
+.pxinfo em { color: #9FE7FF; font-style: normal; }
+.pxtag { position: absolute; left: 50%; top: 11vh; transform: translateX(-50%); font-size: 1.5vw; color: #9FE7FF; background: rgba(0,0,0,.75); padding: .6vh 1.2vw; border: 0.18vw solid #9FE7FF; }
+.pxtimer { position: absolute; left: 50%; top: 5vh; transform: translateX(-50%); width: 24vw; height: 1.2vh; border: 0.18vw solid #fff; background: rgba(0,0,0,.6); }
+.pxtimer i { display: block; height: 100%; width: 100%; background: #FFD25E; }
+.pxcard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(70vw, 1100px); background: #000; border: 0.35vw solid #fff; padding: 3vh 3vw; box-shadow: 0 0 0 0.35vw #000; text-align: center; }
+.pxcard h2 { font-family: 'PX', monospace; font-weight: normal; font-size: 3.4vw; margin: 0 0 1.6vh; color: #FFD25E; }
+.pxcard p { font-size: 1.8vw; line-height: 1.45; margin: 0; }
+.pxcard.small { width: auto; min-width: 30vw; }
+.pxcard.win h2 { color: #7CFF7C; } .pxcard.lose h2 { color: #FF6B6B; }
+.pxcard.story { display: flex; gap: 2.4vw; text-align: left; align-items: flex-start; top: auto; bottom: 6vh; transform: translateX(-50%); }
+.pxcard.story h2 { font-size: 2.4vw; }
+.pxcard.story p { font-size: 1.6vw; }
+.pxcard .face { flex: none; width: 9vw; height: 9vw; border: 0.3vw solid #fff; background: url('/assets/px/faces.png') 0 0 / 300% 100% no-repeat; image-rendering: pixelated; }
+
+/* ---------------------------------------------------------------- phone */
+body.pxphone #main { display: none; }
+#px[hidden] { display: none !important; }
+.pxph { font-family: 'PX', monospace; color: #fff; display: flex; flex-direction: column; gap: 1rem; padding-bottom: 1rem; }
+.pxph h2 { font-family: 'PX', monospace; font-weight: normal; color: #7CFF7C; margin: 0; font-size: 1.6rem; text-align: center; }
+.pxph p { margin: 0; font-size: 1rem; line-height: 1.45; text-align: center; }
+#pxinfo { min-height: 4.5rem; display: flex; flex-direction: column; gap: .6rem; justify-content: center; background: #000; border: 3px solid #fff; padding: .7rem .8rem; }
+.pxtagp { align-self: center; font-size: .85rem; color: #9FE7FF; border: 2px solid #9FE7FF; padding: .1rem .5rem; }
+.pxrooms { display: flex; flex-wrap: wrap; justify-content: center; gap: .35rem; }
+.pxrooms span { font-size: .78rem; border: 2px solid #5a4a6e; padding: .15rem .4rem; color: #cbbfe0; }
+.pxrooms span.done { border-color: #7CFF7C; color: #7CFF7C; }
+.pxbtns { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+.pxbtn { font-family: 'PX', monospace; font-size: .95rem; background: #2b1830; color: #FFD25E; border: 3px solid #FFD25E; padding: .55rem .9rem; border-radius: 0; cursor: pointer; }
+.pxbtn.ghost { color: #cbbfe0; border-color: #5a4a6e; }
+.dpad { display: grid; grid-template: ". u ." 1fr "l m r" 1fr ". d ." 1fr / 1fr 1fr 1fr; width: min(78vw, 340px); aspect-ratio: 1; align-self: center; gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.dpad button { font-size: 2.2rem; color: #fff; background: #3a2a48; border: 4px solid #fff; border-radius: 0; box-shadow: inset -6px -6px 0 rgba(0,0,0,.35); touch-action: none; cursor: pointer; }
+.dpad button.down { background: #FFD25E; color: #000; box-shadow: inset 6px 6px 0 rgba(0,0,0,.25); }
+.dpad [data-d="u"] { grid-area: u; } .dpad [data-d="d"] { grid-area: d; } .dpad [data-d="l"] { grid-area: l; } .dpad [data-d="r"] { grid-area: r; }
+.dpad .mid { grid-area: m; background: #2b1830; border: 4px solid #5a4a6e; }
+.pxph.battle { gap: .6rem; }
+#pxbox { display: block; align-self: center; image-rendering: pixelated; touch-action: none; }
+.pxph.battle #pxinfo { min-height: 3rem; }
+#pxdrag { min-height: 34vh; flex: 1; border: 3px dashed #5a4a6e; display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none; background: repeating-linear-gradient(45deg, rgba(255,255,255,.02) 0 12px, transparent 12px 24px); }
+#pxdrag span { color: #8f82a3; font-size: .9rem; pointer-events: none; }
+.pxph.menu { gap: .7rem; }
+.pxph.menu h3 { margin: .2rem 0 0; font-family: 'PX', monospace; font-weight: normal; color: #FF8A1F; display: flex; justify-content: space-between; }
+.pxph.menu h3 small { color: #fff; }
+.clue { background: #000; border: 3px solid #9FE7FF; padding: .6rem .7rem; font-size: .95rem; line-height: 1.45; }
+.clue b { display: block; color: #9FE7FF; font-weight: normal; margin-bottom: .2rem; font-size: .8rem; }
+.clue.boss { border-color: #E5484D; } .clue.boss b { color: #FF8A8A; }
+.acts { display: flex; flex-direction: column; gap: .4rem; }
+.acts .act { font-family: 'PX', monospace; text-align: left; font-size: 1rem; color: #fff; background: #000; border: 3px solid #fff; border-radius: 0; padding: .65rem .7rem; cursor: pointer; }
+.acts .act.on { border-color: #FFE14D; color: #FFE14D; }
+.tops { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: .4rem; }
+.tbtn { font-family: 'PX', monospace; font-size: 1rem; color: #FF8A1F; background: #000; border: 3px solid #FF8A1F; border-radius: 0; padding: .65rem .3rem; cursor: pointer; }
+.tbtn.on { color: #FFE14D; border-color: #FFE14D; background: #2a2000; }
+.tbtn.yellow { color: #FFE14D; border-color: #FFE14D; animation: pxblink 1s steps(2) infinite; }
+.pxph .hint { font-size: .85rem; color: #cbbfe0; }
+
+.pxsaid { position: absolute; right: 2vw; top: 22vh; width: 15vw; display: flex; flex-direction: column; gap: 1.2vh; }
+.pxsaid p { margin: 0; background: #000; border: 0.2vw solid #9FE7FF; padding: 1vh .8vw; font-size: 1.15vw; line-height: 1.35; }
+.pxsaid b { color: #9FE7FF; font-weight: normal; display: block; }
+.pxcandle b, .pxkeys b, .pips span, .pxtitle { font-weight: 700; }

@@ -156,6 +156,11 @@ class Rigged {
   }
   removeBots() { if (this.phase !== 'LOBBY') return; this.players = this.players.filter((p) => !p.bot); this.sync(); }
   setConnected(id, on) { const p = this.P(id); if (p) { p.connected = on; this.lastActive = Date.now(); this.check(); this.sync(); } }
+  setBust(id, n) {
+    const p = this.P(id); n = Number(n);
+    if (!p || p.house || !this.busts.includes(n) || this.players.some((x) => x !== p && x.bust === n)) return { error: 'Someone already picked that one' };
+    p.bust = n; this.sync(); return { ok: true };
+  }
   kick(byId, target) { if (this.phase !== 'LOBBY' || this.vip()?.id !== byId) return; this.players = this.players.filter((p) => p.id !== target); this.hooks.kicked?.(target); this.sync(); }
 
   start(byId) {
@@ -720,6 +725,7 @@ class Rigged {
     this.lastActive = Date.now();
     switch (a.type) {
       case 'start': return this.start(pid);
+      case 'bust': if (this.phase !== 'LOBBY') return {}; return this.setBust(pid, a.n);
       case 'again': this.playAgain(pid); return {};
       case 'menu': if (this.phase === 'END' && this.vip()?.id === pid) this.hooks.menu?.(); return {};
       case 'skip': this.skip(pid); return {};
@@ -892,7 +898,7 @@ class Rigged {
     if (ph === 'RULE') { x.step = d.step; x.picker = d.picker; x.offer = (d.offer || []).map((k) => ({ k, ...C.RULES[k] })); if (d.card) x.card = { k: d.card, ...C.RULES[d.card] }; if (d.old) x.old = { k: d.old, ...C.RULES[d.old] }; }
     if (ph === 'GRUDGE') { x.step = d.step; x.picker = d.picker; x.target = d.target || null; }
     if (ph === 'END') { x.ranks = d.ranks; x.awards = d.awards; x.houseWon = d.houseWon; x.step = d.step; }
-    if (ph === 'LOBBY') x.min = MIN;
+    if (ph === 'LOBBY') { x.min = MIN; x.busts = this.busts.map((n) => ({ n, by: this.players.find((p) => p.bust === n)?.id || null })); }
     if (!me) {
       v.cue = this.cue; v.joinUrl = this.joinUrl; v.qr = this.qr; v.voiceOn = voice.enabled();
       return v;
