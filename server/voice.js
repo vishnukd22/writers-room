@@ -49,11 +49,19 @@ function speakable(t) {
 
 const stripTags = (t) => String(t || '').replace(/\[[^\]]*\]\s*/g, '').replace(/\s+/g, ' ').trim();
 
-// queue so we never hit the plan's concurrency limit
+// queue so we never hit the plan's concurrency limit.
+// Lines a game needs right now jump the queue; lines made ahead of time (prefetch) use at most all but one slot,
+// so one game preparing lots of lines can never starve another game that is speaking.
 const CONC = Number(process.env.ELEVENLABS_CONCURRENCY || 3);
-let active = 0; const waiting = [];
-function slot(urgent) { return new Promise((r) => { if (active < CONC) { active++; r(); } else if (urgent) waiting.unshift(r); else waiting.push(r); }); }
-function release() { active--; const n = waiting.shift(); if (n) { active++; n(); } }
+const BG = CONC > 1 ? CONC - 1 : 1;
+let active = 0; const hi = []; const lo = [];
+function pump() { while (active < CONC && (hi.length || (lo.length && active < BG))) { const e = hi.length ? hi.shift() : lo.shift(); active++; e.go(); } }
+function slot(urgent, key) { return new Promise((go) => { (urgent ? hi : lo).push({ go, key }); pump(); }); }
+function release() { active--; pump(); }
+function promote(key) { const i = lo.findIndex((e) => e.key === key); if (i >= 0) { hi.push(lo.splice(i, 1)[0]); pump(); } }
+// the last few problems, for /voice-check
+const recent = [];
+function note(code, body) { recent.push({ at: new Date().toISOString(), code, body: String(body || '').slice(0, 200) }); if (recent.length > 10) recent.shift(); }
 
 async function request(text, voice, model, speed) {
   const ctrl = new AbortController();
@@ -72,14 +80,14 @@ async function request(text, voice, model, speed) {
 // Characters use a fast model so scenes play without gaps; the hosts keep the expressive one.
 const FAST = () => process.env.ELEVENLABS_FAST_MODEL || 'eleven_flash_v2_5';
 let fastBroken = false;
-async function synth(text, voice, urgent, fast, speed) {
-  await slot(urgent);
+async function synth(text, voice, urgent, fast, speed, key) {
+  await slot(urgent, key);
   try {
     if (fast && !fastBroken) {
       let r = await request(stripTags(text), voice, FAST(), speed);
       if (r.error && speed && (r.error === 400 || r.error === 422)) { console.error('[voice] speed refused, using normal speed:', r.body || ''); r = await request(stripTags(text), voice, FAST()); }
       if (!r.error) return { buf: r.buf };
-      console.error('[voice] fast model failed, using the normal one:', r.error, r.body || ''); fastBroken = true;
+      console.error('[voice] fast model failed, using the normal one:', r.error, r.body || ''); note(r.error, r.body); if (r.error !== 429 && r.error !== 'timeout') fastBroken = true;
     }
     let model = v3Broken ? 'eleven_multilingual_v2' : MODEL();
     let input = model === 'eleven_v3' ? text : stripTags(text);
@@ -89,7 +97,7 @@ async function synth(text, voice, urgent, fast, speed) {
       v3Broken = true; model = 'eleven_multilingual_v2'; input = stripTags(text);
       r = await request(input, voice, model);
     }
-    if (r.error) { console.error('[voice] error', r.error, r.body || ''); return { error: r.error }; }
+    if (r.error) { console.error('[voice] error', r.error, r.body || ''); note(r.error, r.body); return { error: r.error }; }
     return { buf: r.buf };
   } finally { release(); }
 }
@@ -101,12 +109,12 @@ function get(text, voice, urgent = false, fast = false, speed = 1) {
   voice = voice || NARRATOR();
   if (badVoices.has(voice)) voice = voice === lgFound ? LG_FALLBACK : NARRATOR();
   const key = `${voice}|${fast ? 'f' : ''}|${speed}|${text}`;
-  if (byKey.has(key)) return byKey.get(key);
+  if (byKey.has(key)) { if (urgent) promote(key); return byKey.get(key); }
   const p = (async () => {
-    let r = await synth(text, voice, urgent, fast, speed);
+    let r = await synth(text, voice, urgent, fast, speed, key);
     if (r.error && voice !== NARRATOR() && (r.error === 404 || r.error === 400 || r.error === 422)) {
       badVoices.add(voice);
-      r = await synth(text, NARRATOR(), urgent, fast, speed);
+      r = await synth(text, NARRATOR(), urgent, fast, speed, key);
     }
     if (!r.buf) { byKey.delete(key); return null; }
     const id = crypto.randomBytes(8).toString('hex');
@@ -158,4 +166,12 @@ const RG = () => process.env.ELEVENLABS_RG_VOICE_ID || 'nPczCjzI2devNBz1zQrb'; /
 // Last Night in the Mansion's butler, Mortimer: an older, posh, polite British voice. Set ELEVENLABS_MN_VOICE_ID to change it.
 const MN = () => process.env.ELEVENLABS_MN_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; // "George"
 
-module.exports = { enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, BC_SID, RG, MN, charVoices };
+// what /voice-check shows: is the key there, is anything stuck, what went wrong lately, how much of the plan is used
+async function status() {
+  const out = { keySet: enabled(), model: MODEL(), fastModel: FAST(), fastBroken, v3Broken, busy: active, waiting: hi.length + lo.length, recentErrors: recent };
+  if (enabled()) {
+    try { const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': KEY() } }); if (r.ok) { const j = await r.json(); out.plan = j.tier; out.charactersUsed = j.character_count; out.characterLimit = j.character_limit; out.resetsAt = j.next_character_count_reset_unix ? new Date(j.next_character_count_reset_unix * 1000).toISOString() : null; } else out.plan = `could not read (${r.status})`; } catch (e) { out.plan = `could not read (${e.message})`; }
+  }
+  return out;
+}
+module.exports = { status, enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, BC_SID, RG, MN, charVoices };

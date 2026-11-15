@@ -79,7 +79,10 @@ app.use('/fonts/kalam', express.static(path.join(NM, '@fontsource', 'kalam'), { 
 app.use('/fonts/bungee', express.static(path.join(NM, '@fontsource', 'bungee'), { maxAge: '30d' }));
 app.use('/fonts/shrikhand', express.static(path.join(NM, '@fontsource', 'shrikhand'), { maxAge: '30d' }));
 app.use('/fonts/inter', express.static(path.join(NM, '@fontsource-variable', 'inter'), { maxAge: '30d' }));
+// a quick health check for the narrator voices: open /voice-check in a browser
+app.get('/voice-check', async (req, res) => { try { res.json(await voice.status()); } catch (e) { res.status(500).json({ error: e.message }); } });
 app.use('/fonts/pixelify', express.static(path.join(NM, '@fontsource', 'pixelify-sans'), { maxAge: '30d' }));
+app.use('/fonts/bricolage', express.static(path.join(NM, '@fontsource', 'bricolage-grotesque'), { maxAge: '30d' }));
 app.use('/fonts/fell', express.static(path.join(NM, '@fontsource', 'im-fell-english'), { maxAge: '30d' }));
 // Pictures and music can be cached for days. Code is always checked for updates, so a new upload shows up at once.
 app.use('/assets', express.static(path.join(PUBLIC, 'assets'), { maxAge: '7d' }));
