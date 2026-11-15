@@ -57,6 +57,8 @@
   // ---------------------------------------------------------------- helpers
   const aed = (n) => `${n < 0 ? '-' : ''}AED ${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
   const num = (n) => Math.round(n).toLocaleString('en-US');
+  const teamName = (ids) => (ids || []).map((id) => esc(P_(id)?.name || '')).join(' + ');
+  const teamBusts = (ids, size) => `<div class="team">${(ids || []).map((id) => W.bust(P_(id), size)).join('')}</div>`;
   const signed = (n) => `${n >= 0 ? '+' : '-'}${aed(Math.abs(n))}`;
   const T = () => { if (!S.endsAt) return ''; if (!totals[S.endsAt]) totals[S.endsAt] = Math.max(1, S.endsAt - W.now()); return `data-ends="${S.endsAt}" data-total="${totals[S.endsAt]}"`; };
   const timer = () => (S.endsAt ? `<div class="timer"><i ${T()} data-kind="bar"></i></div>` : '');
@@ -80,8 +82,8 @@
   let lastArt = '';
   function setYard() {
     const ph = S.phase;
-    const want = ph === 'LOBBY' || ph === 'INTRO' || ph === 'TUTORIAL' ? 'bc-yard' : ph === 'AUCTION' || ph === 'BET' ? 'bc-auction' : ph === 'REVEAL' || ph === 'AFTER' ? 'bc-inside' : ph === 'FINALE' || ph === 'END' ? 'bc-finale' : 'bc-yard';
-    const img = W.img(want) || W.img('bc-yard');
+    const want = ph === 'LOBBY' || ph === 'INTRO' || ph === 'TUTORIAL' ? 'bc-yard' : ph === 'AUCTION' || ph === 'BET' ? 'bc-auction' : ph === 'REVEAL' || ph === 'AFTER' ? 'bc-inside' : ph === 'FINALE' || ph === 'END' ? 'bc-finale' : ph === 'BACKROOM' ? 'bc-alley' : 'bc-yard';
+    const img = W.img(want) || (want === 'bc-alley' ? null : W.img('bc-yard'));
     const key = `${img}|${ph}`; if (key === lastArt) return; lastArt = key;
     $('#yard').className = `${img ? 'has-art' : ''} p-${ph.toLowerCase()}`;
     $('#art').style.backgroundImage = img ? `url(${img})` : 'none';
@@ -91,17 +93,18 @@
   function topBar() {
     const lk = S.locker;
     const logo = W.img('bc-logo') ? `<img class="logo" src="${W.img('bc-logo')}" alt="BID-COIN!">` : '<div class="logo word">BID-COIN!</div>';
-    const mid = lk ? `<div class="lnum"><span>Locker ${lk.n} of ${lk.total}</span><b>${esc(lk.origin)}</b>${lk.special === 'mega' ? '<em class="sp mega">The billionaire\'s vault: more stuff, better stuff</em>' : lk.special === 'mystery' ? '<em class="sp mys">Mystery locker: no peeking</em>' : lk.special === 'garage' ? '<em class="sp gar">A garage: there\'s a car at the back</em>' : ''}</div>` : '<div></div>';
+    const mid = S.phase === 'BACKROOM' ? '<div class="lnum"><span>Invitation only</span><b>Shifty Sid\'s back room</b><em class="sp mys">A grubby locker for the bottom half</em></div>' : lk ? `<div class="lnum"><span>Locker ${lk.n} of ${lk.total}</span><b>${esc(lk.origin)}</b>${lk.special === 'mega' ? '<em class="sp mega">The billionaire\'s vault: more stuff, better stuff</em>' : lk.special === 'mystery' ? '<em class="sp mys">Mystery locker: no peeking</em>' : lk.special === 'garage' ? '<em class="sp gar">A garage: there\'s a car at the back</em>' : ''}</div>` : '<div></div>';
     return `${S.phase === 'LOBBY' ? '<div></div>' : logo}${mid}<div class="code"><b>${esc(S.code)}</b><small>${esc(host())}/bc${TEST ? ' · test mode' : ''}</small></div>`;
   }
   function dockHtml() {
     if (S.phase === 'LOBBY') return '';
     const a = S.auc; const lk = S.locker;
     return `<div class="paddles">${S.players.map((p, i) => {
-      const lead = a && a.leader === p.id && S.phase === 'AUCTION';
-      const owner = lk && lk.owner === p.id && ['BET', 'REVEAL', 'AFTER', 'RESULT'].includes(S.phase);
+      const lead = a && S.phase === 'AUCTION' && (a.leader === p.id || (a.team || []).includes(p.id));
+      const owner = lk && (lk.owner === p.id || (lk.syn?.members || []).includes(p.id)) && ['BET', 'REVEAL', 'AFTER', 'RESULT'].includes(S.phase);
+      const teamed = lk && ['PEEK', 'AUCTION', 'BET'].includes(S.phase) && (lk.synds || []).some((sy) => sy.members.includes(p.id));
       const frozen = a && a.frozen && a.frozen[p.id] && S.phase === 'AUCTION';
-      const status = S.phase === 'PEEK' ? (p.ready ? '<em class="st ok">Seen it</em>' : '<em class="st">Peeking</em>') : S.phase === 'BET' && lk && lk.owner !== p.id ? (p.bet ? '<em class="st ok">Bet placed</em>' : '') : '';
+      const status = teamed && S.phase !== 'BET' ? '<em class="st team">🤝 Teamed up</em>' : S.phase === 'PEEK' ? (p.ready ? '<em class="st ok">Seen it</em>' : '<em class="st">Peeking</em>') : S.phase === 'BET' && lk && lk.owner !== p.id ? (p.bet ? '<em class="st ok">Bet placed</em>' : '') : '';
       return `<div class="paddle ${lead ? 'lead' : ''} ${owner ? 'owner' : ''} ${frozen ? 'frozen' : ''} ${p.connected ? '' : 'off'}" id="pd-${p.id}" style="--c:${p.color}"><div class="num">${i + 1}</div>${W.bust(p, 'md')}<div class="pt"><b>${esc(p.name)}</b><span class="cash">${aed(p.cash)}</span></div><div class="inv">${'<i class="cd"></i>'.repeat(p.cards)}${p.sealed ? `<i class="sl" title="sealed">🔒${p.sealed > 1 ? p.sealed : ''}</i>` : ''}${p.cursed ? `<i class="cu" title="cursed">🧿${p.cursed > 1 ? p.cursed : ''}</i>` : ''}</div>${status}${frozen ? '<em class="ice">Frozen</em>' : ''}</div>`;
     }).join('')}</div>`;
   }
@@ -132,7 +135,8 @@
       const k = S.x.key; let body = '';
       if (k === 'peek') body = `<div class="tut-peek">${door('crack', { n: 1 }, shapes(6))}<div class="phones">${['Rolex?', 'A guitar', 'Old shoes'].map((t, i) => `<div class="mini" style="--r:${rot(i)}deg"><span>Your peek</span><b>${t}</b></div>`).join('')}</div></div><p class="tnote">Everyone sees something different. Only you know what you saw.</p>`;
       if (k === 'bid') body = `<div class="tut-bid"><div class="bigprice">${aed(S.rules.start * 0.3)}</div><div class="incs">${S.rules.inc.map((n) => `<span>+${num(n)}</span>`).join('')}</div><div class="calls"><em>Going once</em><em>Going twice</em><em class="sold">SOLD</em></div></div><p class="tnote">No bids for 5 seconds and the hammer falls.</p>`;
-      if (k === 'bet') body = `<div class="tut-bet"><div class="bb v-boom">BOOM<small>they make money</small></div><div class="bb v-bust">BUST<small>they lose money</small></div></div><p class="tnote">Bet ${aed(S.rules.stake)}. Win it, and you get a power card too.</p>`;
+      if (k === 'bet') body = `<div class="tut-bet"><div class="bb v-boom">BOOM<small>they make money</small></div><div class="bb v-bust">BUST<small>they lose money</small></div></div><p class="tnote">Pick how much. The bottom half can go all in. The top half can bet up to 25% of their cash.</p>`;
+      if (k === 'comeback') body = `<div class="tut-comeback"><div class="cb"><span>🤝</span><b>Team up</b><small>Pool your cash with another player. Bid together, split the profit.</small></div><div class="cb sid"><span>🕴️</span><b>Shifty Sid</b><small>Twice a game he sells a grubby locker to the bottom half only. One secret bid each.</small></div></div><p class="tnote">Only for the bottom half of the table. Climb into the top half and you fight like everyone else.</p>`;
       if (k === 'cards') body = `<div class="fan">${['freeze', 'plant', 'steal', 'tax', 'phantom'].map((c, i) => `<div class="pcard" style="--i:${i}">${cardArt(c)}<b>${CARD[c][0]}</b></div>`).join('')}</div><p class="tnote">You start with 2. Win a locker or a bet to get more. Hold up to ${S.rules.hand}.</p>`;
       const prog = Array.from({ length: S.x.slides }, (_, i) => `<i class="${i === S.x.slide ? 'on' : i < S.x.slide ? 'done' : ''}"></i>`).join('');
       return `<div class="center tut"><div class="tprog">${prog}</div><h2 class="say">${esc(S.x.title || '')}</h2>${body}</div>`;
@@ -152,17 +156,29 @@
     BET() {
       const lk = S.locker; const a = S.auc;
       if (S.step === 'none') return `<div class="center"><div class="stampbig grey">No takers</div><p class="lede">Nobody bid. Let's see what you missed.</p></div>`;
-      const who = lk.phantom ? '<div class="phantom">👻</div><b>The mystery bidder</b>' : `${W.bust(P_(lk.owner), 'xl')}<b>${name(lk.owner)}</b>`;
+      const who = lk.phantom ? '<div class="phantom">👻</div><b>The mystery bidder</b>' : lk.syn ? `${teamBusts(lk.syn.members, 'lg')}<b>Team ${teamName(lk.syn.members)}</b>` : `${W.bust(P_(lk.owner), 'xl')}<b>${name(lk.owner)}</b>`;
       return `<div class="center"><div class="sold"><div class="soldstamp">SOLD</div><div class="winner" style="--c:${P_(lk.owner)?.color || '#888'}">${who}<span class="price">${aed(lk.price || a?.price || 0)}</span>${lk.stolen ? `<em class="stolen">Stolen from ${name(lk.stolen.from)}</em>` : ''}</div></div>
-        <h2 class="say">${lk.phantom ? 'Nobody gets it. But will it boom?' : 'Boom or bust? Bet on your phone'}</h2>${timer()}<p class="count" id="bets">${lk.betCount || 0} bets placed</p></div>`;
+        <h2 class="say">${lk.phantom ? 'Nobody gets it. But will it boom?' : 'Boom or bust? Bet on your phone'}</h2>${timer()}<p class="count" id="bets">${lk.betCount || 0} bets placed${lk.betPot ? `, ${aed(lk.betPot)} riding on it` : ''}</p></div>`;
     },
     REVEAL() { return revealHtml(); },
+    BACKROOM() {
+      const x = S.x.br || {}; const st = S.step;
+      const sid = W.img('bc-sid') ? `<img class="sidart" src="${W.img('bc-sid')}" alt="Shifty Sid">` : '<div class="sidfig">🕴️</div>';
+      const guests = `<div class="brguests">${(x.invited || []).map((id) => `<div class="g">${W.bust(P_(id), 'md')}<b>${name(id)}</b></div>`).join('')}</div>`;
+      if (st === 'invite') return `<div class="center backroom">${sid}<h2 class="say">Shifty Sid's back room</h2><p class="lede">Invitation only. The big spenders wait outside.</p>${guests}</div>`;
+      if (st === 'bid') return `<div class="center backroom"><div class="split">${sid}<div class="side"><h2 class="say">Sealed bids</h2><p class="lede">One secret bid each. Highest takes the locker. Everyone else: Boom or Bust?</p>${guests}${timer()}<p class="count" id="brcount">${x.bids || 0} of ${(x.invited || []).length} bids in. ${x.betCount || 0} side bets.</p></div></div></div>`;
+      if (st === 'none') return `<div class="center backroom">${sid}<h2 class="say">No bids</h2><p class="lede">Sid shrugs and vanishes into the alley.</p></div>`;
+      const bids = (x.allBids || []).map((b, i) => `<li class="${i === 0 && b.amt ? 'top' : ''}">${W.bust(P_(b.id), 'sm')}<span>${name(b.id)}</span><b>${b.amt ? aed(b.amt) : 'Passed'}</b></li>`).join('');
+      if (st === 'won') return `<div class="center backroom"><h2 class="say">${name(x.owner)} takes Sid's locker</h2><ol class="brbids">${bids}</ol></div>`;
+      const shown = (x.shown || []); const found = shown.reduce((t, it) => t + (it.value || 0), 0); const v = x.verdict;
+      return `<div class="center backroom reveal"><div class="toprow"><div class="meter"><div><small>${name(x.owner)} paid</small><b>${aed(x.price)}</b></div><div><small>Found so far</small><b class="${found >= x.price ? 'g' : ''}">${aed(found)}</b></div>${v ? `<div class="verdict ${v.profit > 0 ? 'v-boom' : 'v-bust'}">${v.profit > 0 ? 'BOOM' : 'BUST'}<span>${signed(v.profit)}</span></div>` : ''}</div></div><div class="grid n${Math.min(11, shown.length)}" id="grid">${shown.map((it, i) => itemCard(it, i, i === shown.length - 1 && !v ? 'new' : '')).join('')}</div>${betRow(x.bets)}</div>`;
+    },
     AFTER() { return revealHtml(true); },
     RESULT() {
       const lk = S.locker; const r = lk.result || {};
       const ranked = [...S.players].sort((a, b) => b.cash - a.cash);
       const max = Math.max(1, ...ranked.map((p) => p.cash));
-      const head = r.owner ? `<h2 class="say">${name(r.owner)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2>` : `<h2 class="say">${r.phantom ? 'The phantom kept it' : 'Nobody bought it'}</h2>`;
+      const head = r.syn ? `<h2 class="say">Team ${teamName(r.syn)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2><p class="lede">${r.syn.map((id) => `${name(id)} ${signed((r.split?.[id]?.got || 0) - (r.split?.[id]?.paid || 0))}`).join('. ')}</p>` : r.owner ? `<h2 class="say">${name(r.owner)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2>` : `<h2 class="say">${r.phantom ? 'The phantom kept it' : 'Nobody bought it'}</h2>`;
       const fx = (lk.effects || []).filter((e) => e.k === 'tax' && e.cut).map((e) => `<p class="lede">The Tax Man took ${aed(e.cut)} for ${name(e.by)}.</p>`).join('');
       const bars = ranked.map((p, i) => `<div class="bar" style="--c:${p.color};--w:${Math.max(4, (p.cash / max) * 100)}%;--i:${i}">${W.bust(p, 'sm')}<b>${esc(p.name)}</b><span><i></i></span><em>${aed(p.cash)}</em></div>`).join('');
       return `<div class="center result">${head}${fx}<div class="bars">${bars}</div><p class="hint">${lk.n < lk.total ? `Next: locker ${lk.n + 1}` : 'That was the last one'}</p></div>`;
@@ -186,6 +202,10 @@
     },
   };
 
+  function betRow(bets) {
+    if (!bets) return '';
+    return `<div class="betrow">${Object.entries(bets).map(([id, b]) => `<span class="chip ${b.won ? 'won' : 'lost'}">${name(id)}: ${b.pick === 'boom' ? 'Boom' : 'Bust'} ${b.won ? '+' : '-'}${num(b.paid ?? b.amt ?? 0)}${b.all ? ' ALL IN' : ''}</span>`).join('')}</div>`;
+  }
   function revealHtml(after) {
     const lk = S.locker; const shown = lk.shown || []; const last = shown[shown.length - 1];
     const v = lk.verdict; const st = S.step;
@@ -195,7 +215,7 @@
     const meter = lk.owner || lk.phantom ? `<div class="meter" id="meter"><div><small>Paid</small><b>${aed(lk.price)}</b></div><div><small>Found so far</small><b class="${found >= lk.price ? 'g' : ''}">${aed(found)}</b></div>${v ? `<div class="verdict ${v.profit > 0 ? 'v-boom' : 'v-bust'}">${v.profit > 0 ? 'BOOM' : 'BUST'}<span>${signed(v.profit)}</span></div>` : ''}</div>` : `<div class="meter" id="meter"><div><small>Nobody paid</small><b>AED 0</b></div><div><small>Worth</small><b>${aed(found)}</b></div></div>`;
     const spot = last && !v && !after && st !== 'plant' ? `<div class="spot" id="spot"><p class="line">${esc(last.line || '')}</p>${last.credit ? `<small class="credit">Photo: ${esc(last.credit)}</small>` : ''}</div>` : '';
     const backHint = st === 'back' && (!last || !last.back) ? '<div class="backhint">At the back of the locker...</div>' : '';
-    const bets = lk.bets ? `<div class="betrow">${Object.entries(lk.bets).map(([id, b]) => `<span class="chip ${b.won ? 'won' : 'lost'}">${name(id)}: ${b.pick === 'boom' ? 'Boom' : 'Bust'} ${b.won ? `+${S.rules.stake}` : `-${S.rules.stake}`}</span>`).join('')}</div>` : '';
+    const bets = betRow(lk.bets);
     const fx = (lk.effects || []).map((e) => `<span class="chip fx">${CARD[e.k]?.[1] || ''} ${name(e.by)}: ${CARD[e.k]?.[0] || e.k}${e.item ? ` (${esc(e.item)})` : ''}</span>`).join('');
     const afterBar = after ? `<div class="afterbar"><b>Last chance for power cards</b>${timer()}</div>` : '';
     return `<div class="reveal"><div class="toprow">${meter}${afterBar}</div>${backHint}<div class="grid n${Math.min(11, shown.length + (lk.plants || []).length)}" id="grid">${grid}${plants}</div>${spot}${bets}${fx ? `<div class="betrow">${fx}</div>` : ''}</div>`;
@@ -216,7 +236,7 @@
     const a = AUC || S.auc; if (!a) return '';
     const lead = a.leader; const lp = P_(lead);
     const call = a.done && lead ? '<div class="call sold">SOLD</div>' : a.calls === 2 ? '<div class="call c2">Going twice</div>' : a.calls === 1 ? '<div class="call c1">Going once</div>' : '';
-    const who = lead === 'phantom' ? '<div class="leader ph"><div class="phantom sm">👻</div><b>Mystery bidder</b></div>' : lp ? `<div class="leader" style="--c:${lp.color}">${W.bust(lp, 'lg')}<b>${esc(lp.name)}</b></div>` : '<div class="leader none"><b>No bids yet</b><small>Opening at</small></div>';
+    const who = lead === 'phantom' ? '<div class="leader ph"><div class="phantom sm">👻</div><b>Mystery bidder</b></div>' : a.team ? `<div class="leader" style="--c:${lp?.color || '#888'}">${teamBusts(a.team, 'md')}<b>Team ${teamName(a.team)}</b></div>` : lp ? `<div class="leader" style="--c:${lp.color}">${W.bust(lp, 'lg')}<b>${esc(lp.name)}</b></div>` : '<div class="leader none"><b>No bids yet</b><small>Opening at</small></div>';
     const hist = a.hist.slice().reverse().map((h, i) => `<li class="${i === 0 ? 'top' : ''}"><span>${name(h.who)}</span><b>+${num(h.inc)}</b><em>${num(h.price)}</em></li>`).join('');
     const frozen = Object.keys(a.frozen || {}).map((id) => `<span class="chip ice">🧊 ${name(id)}</span>`).join('');
     return `<div class="price ${a.calls ? 'hot' : ''}" id="price"><small>AED</small>${num(a.price)}</div>${who}${call}<div class="hammer"><i id="hbar" style="--dl:${a.dl}ms;--win:${a.win}ms" class="${a.done ? 'done' : ''}" data-k="${a.seq}"></i></div><ol class="hist">${hist}</ol>${frozen ? `<div class="frozen">${frozen}</div>` : ''}`;
@@ -253,7 +273,7 @@
     document.body.dataset.phase = S.phase;
     setYard(); mount(top, topBar()); mount(dock, dockHtml());
     const html = (R[S.phase] || (() => ''))();
-    const key = `${S.phase}|${S.locker?.n || 0}|${S.phase === 'BET' ? S.step : ''}|${S.phase === 'FINALE' ? `${S.x.step}${S.x.box?.name || ''}${S.x.who || ''}` : ''}|${S.phase === 'TUTORIAL' ? S.x.slide : ''}`;
+    const key = `${S.phase}|${S.locker?.n || 0}|${S.phase === 'BET' || S.phase === 'BACKROOM' ? S.step : ''}|${S.phase === 'FINALE' ? `${S.x.step}${S.x.box?.name || ''}${S.x.who || ''}` : ''}|${S.phase === 'TUTORIAL' ? S.x.slide : ''}`;
     if (key !== lastKey) {
       lastKey = key; stage.classList.remove('enter'); void stage.offsetWidth; stage.classList.add('enter');
       stage.innerHTML = html; stage.__html = html; stage.__skel = skeleton(stage);
@@ -276,6 +296,7 @@
     else if (ph === 'AUCTION' || ph === 'BET') { key = 'bc-auction'; mood = 'pitch'; }
     else if (ph === 'REVEAL' || ph === 'AFTER' || ph === 'RESULT') { key = 'bc-reveal'; mood = 'ratings'; }
     else if (ph === 'FINALE' || ph === 'END') { key = 'bc-finale'; mood = 'finale'; }
+    else if (ph === 'BACKROOM') { key = 'bc-backroom'; mood = 'tense'; }
     AV.setBed(ph === 'AUCTION' ? 0.42 : 0.5);
     const id = `${key}|${mood}`;
     if (id !== lastMusic) { lastMusic = id; AV.music(key, mood); }

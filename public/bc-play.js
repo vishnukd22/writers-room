@@ -51,7 +51,7 @@
   function feel() {
     if (!P || !S.me) return;
     if (P.phase !== S.phase) { window.scrollTo(0, 0); closePicker(); }
-    if (['PEEK', 'AUCTION', 'BET'].includes(S.phase) && P.phase !== S.phase) buzz(S.phase === 'AUCTION' ? [80, 40, 80] : 40);
+    if (['PEEK', 'AUCTION', 'BET', 'BACKROOM'].includes(S.phase) && P.phase !== S.phase) buzz(S.phase === 'AUCTION' ? [80, 40, 80] : 40);
   }
 
   // ---------------------------------------------------------------- helpers
@@ -78,6 +78,18 @@
   const cardBtn = (c, extra = '') => `<button class="pcard ${c.usable ? 'live' : ''}" data-a="card" data-k="${c.k}" ${c.usable ? '' : 'disabled'}>${cardPic(c.k)}<b>${CARD[c.k][0]}</b><small>${c.usable ? 'Tap to use' : WHEN[c.k]}</small>${extra}</button>`;
   const usable = (keys) => (me().hand || []).filter((c) => keys.includes(c.k) && c.usable);
   const cardsRow = (keys) => { const cs = usable(keys); return cs.length ? `<div class="cardsrow">${cs.map((c) => cardBtn(c)).join('')}</div>` : ''; };
+  // side bets: choose an amount, then Boom or Bust
+  let betAmt = null;
+  function betPicker(opt, label) {
+    const amts = [...(opt.amts || [])]; if (opt.all) amts.push('all');
+    if (!amts.length) return '<div class="placed">Not enough cash to bet.</div>';
+    if (!amts.includes(betAmt)) betAmt = amts[0];
+    const chips = amts.map((a) => `<button class="chipbtn ${a === betAmt ? 'on' : ''} ${a === 'all' ? 'allin' : ''}" data-a="betAmt" data-v="${a}">${a === 'all' ? `ALL IN<small>${num(opt.all)}</small>` : num(a)}</button>`).join('');
+    const why = opt.low ? 'You are in the bottom half: bet as much as you like.' : `Top half: up to ${aed(opt.max)}.`;
+    return `${label ? `<p class="lead center">${label}</p>` : ''}<div class="chips" id="betchips">${chips}</div><p class="hint center">${why}</p><div class="bb"><button class="btn bt-boom" data-a="bet" data-pick="boom">BOOM<small>they profit</small></button><button class="btn bt-bust" data-a="bet" data-pick="bust">BUST<small>they lose</small></button></div><button class="btn ghost" data-a="bet" data-pick="none">No bet</button>`;
+  }
+  const placedHtml = (b) => `<div class="placed">${b === 'none' ? 'No bet this time.' : `You bet <b>${b === 'boom' ? 'BOOM' : 'BUST'}</b>.`}</div>`;
+  const teamNames = (ids) => (ids || []).map((id) => esc(P_(id)?.name || '')).join(' + ');
   const peekCard = (it) => `<div class="peek ${it.xray ? 'xr' : ''}"><div class="ph">${pic(it)}</div><div><b>${esc(it.name)}</b><p>${esc(it.line || '')}</p>${it.sealed ? '<em class="sealed">Sealed: opened at the very end</em>' : ''}${it.xray ? '<em class="xr">X-Ray</em>' : ''}</div></div>`;
 
   // ---------------------------------------------------------------- the paddle (the fast part)
@@ -89,18 +101,19 @@
   }
   function paddle() {
     const a = AUC; const m = me(); if (!a) return '';
-    const mine = a.leader === m.id;
+    const mine = a.leader === m.id || (a.team || []).includes(m.id); const purse = m.purse ?? m.cash;
     const frozenMs = (a.frozen && a.frozen[m.id]) ? Math.max(0, a.frozen[m.id] - (performance.now() - aucAt)) : 0;
     const status = a.done ? (mine ? '<div class="status win">SOLD to you!</div>' : '<div class="status">SOLD</div>')
-      : mine ? '<div class="status win">You are winning!</div>'
+      : mine ? `<div class="status win">${a.team ? 'Your team is winning!' : 'You are winning!'}</div>`
       : a.leader === 'phantom' ? '<div class="status">A mystery bidder leads</div>'
       : a.leader ? `<div class="status" style="--c:${P_(a.leader)?.color}">${name(a.leader)} leads</div>` : '<div class="status">No bids yet</div>';
     const call = a.done ? '' : a.calls === 2 ? '<em class="call c2">Going twice!</em>' : a.calls === 1 ? '<em class="call c1">Going once</em>' : '';
     const btns = (S.rules.inc || [500, 1000, 5000]).map((inc, i) => {
-      const to = a.price + inc; const off = a.done || mine || frozenMs > 0 || to > m.cash;
-      return `<button class="bid b${i}" data-bid="${inc}" ${off ? 'disabled' : ''}><b>+${num(inc)}</b><span>${to > m.cash ? 'Too much' : `to ${num(to)}`}</span></button>`;
+      const to = a.price + inc; const off = a.done || mine || frozenMs > 0 || to > purse;
+      return `<button class="bid b${i}" data-bid="${inc}" ${off ? 'disabled' : ''}><b>+${num(inc)}</b><span>${to > purse ? 'Too much' : `to ${num(to)}`}</span></button>`;
     }).join('');
-    return `<div class="pricebox ${a.calls ? 'hot' : ''}"><small>AED</small><b>${num(a.price)}</b>${call}</div>${status}<div class="hammer"><i id="hbar"></i></div>
+    const teamTag = purse !== m.cash ? `<div class="teambox">🤝 Team money: ${aed(purse)}</div>` : '';
+    return `${teamTag}<div class="pricebox ${a.calls ? 'hot' : ''}"><small>AED</small><b>${num(a.price)}</b>${call}</div>${status}<div class="hammer"><i id="hbar"></i></div>
       <div class="bids ${frozenMs ? 'iced' : ''}">${btns}${frozenMs ? `<div class="ice">🧊 Frozen<span data-ice="${Date.now() + frozenMs}">${Math.ceil(frozenMs / 1000)}</span></div>` : ''}</div>`;
   }
   (function loop() {
@@ -141,7 +154,14 @@
       const peeks = (m.peek || []).map(peekCard).join('');
       const tip = m.tip ? `<div class="tip">🕵️ Insider tip: worth between <b>${aed(m.tip.lo)}</b> and <b>${aed(m.tip.hi)}</b></div>` : '';
       const body = peeks || `<div class="dark">${lk.special === 'mystery' ? 'Mystery locker. No peeking!' : 'Nothing to see.'}</div>`;
-      return [`peek${lk.n}`, `<h2 class="h">Your peek</h2><p class="lead">Keep a straight face. ${lk.count} things inside.</p><div id="peeks">${body}${tip}</div><div id="pcards">${cardsRow(['xray', 'tip', 'plant'])}</div>
+      const dl = S.x.deal; let deal = '';
+      if (dl && dl.low) {
+        const inv = (dl.invites || []).map((i) => `<div class="invite">${W.bust(P_(i.from), 'sm')}<span><b>${name(i.from)}</b> wants to team up</span><button class="btn sm primary" data-a="synYes" data-id="${i.id}">Team up</button><button class="btn sm ghost" data-a="synNo" data-id="${i.id}">No</button></div>`).join('');
+        const team = dl.team ? `<div class="teamline">🤝 Team ${teamNames(dl.team)}. You bid together with your cash pooled.</div>` : '';
+        const mates = (dl.mates || []).map((mt) => `<button class="btn sm ${mt.invited ? 'ghost' : ''}" data-a="synInvite" data-id="${mt.id}" ${mt.invited ? 'disabled' : ''}>${mt.invited ? `Asked ${name(mt.id)}` : `Team up with ${name(mt.id)}`}</button>`).join('');
+        deal = `<div class="deal" id="deal"><h3>Deal time</h3><p class="hint">You're in the bottom half. Pool your cash with another player for this locker. You split the cost and the profit.</p>${team}${inv}${mates ? `<div class="mates">${mates}</div>` : ''}</div>`;
+      }
+      return [`peek${lk.n}`, `<h2 class="h">Your peek</h2><p class="lead">Keep a straight face. ${lk.count} things inside.</p><div id="peeks">${body}${tip}</div>${deal}<div id="pcards">${cardsRow(['xray', 'tip', 'plant'])}</div>
         <div id="readybox"><button class="btn primary big" data-a="ready" ${m.ready ? 'disabled' : ''}>${m.ready ? 'Waiting for the others' : 'Seen it'}</button></div>`];
     },
     AUCTION() {
@@ -152,13 +172,31 @@
     BET() {
       const lk = S.locker; const m = me(); const x = S.x;
       if (S.step === 'none') return ['nobid', tv('No takers', 'Nobody bid. Watch what you missed.', '🤷')];
-      const mine = lk.owner === m.id;
-      const head = mine ? `<div class="bought"><h2 class="h">You bought it!</h2><p class="lead">${aed(lk.price)}. Fingers crossed.</p></div><p class="hint center">Everyone else is betting on whether you make money.</p>${(m.peek || []).length ? `<div class="recap">${m.peek.map((it) => `<span>${pic(it)}<i>${esc(it.name)}</i></span>`).join('')}</div>` : ''}` : `<h2 class="h">${lk.phantom ? 'The mystery bidder won it' : `${name(lk.owner)} bought it`}</h2><p class="lead">For ${aed(lk.price)}. Will they make money?</p>`;
-      const bet = mine ? '' : m.bet ? `<div class="placed">${m.bet === 'none' ? 'No bet this time.' : `You bet <b>${m.bet === 'boom' ? 'BOOM' : 'BUST'}</b>.`}</div>` : x.canBet ? `<div class="bb"><button class="btn bt-boom" data-a="bet" data-pick="boom">BOOM<small>they profit</small></button><button class="btn bt-bust" data-a="bet" data-pick="bust">BUST<small>they lose</small></button></div><p class="hint center">Bet ${aed(S.rules.stake)}. Win it and you get a power card.</p><button class="btn ghost sm" data-a="bet" data-pick="none">No bet</button>` : `<p class="hint center">You need ${aed(S.rules.stake)} to bet.</p>`;
+      const mine = lk.owner === m.id || !!x.myTeam;
+      const head = mine ? `<div class="bought"><h2 class="h">${x.myTeam ? 'Your team bought it!' : 'You bought it!'}</h2><p class="lead">${aed(lk.price)}. Fingers crossed.</p></div><p class="hint center">Everyone else is betting on whether you make money.</p>${(m.peek || []).length ? `<div class="recap">${m.peek.map((it) => `<span>${pic(it)}<i>${esc(it.name)}</i></span>`).join('')}</div>` : ''}` : `<h2 class="h">${lk.phantom ? 'The mystery bidder won it' : `${name(lk.owner)} bought it`}</h2><p class="lead">For ${aed(lk.price)}. Will they make money?</p>`;
+      const bet = mine ? '' : m.bet ? placedHtml(m.bet) : x.canBet && x.betOpt ? betPicker(x.betOpt, '') : '<div class="placed">Not enough cash to bet.</div>';
       const steal = usable(['steal']).length ? `<div class="cardsrow">${cardBtn(usable(['steal'])[0], `<em>Costs ${aed(x.stealPrice)}</em>`)}</div>` : '';
       return [`bet${lk.n}|${lk.owner}`, `${head}<div id="betbox">${bet}</div><div id="stealbox">${steal}</div>`];
     },
     REVEAL() { return revealPhone(); },
+    BACKROOM() {
+      const x = S.x; const m = me(); const st = S.step;
+      if (x.brInvited) {
+        if (st === 'invite') return ['br-inv', tv('Psst. Over here.', 'Shifty Sid has a locker, just for the bottom half. Watch the TV.', '🕴️')];
+        if (st === 'bid') {
+          if (x.brBid != null) return ['br-done', tv(x.brBid ? `Your sealed bid: ${aed(x.brBid)}` : 'You passed', 'Nobody else can see it. Sid opens the bids soon.', '✉️')];
+          const peek = (x.brPeek || []).map(peekCard).join('');
+          const chips = (x.brOptions || []).map((v) => `<button class="btn brb" data-a="brBid" data-v="${v}">${num(v)}</button>`).join('');
+          return ['br-bid', `<h2 class="h">Sid's locker</h2><p class="lead">You got one look inside. Make one secret bid. Highest takes it, and pays what they bid.</p><div id="peeks">${peek}</div><div class="brgrid">${chips}</div><button class="btn ghost" data-a="brBid" data-v="pass">Pass</button>`];
+        }
+      } else if (st === 'bid') {
+        if (m.bet) return ['br-bet-done', placedHtml(m.bet)];
+        if (x.canBet && x.betOpt) return ['br-bet', `<h2 class="h">Shifty Sid's sale</h2>${betPicker(x.betOpt, "The bottom half is bidding in secret on Sid's grubby locker. Will the winner make money?")}`];
+        return ['br-watch', tv("Shifty Sid's back room", 'Only the bottom half is invited. Watch the TV.', '🕴️')];
+      }
+      if (st === 'invite') return ['br-out', tv("Shifty Sid's back room", 'Only the bottom half is invited. You can bet on it in a moment.', '🕴️')];
+      return [`br-${st}`, tv("Sid's locker", 'Watch the TV.', '🕴️')];
+    },
     AFTER() {
       const lk = S.locker; const m = me();
       const cs = usable(['tax', 'swap', 'appraise', 'curse']);
@@ -168,7 +206,7 @@
     RESULT() {
       const lk = S.locker; const m = me(); const r = lk.result || {};
       const rank = [...S.players].sort((a, b) => b.cash - a.cash).findIndex((p) => p.id === m.id) + 1;
-      const mine = r.owner === m.id ? `<p class="lead big ${r.profit >= 0 ? 'g' : 'rd'}">${r.profit >= 0 ? 'You made' : 'You lost'} ${aed(Math.abs(r.profit))}</p>` : '';
+      const sp = r.split?.[m.id]; const mine = sp ? `<p class="lead big ${sp.got - sp.paid >= 0 ? 'g' : 'rd'}">Your team share: ${sp.got - sp.paid >= 0 ? '+' : '-'}${aed(Math.abs(sp.got - sp.paid))}</p>` : r.owner === m.id ? `<p class="lead big ${r.profit >= 0 ? 'g' : 'rd'}">${r.profit >= 0 ? 'You made' : 'You lost'} ${aed(Math.abs(r.profit))}</p>` : '';
       return [`res${lk.n}`, `<div class="tv"><div class="ico">💰</div><h2 class="h">${aed(m.cash)}</h2>${mine}<p class="lead">You're ${ordinal(rank)} of ${S.players.length}.</p></div>`];
     },
     FINALE() { return [`fin${S.x.step}${S.x.box?.name || ''}`, tv('The sealed boxes', 'Watch the TV.', '🔒')]; },
@@ -249,7 +287,11 @@
     if (a === 'addBot') send('addBot');
     if (a === 'removeBots') send('removeBots');
     if (a === 'ready') { b.disabled = true; send('ready'); }
-    if (a === 'bet') { document.querySelectorAll('[data-a=bet]').forEach((x) => { x.disabled = true; }); buzz(20); send('bet', { pick: b.dataset.pick }); }
+    if (a === 'betAmt') { betAmt = b.dataset.v === 'all' ? 'all' : Number(b.dataset.v); document.querySelectorAll('[data-a=betAmt]').forEach((x) => x.classList.toggle('on', x === b)); buzz(10); }
+    if (a === 'bet') { document.querySelectorAll('[data-a=bet]').forEach((x) => { x.disabled = true; }); buzz(20); send('bet', { pick: b.dataset.pick, amt: betAmt }, (r) => { if (r.error) document.querySelectorAll('[data-a=bet]').forEach((x) => { x.disabled = false; }); }); }
+    if (a === 'synInvite') { b.disabled = true; send('synInvite', { to: b.dataset.id }); }
+    if (a === 'synYes' || a === 'synNo') { b.disabled = true; send('synAnswer', { id: b.dataset.id, yes: a === 'synYes' }); }
+    if (a === 'brBid') { document.querySelectorAll('[data-a=brBid]').forEach((x) => { x.disabled = true; }); buzz(20); send('brBid', { amt: b.dataset.v === 'pass' ? 'pass' : Number(b.dataset.v) }, (r) => { if (r.error) document.querySelectorAll('[data-a=brBid]').forEach((x) => { x.disabled = false; }); }); }
     if (a === 'pass') send('pass');
     if (a === 'card') { const k = b.dataset.k; if (TARGET[k]) openPicker(k); else { b.disabled = true; buzz(25); send('card', { k }, (r) => { if (r.ok) toast(`${CARD[k][0]} played`, 'good'); }); } }
     if (a === 'target') { const k = b.dataset.k; closePicker(); buzz(25); send('card', { k, target: b.dataset.id }, (r) => { if (r.ok) toast(`${CARD[k][0]} played`, 'good'); }); }

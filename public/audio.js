@@ -79,7 +79,7 @@ window.AV = (() => {
   let current = { key: null, el: null, gain: null };
   // key: track file name (without .mp3); mood: built-in fallback
   // BID-COIN! borrows Writers' Room tracks until its own arrive
-  const MUSIC_ALIAS = { 'bc-lobby': 'lobby', 'bc-auction': 'pitch', 'bc-reveal': 'ratings', 'bc-finale': 'finale',
+  const MUSIC_ALIAS = { 'bc-lobby': 'lobby', 'bc-backroom': 'genre-heist', 'bc-auction': 'pitch', 'bc-reveal': 'ratings', 'bc-finale': 'finale',
     // RIGGED! borrows tracks too, until its own arrive (the Bomb uses the built-in tense score)
     'rg-lobby': 'lobby', 'rg-question': 'pitch', 'rg-wheel': 'ratings', 'rg-finale': 'finale',
     // Last Night in the Mansion borrows the old Writers' Room horror tracks until its own arrive
@@ -150,7 +150,7 @@ window.AV = (() => {
     // BID-COIN!
     'bc-bid': 'blip', 'bc-gavel': 'gavel', 'bc-door': 'door', 'bc-tick': 'tick', 'bc-tick2': 'tick2', 'bc-thud': 'thud', 'bc-cash': 'bell', 'bc-legend': 'fanfare',
     'bc-curse': 'dundun', 'bc-lock': 'stamp', 'bc-plant': 'scratch', 'bc-boom': 'fanfare', 'bc-bust': 'trombone', 'bc-freeze': 'freeze', 'bc-phantom': 'sting',
-    'bc-steal': 'scratch', 'bc-tax': 'bell', 'bc-swap': 'whoosh', 'bc-appraise': 'bell',
+    'bc-steal': 'scratch', 'bc-tax': 'bell', 'bc-swap': 'whoosh', 'bc-appraise': 'bell', 'bc-sid': 'scratch', 'bc-deal': 'bell',
     // RIGGED!
     'rg-sting': 'sting', 'rg-house': 'dundun', 'rg-question': 'blip', 'rg-ding': 'ding', 'rg-buzzer': 'buzzer', 'rg-tick': 'tick', 'rg-pass': 'blip', 'rg-fuse': 'fuse',
     'rg-boom': 'boom', 'rg-reveal': 'sting', 'rg-wheel': 'wheel', 'rg-card': 'fanfare', 'rg-swap': 'whoosh', 'rg-cash': 'cash', 'rg-fanfare': 'fanfare', 'rg-go': 'fanfare',

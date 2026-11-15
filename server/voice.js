@@ -151,9 +151,11 @@ findIndianVoice();
 // ---------------------------------------------------------------- BID-COIN!'s auctioneer: fast and lively. Set ELEVENLABS_BC_VOICE_ID to change it.
 const BC = () => process.env.ELEVENLABS_BC_VOICE_ID || 'IKne3meq5aSn9XLyUdCD'; // "Charlie"
 // RIGGED!'s host, Vince Velvet: a smooth old-school announcer. Set ELEVENLABS_RG_VOICE_ID to change it.
+// Shifty Sid, who runs BID-COIN!'s back-room sales: a husky, shady voice. Set ELEVENLABS_BC_SID_VOICE_ID to change it.
+const BC_SID = () => process.env.ELEVENLABS_BC_SID_VOICE_ID || 'N2lVS1w4EtoT3dr4eOWO'; // "Callum"
 const RG = () => process.env.ELEVENLABS_RG_VOICE_ID || 'nPczCjzI2devNBz1zQrb'; // "Brian"
 
 // Last Night in the Mansion's butler, Mortimer: an older, posh, polite British voice. Set ELEVENLABS_MN_VOICE_ID to change it.
 const MN = () => process.env.ELEVENLABS_MN_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; // "George"
 
-module.exports = { enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, RG, MN, charVoices };
+module.exports = { enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, BC_SID, RG, MN, charVoices };

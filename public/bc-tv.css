@@ -298,3 +298,18 @@ body { overflow: hidden; background: var(--asphalt); }
 
 .spot { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
 .spot .credit { font-size: .75rem; color: var(--mute); background: rgba(20,23,29,.7); padding: .1rem .5rem; border-radius: 6px; }
+
+/* ---------------------------------------------------------------- teams and Shifty Sid's back room */
+.team { display: flex; } .team .bust { margin-left: -.9rem; } .team .bust:first-child { margin-left: 0; }
+.paddle .st.team { background: #6E4BD8; color: #fff; }
+.tut-comeback { display: flex; gap: 2rem; } .tut-comeback .cb { width: 22rem; padding: 1.4rem; border-radius: 18px; background: rgba(255,255,255,.08); display: flex; flex-direction: column; gap: .4rem; text-align: center; }
+.tut-comeback .cb span { font-size: 4rem; } .tut-comeback .cb b { font-family: var(--sign); font-size: 2.2rem; } .tut-comeback .cb small { font-size: 1.15rem; line-height: 1.35; }
+#yard.p-backroom { background: radial-gradient(ellipse at 50% 30%, #2A2418, #050403 70%); }
+#yard.p-backroom .art { opacity: .35; filter: saturate(.6) brightness(.6); }
+.backroom .sidfig { font-size: 11rem; filter: drop-shadow(0 0 40px rgba(255, 190, 80, .25)); animation: sidlean 3s ease-in-out infinite; }
+.backroom .sidart { max-height: 46vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
+@keyframes sidlean { 50% { transform: rotate(-4deg) translateX(-8px); } }
+.backroom .say { color: #F2C230; }
+.brguests { display: flex; gap: 1.6rem; justify-content: center; margin: 1rem 0; } .brguests .g { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+.brbids { list-style: none; padding: 0; margin: 1rem auto; min-width: 26rem; } .brbids li { display: flex; align-items: center; gap: .8rem; padding: .6rem 1rem; border-radius: 12px; font-size: 1.5rem; }
+.brbids li span { flex: 1; text-align: left; } .brbids li.top { background: rgba(242, 194, 48, .2); box-shadow: inset 0 0 0 2px #F2C230; }

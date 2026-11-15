@@ -42,13 +42,22 @@ const SAY = {
   cursedPay: 'And now, the cursed things. Somebody has to pay to get rid of them.',
   winner: '[excited] {name} wins BID-COIN, with {cash} dirhams!',
   goodnight: 'Thanks for bidding. Same time next week. Bring cash!',
+  // syndicates
+  synOpen: ['We have a syndicate! {names}, bidding together.', 'Team-up alert! {names} have pooled their cash.'],
+  // Shifty Sid's back room. Sid's lines are read in his own voice.
+  brIntro: ["Psst. Over here. No, don't look at me. Look at the locker.", "Keep your voice down. The big spenders can't know about this."],
+  brInvite: ["{names}. Yeah, you lot. I've got a locker. Bit grubby. Very cheap. Interested?", "This one's just for {names}. Nobody else. Capiche?"],
+  brRules: ['One secret bid each. Highest bid takes it. Everyone else, bet on it.', 'Sealed bids only. The rest of you, boom or bust?'],
+  brNoBids: ["Nobody? Fine. I'll sell it to the pigeons.", 'No bids. Your loss. Sid is out of here.'],
+  brWon: ['{name}, it is yours. {price} dirhams. No refunds. No questions.', 'Sold to {name}. {price}. Pleasure doing business.'],
 };
 
 // The rules, four short slides on the very first game.
 const TUTORIAL = [
   { key: 'peek', title: 'Peek', line: 'First, the peek. Each of you sees something different on your phone. Keep it to yourself. Or lie about it.' },
   { key: 'bid', title: 'Bid', line: "Then the auction. Tap plus five hundred, plus a thousand, or plus five thousand. Five seconds with no bids, and it's sold!" },
-  { key: 'bet', title: 'Boom or bust', line: 'Everyone else bets. Will the winner make money? Then we open the locker, one thing at a time.' },
+  { key: 'bet', title: 'Boom or bust', line: 'Everyone else bets. Will the winner make money? You pick how much. If you are in the bottom half, you can go all in.' },
+  { key: 'comeback', title: 'Falling behind?', line: "Fall into the bottom half and you get help. Team up with another player to bid together. And a shady man called Sid might invite you to a secret sale." },
   { key: 'cards', title: 'Power cards', line: "And you each get power cards. Freeze a rival. Steal a locker. Everyone gets one free Lock to block an attack. And watch out: some lockers hide a disaster. Let's go!" },
 ];
 

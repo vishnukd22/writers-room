@@ -49,15 +49,22 @@ To be several players on one laptop, open `/lg?test` in several tabs. Each tab i
 
 A storage-locker bidding war for 2 to 8 players (bots can fill seats), about 15 to 20 minutes. Everyone starts with AED 40,000 and bids in steps of 500, 1,000 or 5,000. Eight lockers come up for auction. Richest at the end wins.
 
-1. **Peek:** the door rolls up a little and each phone shows a different thing inside. The player in last place sees two.
+1. **Peek:** the door rolls up a little and each phone shows a different thing inside. The player in last place sees two. This is also **deal time** for syndicates (below).
 2. **Auction:** tap +500, +1,000 or +5,000. Five seconds with no bids and the hammer falls. The server decides who was first, so bids never clash.
-3. **Boom or bust:** everyone else bets AED 2,000 on whether the winner makes money.
+3. **Boom or bust:** everyone else bets on whether the winner makes money, and picks how much (1,000, 2,500, 5,000 or 10,000). Players in the bottom half can bet up to all their cash (**All in**). The top half can bet up to 25% of their cash, never more than 10,000. A winning bet of 2,500 or more also earns a power card.
 4. **Reveal:** the locker is opened one thing at a time, with the back of the locker last. Junk, decent, rare, legendary and cursed things. Sealed boxes are opened at the very end. Cursed things cost money at the end unless you pass them on.
 5. **Disasters:** about one locker in four hides a disaster behind something innocent in the peek (a "classic car under a dust sheet" that turns out to be stolen). Fixed fines of AED 15,000 to 60,000, or a tax audit (25% of your cash) or a lawsuit (30%). Paid on the spot, never below zero. The vault and garages are riskier.
 6. **Power cards:** everyone starts with two and holds up to three. Win a locker or a bet to get another. X-Ray Specs, Insider Tip, The Plant (fakes one thing in everyone else's peek of the next locker), Freeze, Phantom Bidder, Steal (price plus 50%), Tax Man (15%), Swap Meet (takes the second-best find), Appraiser (best find x1.5), Pass the Curse, and Lock.
 7. **Locks:** everyone gets one free Lock. When someone plays Steal, Tax Man, Swap Meet, Pass the Curse or Freeze on you, your phone gives you five seconds to block it. Lock cards give you more.
 
-One locker in the middle of the game is a mystery locker (no peeking). Most games have a garage locker with a car at the back, from a rusty Corolla to a Skyline worth AED 250,000. The last locker is a billionaire's vault with more and better things. The AI invents one or two one-of-a-kind finds each game.
+**Comebacks for the bottom half** (the poorer half of the table by cash; climb into the top half and these stop):
+
+- **Syndicates:** during the peek, a bottom-half player can invite another bottom-half player to team up for that locker (up to 3 people in a 7 or 8 player game). Their cash is pooled into one paddle and either partner can bid. What's inside is cashed out on the spot, sealed boxes and curses included, and the cost and the money are split by how much each put in. Steal and Swap Meet can't be used on a team's locker. The team ends after that locker.
+- **Shifty Sid's back room:** after lockers 3 and 6, a shady man in a trench coat invites only the bottom half to a sealed-bid sale of one grubby locker. Each invitee gets one look inside and one secret bid (500 to 12,000). Highest bid wins and pays what they bid. It's mostly junk with a real chance of a hidden gem. Everyone else can bet Boom or Bust on it. Sid has his own voice (`ELEVENLABS_BC_SID_VOICE_ID`), and an optional picture `bc-sid` and backdrop `bc-alley` in `public/assets/img`.
+
+**Jackpots:** at most one legendary find per locker, and the priciest cars only turn up in the vault, so one lucky locker can't decide the game.
+
+One locker in the middle of the game is a mystery locker (no peeking). Most games have a garage locker with a car at the back, from a rusty Corolla to a classic worth around AED 100,000. The last locker is a billionaire's vault with more and better things. The AI invents one or two one-of-a-kind finds each game.
 
 **Items:** about 520 real things and 30 cars (a Rolex Submariner 126610LN, a 1965 Ford Mustang, a Singer 201, a box of Uni-ball Signo pens...) in `server/bc-items.js` and `server/bc-items-more.js` (with the disasters), each with a rarity, a realistic resale value in AED, a funny line and a photo search.
 
