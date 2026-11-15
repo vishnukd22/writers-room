@@ -120,7 +120,6 @@ class Mansion {
     this.pausedMs = 0; this.recent = []; this.best = null; this.nights = 0;
     this.reset();
     [M2.welcome, M2.rules].forEach((t) => this.prefetch(t, true));
-    [...fixedLines(M2), SAY.welcomeBots, SAY.lost].forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
   }
   reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false, ctx: null, scareFx: null, bigScares: 0, vote: null, poss: null, nightPoss: 0, accuse: null }); }
 
@@ -222,6 +221,8 @@ class Mansion {
   start(byId) {
     if (byId && this.vip()?.id !== byId) return { error: 'Only the first player can start' };
     if (this.phase !== 'LOBBY') return {};
+    // the rest of the lines are made once the game really starts (not every time a TV opens a lobby), to save voice credits
+    if (!this.madeAll) { this.madeAll = true; [...fixedLines(M2), SAY.welcomeBots, SAY.lost].forEach((t) => this.prefetch(t)); }
     this.players = this.players.filter((p) => p.connected);
     const humans = this.humans().length;
     if (this.players.length < MIN || (!this.test && humans < 1)) return { error: `You need at least ${MIN} guests${this.test ? '. Add some bots on the TV.' : '. Add a bot from the first phone.'}` };

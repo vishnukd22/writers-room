@@ -61,7 +61,9 @@ function release() { active--; pump(); }
 function promote(key) { const i = lo.findIndex((e) => e.key === key); if (i >= 0) { hi.push(lo.splice(i, 1)[0]); pump(); } }
 // the last few problems, for /voice-check
 const recent = [];
-function note(code, body) { recent.push({ at: new Date().toISOString(), code, body: String(body || '').slice(0, 200) }); if (recent.length > 10) recent.shift(); }
+// when the plan runs out of credits, stop asking for a while instead of failing on every line
+let pausedUntil = 0;
+function note(code, body) { if (code === 401 && /quota_exceeded/.test(String(body || ''))) pausedUntil = Date.now() + 10 * 60 * 1000; recent.push({ at: new Date().toISOString(), code, body: String(body || '').slice(0, 200) }); if (recent.length > 10) recent.shift(); }
 
 async function request(text, voice, model, speed) {
   const ctrl = new AbortController();
@@ -105,7 +107,7 @@ async function synth(text, voice, urgent, fast, speed, key) {
 // Returns a promise of an audio id (or null when there is no voice available).
 function get(text, voice, urgent = false, fast = false, speed = 1) {
   text = speakable(text);
-  if (!enabled() || !stripTags(text)) return Promise.resolve(null);
+  if (!enabled() || !stripTags(text) || Date.now() < pausedUntil) return Promise.resolve(null);
   voice = voice || NARRATOR();
   if (badVoices.has(voice)) voice = voice === lgFound ? LG_FALLBACK : NARRATOR();
   const key = `${voice}|${fast ? 'f' : ''}|${speed}|${text}`;
@@ -168,7 +170,7 @@ const MN = () => process.env.ELEVENLABS_MN_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; /
 
 // what /voice-check shows: is the key there, is anything stuck, what went wrong lately, how much of the plan is used
 async function status() {
-  const out = { keySet: enabled(), model: MODEL(), fastModel: FAST(), fastBroken, v3Broken, busy: active, waiting: hi.length + lo.length, recentErrors: recent };
+  const out = { outOfCredits: Date.now() < pausedUntil, keySet: enabled(), model: MODEL(), fastModel: FAST(), fastBroken, v3Broken, busy: active, waiting: hi.length + lo.length, recentErrors: recent };
   if (enabled()) {
     try { const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': KEY() } }); if (r.ok) { const j = await r.json(); out.plan = j.tier; out.charactersUsed = j.character_count; out.characterLimit = j.character_limit; out.resetsAt = j.next_character_count_reset_unix ? new Date(j.next_character_count_reset_unix * 1000).toISOString() : null; } else out.plan = `could not read (${r.status})`; } catch (e) { out.plan = `could not read (${e.message})`; }
   }

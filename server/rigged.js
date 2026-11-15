@@ -62,7 +62,6 @@ class Rigged {
     this.seen = { mc: new Set(), tf: new Set(), lie: new Set(), race: new Set() };
     this.reset();
     [SAY.welcome, SAY.welcomeHouse, SAY.rules, SAY.dossier, SAY.round[1]].forEach((t) => this.prefetch(t, true));
-    fixedLines(SAY).forEach((t) => this.prefetch(t)); // every fixed line is made while people join, so none arrive late
   }
   reset() {
     Object.assign(this, { roundN: 0, live: null, q: null, cur: null, rev: null, qd: {}, qSeq: 0, sd: null, race: null, lastLie: null, grudgeWin: null, winner: null, lastChat: 0, sabDemo: false });
@@ -166,6 +165,8 @@ class Rigged {
   start(byId) {
     if (byId && this.vip()?.id !== byId) return { error: 'Only the first player can start' };
     if (this.phase !== 'LOBBY') return {};
+    // the rest of the lines are made once the game really starts (not every time a TV opens a lobby), to save voice credits
+    if (!this.madeAll) { this.madeAll = true; fixedLines(SAY).forEach((t) => this.prefetch(t)); }
     this.players = this.players.filter((p) => p.connected && !p.house);
     const n = this.players.length;
     if (n < MIN) return { error: `RIGGED! needs at least ${MIN} players${this.test ? '. Add some bots on the TV.' : '. Add a bot from the first phone.'}` };
