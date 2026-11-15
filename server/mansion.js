@@ -31,7 +31,7 @@ const MIN = 2; const MAX = 8; const ROOMS_PER_NIGHT = 4;
 const PX_KEYS = ['ice', 'cellar', 'dodge', 'chat'];
 const NIGHT_KEYS = Object.keys(ROOMS2); const NIGHT_ROOMS = Math.min(5, NIGHT_KEYS.length);
 const SCARES = { mild: 0, spooky: 3, nightmare: 5 };
-const BURN = 0.035; // % of candle per second while a room or the door is in play
+const BURN = 0.05; // % of candle per second while a room or the door is in play
 const TYPES = ['talk', 'timing', 'speed', 'memory'];
 const SHAPES = [['◆', 'diamond'], ['▲', 'triangle'], ['●', 'circle'], ['■', 'square'], ['★', 'star'], ['✚', 'cross']];
 const ORDN = ['FIRST', 'SECOND', 'THIRD'];
@@ -381,8 +381,8 @@ class Mansion {
       this.setPhase('PX', { step: 'ready', key, kind: n }); this.sayOver(g, R.possId && n === 2 ? M2.possessed : M2.round[n]); await this.hold(g, R.possId && n === 2 ? 4.5 : 2.5);
       const res = await this.pxStage(g, def, n, 'play');
       if (this.dead) { this.active = null; return; }
-      if (res === 'win') { wins++; this.gain(3); this.sfx('mn-clear'); this.setPhase('PX', { step: 'won', key, kind: n }); this.sayOver(g, line(M2.win)); }
-      else { this.drip(6, null); this.sfx('mn-fail'); this.setPhase('PX', { step: 'lost', key, kind: n }); this.sayOver(g, line(M2.fail)); }
+      if (res === 'win') { wins++; this.gain(2); this.sfx('mn-clear'); this.setPhase('PX', { step: 'won', key, kind: n }); this.sayOver(g, line(M2.win)); }
+      else { this.drip(9, null); this.sfx('mn-fail'); this.setPhase('PX', { step: 'lost', key, kind: n }); this.sayOver(g, line(M2.fail)); }
       if (this.dead) { this.active = null; return; }
       await this.hold(g, 3);
       if (n === 2 && this.poss) await this.accuseVote(g);
@@ -406,7 +406,7 @@ class Mansion {
     const tally = {}; Object.values(this.accuse.votes).forEach((id) => { tally[id] = (tally[id] || 0) + 1; });
     const best = Math.max(0, ...Object.values(tally)); const top = Object.keys(tally).filter((id) => tally[id] === best);
     const caught = top.length === 1 && top[0] === poss.id; this.accuse.caught = caught; this.accuse.tally = tally;
-    if (caught) { this.gain(6); this.sfx('mn-clear'); } else { this.drip(4, null); this.sfx('mn-giggle'); }
+    if (caught) { this.gain(5); this.sfx('mn-clear'); } else { this.drip(6, null); this.sfx('mn-giggle'); }
     this.setPhase('ACCUSE', { step: 'reveal' }); await this.say(g, line(caught ? M2.caught : M2.missed)); await this.hold(g, 1.5);
     this.poss = null; this.accuse = null;
   }
@@ -420,7 +420,7 @@ class Mansion {
   // ------------------------------------------------------------ the finale: every room again, fast, while the house falls down
   async collapse(g) {
     this.setPhase('COLLAPSE', { step: 'intro' }); this.sfx('mn-thunder');
-    if (this.ctx.keys) this.gain(this.ctx.keys * 4);
+    if (this.ctx.keys) this.gain(this.ctx.keys * 2);
     await this.say(g, M2.collapse);
     const list = this.ctx.played.slice(0, 4);
     for (let i = 0; i < list.length; i++) {
@@ -430,7 +430,7 @@ class Mansion {
       if (i === 1) await this.bigScare(g);
       const res = await this.pxStage(g, def, 'quick', 'play', { key, n: i + 1, of: list.length });
       if (this.dead) { this.active = null; return this.endNight(false, g); }
-      if (res !== 'win') { this.drip(8, null); this.sfx('mn-fail'); } else this.sfx('mn-clear');
+      if (res !== 'win') { this.drip(10, null); this.sfx('mn-fail'); } else this.sfx('mn-clear');
       if (this.dead) { this.active = null; return this.endNight(false, g); }
     }
     this.active = null;
@@ -457,7 +457,7 @@ class Mansion {
     const A = this.active; const { X, R } = A;
     PXR.GHOST.mx = {}; this.players.forEach((p) => { p.mx = {}; });
     const arg = kind === 'boss' || kind === 'hub' ? this.ctx : kind;
-    R.dripped = 0; R.dripCap = kind === 'quick' ? 8 : 14;
+    R.dripped = 0; R.dripCap = kind === 'quick' ? 10 : 18;
     R.st = def.make(X, arg); R.st.t0 = this.clock(); R.kind = kind; if (R.possId && kind === 2) R.st.poss = R.possId;
     const secs = def.secs ? def.secs[kind] || 120 : 9999;
     // stage clocks run in real seconds: the attacks and puzzles are played at real speed even in quick tests

@@ -79,10 +79,10 @@ window.PX = (() => {
     // candle light: the dark closes in as the candle burns down
     if (!view.dark) view.dark = document.createElement('canvas');
     const dk = view.dark; dk.width = LS.w * Z; dk.height = LS.h * Z; const dc = dk.getContext('2d'); dc.setTransform(Z, 0, 0, Z, 0, 0);
-    const base = d.nodark ? 0 : d.dark ? 0.97 : d.theme === 'mercy' ? 0.35 : 0.3 + (1 - Math.max(0, Math.min(100, candle)) / 100) * 0.4;
+    const base = d.nodark ? 0 : d.dark ? 1 : d.theme === 'mercy' ? 0.35 : 0.3 + (1 - Math.max(0, Math.min(100, candle)) / 100) * 0.4;
     dc.fillStyle = `rgba(8,4,18,${base})`; dc.fillRect(0, 0, LS.w, LS.h); dc.globalCompositeOperation = 'destination-out';
     const glow = (x, y, r, a) => { const g = dc.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); dc.fillStyle = g; dc.fillRect(x - r, y - r, r * 2, r * 2); };
-    acts.forEach((a) => { const s = view.sprites[a.id]; glow(ox + s.x * T + 8, oy + (s.y + 1) * T + 8, d.dark ? T * 1.7 : T * 3.2, d.dark ? 0.95 : 0.9); });
+    acts.forEach((a) => { const s = view.sprites[a.id]; glow(ox + s.x * T + 8, oy + (s.y + 1) * T + 8, d.dark ? T * 1.25 : T * 3.2, d.dark ? 0.9 : 0.9); });
     (d.stands || []).filter((s) => s.lit).forEach((s) => glow(ox + s.x * T + 8, oy + (s.y + 1) * T + 8, T * 2.5, 0.9));
     if (d.doors) d.doors.filter((x) => x.open && !x.hide).forEach((x) => glow(ox + x.x * T + 8, oy, T * 1.6, 0.6));
     dc.globalCompositeOperation = 'source-over'; ctx.drawImage(dk, 0, 0, LS.w, LS.h);

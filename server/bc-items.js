@@ -329,7 +329,8 @@ const CATS = {
 const RARITY = { j: 'Junk', d: 'Decent', r: 'Rare', l: 'Legendary', x: 'Cursed', c: 'Car', z: 'Disaster' };
 
 const M = require('./bc-items-more');
-const ALL = [...ROWS, ...M.MORE, ...M.CARS, ...M.COVERS, ...M.DISASTERS.map((d) => [d.id, d.name, d.cat, 'z', d.pct ? 0 : -d.cost, d.line, d.q])];
+const { EXTRA } = require('./bc-items-extra');
+const ALL = [...ROWS, ...M.MORE, ...EXTRA, ...M.CARS, ...M.COVERS, ...M.DISASTERS.map((d) => [d.id, d.name, d.cat, 'z', d.pct ? 0 : -d.cost, d.line, d.q])];
 const ITEMS = ALL.map(([id, name, cat, rar, value, line, q]) => ({ id, name, cat, rar, value, line, q }));
 const DISASTERS = M.DISASTERS;
 const BY_ID = Object.fromEntries(ITEMS.map((i) => [i.id, i]));

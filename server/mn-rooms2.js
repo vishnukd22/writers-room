@@ -14,8 +14,8 @@ const nameOf = (X, id) => X.P(id)?.name || 'Someone';
 // Sneak while her back is turned. When she turns round, freeze: the phone's motion sensor sees any wobble.
 const HOLD = {
   key: 'doll', name: 'Hold Still', style: 'paint', art: 'mn-room-nursery', music: 'mn-memory',
-  goal: 'Tap SNEAK while her back is turned. When she turns, freeze. Don\'t move your phone at all.',
-  secs: { 1: 60, 2: 70, quick: 28 },
+  goal: 'Tap SNEAK while her back is turned. When she starts to turn, press and HOLD the pad and freeze. Lift your thumb or move your phone and she sees you.',
+  secs: { 1: 75, 2: 95, quick: 30 },
   make(X, kind) {
     const n = Math.max(2, live(X).length);
     const st = { kind, prog: 0, target: kind === 'quick' ? 45 : 100, tap: 100 / (40 * n), phase: 'green', caught: [], seenThis: {}, modes: {}, log: null };
@@ -31,17 +31,17 @@ const HOLD = {
     if (st.prog >= st.target) { st.done = 'win'; X.sfx('mn-unlock'); return; }
     if (now < st.until) return;
     const k = st.kind;
-    if (st.phase === 'green') { st.phase = 'warn'; st.until = now + (k === 1 ? 900 : 650); X.sfx('mn-creak2'); return; }
+    if (st.phase === 'green') { st.phase = 'warn'; st.until = now + (k === 1 ? 750 : 500); X.sfx('mn-creak2'); return; }
     if (st.phase === 'warn') {
-      if (k !== 1 && Math.random() < 0.3 && !st.faked) { st.faked = true; this.green(X, st); return; } // she twitches, but doesn't turn
-      st.faked = false; st.phase = 'red'; st.redAt = now; st.until = now + (k === 2 ? rnd(2800, 4300) : rnd(2300, 3600)); st.redWall = X.wall(now); X.sfx('mn-breath'); return;
+      if (Math.random() < (k === 1 ? 0.2 : 0.35) && !st.faked) { st.faked = true; this.green(X, st); return; } // she twitches, but doesn't turn
+      st.faked = false; st.phase = 'red'; st.redAt = now; st.until = now + (k === 2 ? rnd(4000, 7000) : k === 1 ? rnd(3000, 5000) : rnd(2500, 4000)); st.redWall = X.wall(now); X.sfx('mn-breath'); return;
     }
     if (st.phase === 'red') this.green(X, st);
   },
   catch(X, st, id, why) {
     if (st.seenThis[id]) return; st.seenThis[id] = true;
-    st.prog = Math.max(0, st.prog - 12); st.caught.push(id); st.log = { name: nameOf(X, id), why, at: X.now() };
-    X.sfx('mn-giggle'); X.drip(2, null); X.scare('personal', id);
+    st.prog = Math.max(0, st.prog - 25); st.caught.push(id); st.log = { name: nameOf(X, id), why, at: X.now() }; st.lunge = X.now();
+    X.sfx('mn-giggle'); X.drip(4, null); X.scare('personal', id);
   },
   act(X, p, a, st) {
     const now = X.now();
@@ -55,9 +55,9 @@ const HOLD = {
   },
   bot(X, b, st) {
     if (st.phase === 'green' && X.after(b, 'doll', 0.16, 0.3)) this.act(X, b, { a: 'sneak' }, st);
-    if (st.phase === 'red' && !st.seenThis[b.id] && X.now() - st.redAt > 600 && Math.random() < 0.006) this.catch(X, st, b.id, 'moved');
+    if (st.phase === 'red' && !st.seenThis[b.id] && X.now() - st.redAt > 600 && Math.random() < 0.003) this.catch(X, st, b.id, 'moved');
   },
-  tv(X, st) { return { ui: 'paint', room: 'doll', phase: st.phase, prog: Math.round((st.prog / st.target) * 100), log: st.log && X.now() - st.log.at < 2500 ? st.log : null, turnAt: st.phase === 'green' ? st.turnAt : null }; },
+  tv(X, st) { return { ui: 'paint', room: 'doll', lunge: st.lunge && X.now() - st.lunge < 1400, phase: st.phase, prog: Math.round((st.prog / st.target) * 100), log: st.log && X.now() - st.log.at < 2500 ? st.log : null, turnAt: st.phase === 'green' ? st.turnAt : null }; },
   phone(X, p, st) { return { ui: 'paint', room: 'doll', phase: st.phase, prog: Math.round((st.prog / st.target) * 100), turnAt: st.phase === 'green' ? st.turnAt : null, redAt: st.phase === 'red' ? st.redWall : null, caught: !!st.seenThis[p.id], mode: st.modes[p.id] || null }; },
 };
 
@@ -97,7 +97,7 @@ const HIDE = {
     st.searched.push(...targets); st.hits = [];
     for (const k of targets) {
       const who = Object.entries(st.where).filter(([id, w]) => w === k && !st.found.includes(id)).map(([id]) => id);
-      who.forEach((id) => { st.found.push(id); X.scare('personal', id); X.drip(3, null); });
+      who.forEach((id) => { st.found.push(id); X.scare('personal', id); X.drip(4, null); });
       st.hits.push({ k, who: who.map((id) => nameOf(X, id)) });
     }
     X.sfx(st.hits.some((h) => h.who.length) ? 'mn-scream' : 'mn-creak');
@@ -172,7 +172,7 @@ const SEANCE = {
       if (st.dwell >= 900) {
         st.left = false; st.dwell = 0;
         if (on === st.letters[st.got]) { st.got++; X.sfx('mn-chime'); if (st.got >= st.letters.length) { st.done = 'win'; X.sfx('mn-unlock'); } }
-        else if (now - st.hissAt > 1500) { st.hissAt = now; X.sfx('mn-whisper'); X.drip(1, null); st.wrong = { k: on, at: now }; }
+        else if (now - st.hissAt > 1500) { st.hissAt = now; X.sfx('mn-whisper'); X.drip(2, null); st.wrong = { k: on, at: now }; }
       }
     }
   },
@@ -237,7 +237,7 @@ const ICE = { ...ICE0, key: 'ice', style: 'poke', art: 'mn-room-ballroom', goal:
     const sx = q.x, sy = q.y; ICE0.move.call(this, X, st, id, d); if (q.out || (q.x === sx && q.y === sy)) return;
     // did the slide cross a crack?
     const [dx, dy] = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] }[d]; let x = sx, y = sy;
-    while (x !== q.x || y !== q.y) { x += dx; y += dy; const k = st.thin.findIndex(([tx, ty]) => tx === x && ty === y); if (k >= 0) { st.thin.splice(k, 1); st.g[y][x] = 'x'; const s0 = st.start[id]; q.x = s0[0]; q.y = s0[1]; q.seq++; q.slide = 0; X.sfx('mn-bottle'); X.drip(1, null); X.scare('personal', id); this.check(X, st); return; } }
+    while (x !== q.x || y !== q.y) { x += dx; y += dy; const k = st.thin.findIndex(([tx, ty]) => tx === x && ty === y); if (k >= 0) { st.thin.splice(k, 1); st.g[y][x] = 'x'; const s0 = st.start[id]; q.x = s0[0]; q.y = s0[1]; q.seq++; q.slide = 0; X.sfx('mn-bottle'); X.drip(2, null); X.scare('personal', id); this.check(X, st); return; } }
   },
   plan(st, id, q, goal) {
     if (!st.thin || !st.thin.length) return ICE0.plan.call(this, st, id, q, goal);
@@ -294,7 +294,7 @@ const LIGHTS = {
   touch(X, st) {
     for (const [id, q] of Object.entries(st.pl)) {
       if (q.out) continue; const gh = st.ghosts.find((o) => o.x === q.x && o.y === q.y); if (!gh) continue;
-      st.caught++; X.drip(2, null); X.sfx('mn-scream'); X.scare('personal', id);
+      st.caught++; X.drip(3, null); X.sfx('mn-scream'); X.scare('personal', id);
       const far = []; for (let y = 0; y < st.g.length; y++) for (let x = 1; x < st.g[0].length - 1; x++) if (st.g[y][x] === '.' && Math.abs(x - q.x) + Math.abs(y - q.y) > 8) far.push([x, y]);
       if (far.length) { const [fx, fy] = pick(far); gh.x = fx; gh.y = fy; gh.next = X.now() + 2500; }
     }
@@ -365,11 +365,12 @@ const FUSE = {
     const mods = ['wires', 'symbols']; if (kind === 2) mods.push('lever'); if (kind === 'quick') mods.splice(1, 1);
     const st = { kind, elec, mods, solved: {}, wires, cut: [], sym: makeSymbols(), pressed: [], lever: { c: pick(['red', 'green', 'blue', 'yellow']), n: rint(1, 9) }, sparks: 0, sparkAt: 0 };
     // hand out the manual pages to everyone but the electrician
-    const readers = shuffle(all.filter((p) => p.id !== elec).map((p) => p.id)); st.pages = {};
+    // pages go to the other people (never guests). With nobody else, the electrician has to read them alone.
+    const readers = shuffle(all.filter((p) => p.id !== elec && !p.bot).map((p) => p.id)); st.pages = {};
     mods.forEach((m, i) => { const id = readers.length ? readers[i % readers.length] : elec; (st.pages[id] = st.pages[id] || []).push(m); });
     return st;
   },
-  spark(X, st) { st.sparks++; st.sparkAt = X.now(); X.sfx('mn-spark'); X.drip(2, null); },
+  spark(X, st) { st.sparks++; st.sparkAt = X.now(); X.sfx('mn-spark'); X.drip(3, null); },
   done(X, st, m) { st.solved[m] = true; X.sfx('mn-switch'); if (st.mods.every((k) => st.solved[k])) { st.done = 'win'; X.sfx('mn-unlock'); } },
   act(X, p, a, st) {
     if (a.a === 'short' && st.poss === p.id && (st.shorts || 0) < 2) { st.shorts = (st.shorts || 0) + 1; st.darkUntil = X.now() + 4000; this.spark(X, st); return; }
@@ -392,12 +393,11 @@ const FUSE = {
     return { m, title: 'Page: The lever', lines: ['Look at the colour of the light and the number next to it.', ...LEVER_RULES] };
   },
   tv(X, st) {
-    const botPages = Object.entries(st.pages).filter(([id]) => X.P(id)?.bot).flatMap(([id, ms]) => ms.map((m) => ({ name: nameOf(X, id), ...this.page(st, m) })));
-    return { ui: 'paint', room: 'fuse', elec: nameOf(X, st.elec), mods: st.mods.map((m) => ({ m, done: !!st.solved[m] })), spark: X.now() - st.sparkAt < 900, sparks: st.sparks, readers: Object.entries(st.pages).map(([id, ms]) => ({ name: nameOf(X, id), ms })), botPages, elecBot: !!X.P(st.elec)?.bot };
+    return { ui: 'paint', room: 'fuse', elec: nameOf(X, st.elec), mods: st.mods.map((m) => ({ m, done: !!st.solved[m] })), spark: X.now() - st.sparkAt < 900, sparks: st.sparks, readers: Object.entries(st.pages).map(([id, ms]) => ({ name: nameOf(X, id), ms })), elecBot: !!X.P(st.elec)?.bot };
   },
   phone(X, p, st) {
     const base = { ui: 'paint', room: 'fuse', elec: nameOf(X, st.elec), mods: st.mods.map((m) => ({ m, done: !!st.solved[m] })), spark: X.now() - st.sparkAt < 900 };
-    if (p.id === st.elec) return { ...base, box: { wires: st.wires, cut: st.cut, four: st.sym.four, pressed: st.pressed, lever: st.mods.includes('lever') ? st.lever : null }, dark: X.now() < (st.darkUntil || 0) };
+    if (p.id === st.elec) return { ...base, box: { wires: st.wires, cut: st.cut, four: st.sym.four, pressed: st.pressed, lever: st.mods.includes('lever') ? st.lever : null }, pages: (st.pages[p.id] || []).map((m) => this.page(st, m)), dark: X.now() < (st.darkUntil || 0) };
     return { ...base, pages: (st.pages[p.id] || []).map((m) => this.page(st, m)) };
   },
 };
@@ -424,7 +424,7 @@ const KITCHEN = {
     const mine = st.pantry[p.id] || []; const k = a.k === 'poison' && st.poss === p.id ? 'poison' : mine.includes(a.k) ? a.k : null; if (!k) return;
     st.last = { k, by: p.name, at: X.now() };
     if (X.now() < (st.cleanUntil || 0)) return; // the pot is being scrubbed after a splat
-    if (!st.dish.items.includes(k) || st.pot.includes(k)) { st.splats++; st.splat = { k, by: p.name, at: X.now() }; st.pot = []; st.cleanUntil = X.now() + 1500; X.sfx('mn-bubble'); X.drip(1, null); return; }
+    if (!st.dish.items.includes(k) || st.pot.includes(k)) { st.splats++; st.splat = { k, by: p.name, at: X.now() }; st.pot = []; st.cleanUntil = X.now() + 1500; X.sfx('mn-bubble'); X.drip(2, null); return; }
     st.pot.push(k); X.sfx('mn-chomp');
     if (st.dish.items.every((it) => st.pot.includes(it))) { st.served++; X.sfx('mn-bell'); if (st.served >= st.need) { st.done = 'win'; return; } this.order(X, st); }
   },

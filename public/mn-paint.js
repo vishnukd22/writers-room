@@ -45,6 +45,7 @@ window.MP = (() => {
       const say = d.phase === 'red' ? 'FREEZE!' : d.phase === 'warn' ? 'She\'s turning...' : 'SNEAK!';
       const face = d.phase === 'red' ? 'mn-doll' : 'mn-doll-back';
       const scale = 0.55 + (d.prog / 100) * 0.75;
+      if (d.lunge) return `<div class="doll lunge">${pic('mn-doll', 'doll-lunge')}</div>`;
       return `<div class="doll ${d.phase}"><div class="doll-fig" style="--s:${scale.toFixed(3)}">${pic(face, 'doll-img') || '<div class="doll-fallback">🪆</div>'}</div>
         <div class="doll-say">${say}</div>
         <div class="doll-bar"><i style="width:${d.prog}%"></i><span>Sneak to the doll: ${d.prog}%</span></div>
@@ -131,9 +132,10 @@ window.MP = (() => {
     doll(S, d) {
       const mode = motionState();
       if (d.caught) return `<div class="mp doll red"><div class="mp-scream">SHE SAW YOU</div><p class="mp-hint">Wait for her to turn away again.</p></div>`;
-      if (d.phase === 'red') return `<div class="mp doll red"><div class="mp-freeze">FREEZE</div>${mode === 'hold' ? '<div class="mp-pad" data-hold="freeze">Keep pressing here. Don\'t let go!</div>' : `<div class="wobble"><i id="mpWob"></i></div><p class="mp-hint">Don't move your phone.</p>`}</div>`;
-      if (d.phase === 'warn') return `<div class="mp doll warn"><div class="mp-freeze warn">She's turning!</div>${mode === 'hold' ? '<div class="mp-pad" data-hold="freeze">Press and HOLD here now</div>' : '<p class="mp-hint">Get ready to freeze.</p>'}</div>`;
-      return `<div class="mp doll"><div class="doll-bar mp-bar"><i style="width:${d.prog}%"></i><span>${d.prog}%</span></div><button class="mp-sneak" data-tap='{"type":"px","a":"sneak"}'>SNEAK</button><p class="mp-hint">Tap fast while her back is turned.${mode === 'hold' ? ' When she turns, press and hold the red pad.' : ''}</p>${mode !== 'on' && mode !== 'hold' ? '<button class="mp-small" data-motion="1">Turn on the motion sensor</button>' : ''}</div>`;
+      const pad = (t) => `<div class="mp-pad ${holding.has('freeze') ? 'down' : ''}" data-hold="freeze">${t}</div>`;
+      if (d.phase === 'red') return `<div class="mp doll red"><div class="mp-freeze">FREEZE</div>${pad('Keep your thumb here. Don\'t let go!')}${mode === 'on' ? '<div class="wobble"><i id="mpWob"></i></div><p class="mp-hint">And don\'t move your phone. Not even a little.</p>' : ''}</div>`;
+      if (d.phase === 'warn') return `<div class="mp doll warn"><div class="mp-freeze warn">She's turning!</div>${pad('Press and HOLD here NOW')}</div>`;
+      return `<div class="mp doll"><div class="doll-bar mp-bar"><i style="width:${d.prog}%"></i><span>${d.prog}%</span></div><button class="mp-sneak" data-tap='{"type":"px","a":"sneak"}'>SNEAK</button><p class="mp-hint">Tap fast while her back is turned. When she starts turning, press and hold the pad that appears.</p>${mode !== 'on' && mode !== 'hold' ? '<button class="mp-small" data-motion="1">Turn on the motion sensor</button>' : ''}</div>`;
     },
     hide(S, d) {
       const where = d.spots.find((s) => s.k === d.mine);
@@ -163,7 +165,8 @@ window.MP = (() => {
         const wires = `<div class="fbox"><h3>Wires ${done('wires') ? '✓' : ''}</h3>${b.wires.map((c, i) => `<button class="wire w-${c} ${b.cut.includes(i) ? 'cut' : ''}" data-x='{"type":"px","a":"cut","i":${i}}' ${done('wires') ? 'disabled' : ''}><span>${i + 1}</span><i></i><small>${c}</small></button>`).join('')}</div>`;
         const syms = d.mods.some((x) => x.m === 'symbols') ? `<div class="fbox"><h3>Symbols ${done('symbols') ? '✓' : ''}</h3><div class="syms">${b.four.map((s) => `<button class="${b.pressed.includes(s) ? 'on' : ''}" data-x='{"type":"px","a":"sym","s":"${s}"}' ${done('symbols') ? 'disabled' : ''}>${s}</button>`).join('')}</div></div>` : '';
         const lever = b.lever ? `<div class="fbox"><h3>Lever ${done('lever') ? '✓' : ''}</h3><div class="lever"><span class="light l-${b.lever.c}"></span><b>${b.lever.n}</b><button data-x='{"type":"px","a":"lever","d":"up"}' ${done('lever') ? 'disabled' : ''}>UP</button><button data-x='{"type":"px","a":"lever","d":"down"}' ${done('lever') ? 'disabled' : ''}>DOWN</button></div><small class="mp-hint">The light is ${b.lever.c}.</small></div>` : '';
-        return `<div class="mp mpfuse ${d.spark ? 'spark' : ''}"><h2 class="mp-h">You're the electrician</h2><p class="mp-hint">Describe what you see. Don't touch anything until the others tell you.</p>${wires}${syms}${lever}</div>`;
+        const own = (d.pages || []).map((pg) => `<div class="fpage"><h3>${esc(pg.title)}</h3>${pg.cols ? `<div class="symcols">${pg.cols.map((c, i) => `<span><b>${i + 1}</b>${c.join(' ')}</span>`).join('')}</div>` : ''}${pg.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>`).join('');
+        return `<div class="mp mpfuse ${d.spark ? 'spark' : ''}"><h2 class="mp-h">You're the electrician</h2><p class="mp-hint">${own ? 'Nobody else can help this time. Use the manual below.' : 'Describe what you see. Don\'t touch anything until the others tell you.'}</p>${wires}${syms}${lever}${own}</div>`;
       }
       const pages = (d.pages || []).map((pg) => `<div class="fpage"><h3>${esc(pg.title)}</h3>${pg.cols ? `<div class="symcols">${pg.cols.map((c, i) => `<span><b>${i + 1}</b>${c.join(' ')}</span>`).join('')}</div>` : ''}${pg.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>`).join('');
       return `<div class="mp"><h2 class="mp-h">${esc(d.elec)} sees the fuse box</h2>${mods}${pages || '<div class="mp-card"><p>No page for you this time. Help the others!</p></div>'}</div>`;
@@ -203,7 +206,8 @@ window.MP = (() => {
   // the motion sensor: on, refused (we use press-and-hold instead), or not asked yet
   let motion = localStorage.getItem('mnMotion') || null; let lastAcc = null; let jerk = 0; let gotEvent = false;
   function motionState() { return motion; }
-  function onMotion(e) { const a = e.accelerationIncludingGravity; if (!a || a.x == null) return; gotEvent = true; if (lastAcc) { const d = Math.hypot(a.x - lastAcc.x, a.y - lastAcc.y, a.z - lastAcc.z); jerk = jerk * 0.7 + d * 0.3; } lastAcc = { x: a.x, y: a.y, z: a.z }; }
+  let baseG = null; let tilt = 0;
+  function onMotion(e) { const a = e.accelerationIncludingGravity; if (!a || a.x == null) return; gotEvent = true; if (lastAcc) { const d = Math.hypot(a.x - lastAcc.x, a.y - lastAcc.y, a.z - lastAcc.z); jerk = jerk * 0.6 + d * 0.4; } lastAcc = { x: a.x, y: a.y, z: a.z }; if (baseG) { const m1 = Math.hypot(a.x, a.y, a.z), m2 = Math.hypot(baseG.x, baseG.y, baseG.z); if (m1 && m2) tilt = (Math.acos(Math.max(-1, Math.min(1, (a.x * baseG.x + a.y * baseG.y + a.z * baseG.z) / (m1 * m2)))) * 180) / Math.PI; } }
   function startListening() { window.addEventListener('devicemotion', onMotion); setTimeout(() => { if (!gotEvent) { motion = 'hold'; tellMode(); } }, 1800); }
   function tellMode() { try { localStorage.setItem('mnMotion', motion); } catch (e) { /* fine */ } send?.('px', { a: 'mode', motion: motion === 'on' }); window.__mnRender?.(); }
   async function askMotion() {
@@ -219,10 +223,13 @@ window.MP = (() => {
   function watchDoll() {
     const d = S0?.me?.px; if (!d || d.room !== 'doll' || S0.step !== 'play') return;
     if (motion && modeSentFor !== S0.x.kind) { modeSentFor = S0.x.kind; send('px', { a: 'mode', motion: motion === 'on' }); }
-    const wob = document.getElementById('mpWob'); if (wob) wob.style.width = `${Math.min(100, (jerk / 1.4) * 100)}%`;
+    const wob = document.getElementById('mpWob'); if (wob) wob.style.width = `${Math.min(100, Math.max(jerk / 0.7, tilt / 5) * 100)}%`;
+    if (d.phase !== 'red') { baseG = null; tilt = 0; }
     if (d.phase !== 'red' || !d.redAt || d.caught) return;
     if (reportedRed === d.redAt) return; if (W.now() - d.redAt < 400) return;
-    const bad = motion === 'hold' ? !holding.has('freeze') : motion === 'on' ? jerk > 1.4 : false;
+    if (!baseG && lastAcc) { baseG = { ...lastAcc }; tilt = 0; }
+    // thumb off the pad, or (with the sensor on) a wobble or a tilt of more than 5 degrees
+    const bad = !holding.has('freeze') || (motion === 'on' && (jerk > 0.7 || tilt > 5));
     if (bad) { reportedRed = d.redAt; send('px', { a: 'moved' }); navigator.vibrate?.([200, 60, 300]); }
   }
   function setState(S) { S0 = S; }
