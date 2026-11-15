@@ -19,6 +19,7 @@ const fill = (t, o) => String(t).replace(/\{(\w+)\}/g, (_, k) => (o[k] ?? ''));
 const line = (t, o = {}) => fill(Array.isArray(t) ? pick(t) : t, o);
 const timeout = (p, t) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), t))]);
 const strip = voice.stripTags;
+const fixedLines = (o) => (typeof o === 'string' ? (o.includes('{') ? [] : [o]) : o && typeof o === 'object' ? Object.values(o).flatMap(fixedLines) : []);
 class Cancelled extends Error {}
 
 const VOICE = () => voice.MN();
@@ -114,6 +115,7 @@ class Mansion {
     this.pausedMs = 0; this.recent = []; this.best = null; this.nights = 0;
     this.reset();
     [SAY.welcome, SAY.rules].forEach((t) => this.prefetch(t, true));
+    fixedLines(SAY).forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
   }
   reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false }); }
 

@@ -32,6 +32,7 @@ function lev(a, b) {
   return d[a.length][b.length];
 }
 const tooClose = (lie, truth) => { const a = norm(lie); const b = norm(truth); if (!a) return true; return a === b || (b.length >= 5 && lev(a, b) <= 1) || (b.length >= 4 && a.includes(b)); };
+const fixedLines = (o) => (typeof o === 'string' ? (o.includes('{') ? [] : [o]) : o && typeof o === 'object' ? Object.values(o).flatMap(fixedLines) : []);
 class Cancelled extends Error {}
 
 const VOICE = () => voice.RG();
@@ -61,6 +62,7 @@ class Rigged {
     this.seen = { mc: new Set(), tf: new Set(), lie: new Set(), race: new Set() };
     this.reset();
     [SAY.welcome, SAY.welcomeHouse, SAY.rules, SAY.dossier, SAY.round[1]].forEach((t) => this.prefetch(t, true));
+    fixedLines(SAY).forEach((t) => this.prefetch(t)); // every fixed line is made while people join, so none arrive late
   }
   reset() {
     Object.assign(this, { roundN: 0, live: null, q: null, cur: null, rev: null, qd: {}, qSeq: 0, sd: null, race: null, lastLie: null, grudgeWin: null, winner: null, lastChat: 0, sabDemo: false });

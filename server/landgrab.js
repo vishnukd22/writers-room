@@ -49,7 +49,7 @@ class LandGrab {
     this.runId = 0; this.waiter = null; this.lastActive = Date.now(); this.syncPending = false;
     this.fx = []; this.fxSeq = 0; this.timers = []; this.busts = bustPool(); this.taught = false;
     this.newBoard();
-    for (const t of Object.values(L.SAY)) if (typeof t === 'string' && !t.includes('{')) this.prefetch(t);
+    for (const t of [...Object.values(L.SAY).flat(), ...L.TUTORIAL.map((x) => x.line), ...Object.values(L.TIPS)]) if (typeof t === 'string' && !t.includes('{')) this.prefetch(t);
   }
   newBoard() {
     Object.assign(this, { protect: 0, sell: 0, tracker: 0, deck: [], bin: [], reg: [], cur: null, rot: -1, special: null, lastPres: null, lastSec: null,
@@ -90,7 +90,7 @@ class LandGrab {
   left() { return Math.max(30, (this.endsAt || Date.now()) - Date.now()); }
 
   // ------------------------------------------------------------ the gossip's voice
-  prefetch(text, urgent) { return voice.get(text, GOSSIP(), urgent); }
+  prefetch(text, urgent) { return voice.get(text, GOSSIP(), urgent, true, voice.LG_SPEED()).catch(() => null); }
   estimate(text) { return Math.min(30000, 900 + strip(text).length * 62); }
   async makeCue(text, opts = {}) {
     let audioId = null;
@@ -222,9 +222,9 @@ class LandGrab {
 
     // 1. the President picks a Secretary while the room argues (and the tea shop gossips)
     this.setPhase('NOMINATE', {}, T.nominate);
-    if (first) await this.say(g, L.SAY.first);
-    await this.say(g, fill(pick(L.SAY.nominate), { pres: pres.name }));
-    if (this.lastSec) await this.tip(g, 'limited');
+    // she talks over the choosing: the President's phone is already live
+    const tipLim = this.lastSec && this.tipsOn && !this.tipsDone.has('limited'); if (tipLim) this.tipsDone.add('limited');
+    this.sayOver(g, [first ? L.SAY.first : '', fill(pick(L.SAY.nominate), { pres: pres.name }), tipLim ? L.TIPS.limited : ''].filter(Boolean).join(' '));
     while (!r.nom) {
       const res = await this.wait(this.left(), () => !!r.nom || this.rumourQ.length > 0); this.guard(g);
       if (r.nom) break;
@@ -242,24 +242,24 @@ class LandGrab {
     r.votes = Object.fromEntries(this.alive().map((p) => [p.id, p.id in votes ? votes[p.id] : null]));
     r.passed = yes > no;
     this.setPhase('VOTE', { step: 'result', votes }); this.sfx(r.passed ? 'gavel' : 'lg-murmur');
-    await this.pause(g, 2.5);
+    await this.pause(g, 2);
     if (!r.passed) {
       this.tracker++;
       if (this.tracker >= 3) return this.shutdown(g, r);
-      await this.say(g, this.tracker === 2 ? L.SAY.voteFail2 : pick(L.SAY.voteFail));
-      await this.tip(g, 'fail');
+      const tipFail = this.tipsOn && !this.tipsDone.has('fail'); this.tipsDone.add('fail');
+      await this.say(g, `${this.tracker === 2 ? L.SAY.voteFail2 : pick(L.SAY.voteFail)}${tipFail ? ` ${L.TIPS.fail}` : ''}`);
       return;
     }
     this.tracker = 0; this.lastPres = pres.id; this.lastSec = sec.id;
     if (this.sell >= 3) {
       if (sec.role === 'P') { this.winner = { team: 'G', reason: 'puppetElected', name: sec.name, id: sec.id }; return; }
       await this.say(g, fill(L.SAY.notPuppet, { sec: sec.name }));
-    } else await this.say(g, fill(L.SAY.votePass, { pres: pres.name, sec: sec.name }));
+    }
 
     // 3. the files: the President bins one, the Secretary signs one
     this.hand = this.draw(3); r.drew = [...this.hand];
     this.setPhase('FILES', { step: 'pres' }, T.files); this.sfx('lg-paper');
-    this.sayOver(g, fill(L.SAY.filesPres, { pres: pres.name }) + (this.tipsOn && !this.tipsDone.has('files') ? ` ${L.TIPS.files}` : '')); this.tipsDone.add('files');
+    this.sayOver(g, (this.sell >= 3 ? '' : `${fill(L.SAY.votePass, { pres: pres.name, sec: sec.name })} `) + fill(L.SAY.filesPres, { pres: pres.name }) + (this.tipsOn && !this.tipsDone.has('files') ? ` ${L.TIPS.files}` : '')); this.tipsDone.add('files');
     await this.wait(ms(T.files), () => !!this.passed); this.guard(g);
     if (!this.passed) { const i = Math.floor(Math.random() * 3); this.bin.push(this.hand[i]); this.passed = this.hand.filter((_, j) => j !== i); this.note(pres, 'Time ran out, so a file was binned for you.'); }
     r.passed2 = [...this.passed];
@@ -294,7 +294,7 @@ class LandGrab {
     this.setPhase('CLAIMS', { step: 'show' }); this.sync();
     const pc = r.claims.pres; const sc = r.claims.sec;
     r.clash = pc !== null && sc !== null && (sc < Math.max(0, pc - 1) || sc > Math.min(2, pc));
-    if (r.clash) { this.sfx('lg-murmur'); await this.say(g, L.SAY.clash); } else await this.pause(g, 4);
+    if (r.clash) { this.sfx('lg-murmur'); await this.say(g, L.SAY.clash); } else await this.pause(g, 3);
     await this.tip(g, 'claims');
 
     // 5. a special power for the President, if this Sell file unlocked one
@@ -342,7 +342,7 @@ class LandGrab {
     const targets = kind === 'inquiry' ? others.filter((p) => !(pres.seen || []).some((s) => s.id === p.id)) : others;
     if (!targets.length) return;
     this.setPhase('POWER', { kind, step: 'choose', targets: targets.map((p) => p.id) }, T.power); this.sfx('dundun');
-    await this.say(g, fill(L.SAY[kind], { pres: pres.name }));
+    this.sayOver(g, fill(L.SAY[kind], { pres: pres.name }));
     await this.wait(this.left(), () => !!this.d.target); this.guard(g);
     const target = this.P(this.d.target) || pick(targets);
     r.power.target = target.id;

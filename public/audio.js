@@ -185,8 +185,6 @@ window.AV = (() => {
 
   // ---------------------------------------------------------------- narrator
   let voiceEl = null; let speaking = null;
-  let browserVoice = null;
-  if ('speechSynthesis' in window) { const pv = () => { const vs = speechSynthesis.getVoices(); browserVoice = vs.find((v) => /en[-_]GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null; }; pv(); speechSynthesis.onvoiceschanged = pv; }
   function speak(cue, onDone) {
     stopVoice();
     speaking = cue.id; duck(true);
@@ -198,11 +196,7 @@ window.AV = (() => {
       voiceEl = new Audio(cue.audio); voiceEl.volume = voiceVol;
       voiceEl.onended = finish; voiceEl.onerror = fail;
       voiceEl.play().catch(fail);
-    } else if ('speechSynthesis' in window && voiceVol > 0) {
-      const u = new SpeechSynthesisUtterance(cue.speak || cue.text); if (browserVoice) u.voice = browserVoice; u.rate = 1.02; u.pitch = cue.kind === 'char' ? 1.15 : 0.95;
-      u.onend = () => (Date.now() - t0 < 500 ? fail() : finish()); u.onerror = fail; speechSynthesis.speak(u);
-      setTimeout(() => { if (speaking === cue.id && !speechSynthesis.speaking) fail(); }, 2500);
-    } else setTimeout(finish, readMs);
+    } else setTimeout(finish, readMs); // no clip ready: show the words only. Never the browser's robot voice.
   }
   function stopVoice() { if (voiceEl) { voiceEl.onended = null; voiceEl.pause(); voiceEl = null; } if ('speechSynthesis' in window) speechSynthesis.cancel(); if (speaking) { speaking = null; duck(false); } }
 

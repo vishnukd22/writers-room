@@ -20,6 +20,33 @@ const badVoices = new Set();
 let v3Broken = false;
 const MAX = 400;
 
+// ---------------------------------------------------------------- numbers the way a person says them
+// The screen keeps exact amounts ("AED 38,450"). The voice says "thirty-eight and a half thousand dirhams":
+// voices slur long digit strings, and nobody says the exact figure out loud anyway.
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+function words(n) {
+  n = Math.floor(Math.abs(n));
+  if (n < 20) return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '');
+  if (n < 1000) return `${ONES[Math.floor(n / 100)]} hundred${n % 100 ? ` and ${words(n % 100)}` : ''}`;
+  if (n < 1e6) return `${words(Math.floor(n / 1000))} thousand${n % 1000 ? (n % 1000 < 100 ? ' and ' : ' ') + words(n % 1000) : ''}`;
+  return `${words(Math.floor(n / 1e6))} million${n % 1e6 ? ` ${words(n % 1e6)}` : ''}`;
+}
+function spokenAmount(n) {
+  n = Math.round(Math.abs(n));
+  if (n >= 1e6) { const m = Math.round(n / 1e5) / 10; return `${Number.isInteger(m) ? words(m) : `${words(Math.floor(m))} point ${ONES[Math.round((m % 1) * 10)]}`} million`; }
+  if (n >= 10000) { const r = Math.round(n / 500) * 500; return `${words(Math.floor(r / 1000))}${r % 1000 ? ' and a half' : ''} thousand`; }
+  return words(n);
+}
+const num = (s) => Number(String(s).replace(/,/g, ''));
+function speakable(t) {
+  return String(t || '')
+    .replace(/(?:AED|Dhs?)\s?(\d[\d,]*(?:\.\d+)?)(\s+dirhams)?/gi, (_, n) => `${spokenAmount(num(n))} dirhams`)
+    .replace(/\$(\d[\d,]*)(\s+Bucks)?/g, (_, n) => `${spokenAmount(num(n))} Bucks`)
+    .replace(/\b\d{1,3}(?:,\d{3})+\b/g, (m) => spokenAmount(num(m)));
+}
+
 const stripTags = (t) => String(t || '').replace(/\[[^\]]*\]\s*/g, '').replace(/\s+/g, ' ').trim();
 
 // queue so we never hit the plan's concurrency limit
@@ -28,14 +55,14 @@ let active = 0; const waiting = [];
 function slot(urgent) { return new Promise((r) => { if (active < CONC) { active++; r(); } else if (urgent) waiting.unshift(r); else waiting.push(r); }); }
 function release() { active--; const n = waiting.shift(); if (n) { active++; n(); } }
 
-async function request(text, voice, model) {
+async function request(text, voice, model, speed) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 30000);
   try {
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
       method: 'POST', signal: ctrl.signal,
       headers: { 'xi-api-key': KEY(), 'content-type': 'application/json', accept: 'audio/mpeg' },
-      body: JSON.stringify({ text, model_id: model }),
+      body: JSON.stringify(speed && speed !== 1 ? { text, model_id: model, voice_settings: { speed } } : { text, model_id: model }),
     });
     if (!res.ok) { const body = (await res.text()).slice(0, 300); return { error: res.status, body }; }
     return { buf: Buffer.from(await res.arrayBuffer()) };
@@ -45,11 +72,12 @@ async function request(text, voice, model) {
 // Characters use a fast model so scenes play without gaps; the hosts keep the expressive one.
 const FAST = () => process.env.ELEVENLABS_FAST_MODEL || 'eleven_flash_v2_5';
 let fastBroken = false;
-async function synth(text, voice, urgent, fast) {
+async function synth(text, voice, urgent, fast, speed) {
   await slot(urgent);
   try {
     if (fast && !fastBroken) {
-      const r = await request(stripTags(text), voice, FAST());
+      let r = await request(stripTags(text), voice, FAST(), speed);
+      if (r.error && speed && (r.error === 400 || r.error === 422)) { console.error('[voice] speed refused, using normal speed:', r.body || ''); r = await request(stripTags(text), voice, FAST()); }
       if (!r.error) return { buf: r.buf };
       console.error('[voice] fast model failed, using the normal one:', r.error, r.body || ''); fastBroken = true;
     }
@@ -67,17 +95,18 @@ async function synth(text, voice, urgent, fast) {
 }
 
 // Returns a promise of an audio id (or null when there is no voice available).
-function get(text, voice, urgent = false, fast = false) {
+function get(text, voice, urgent = false, fast = false, speed = 1) {
+  text = speakable(text);
   if (!enabled() || !stripTags(text)) return Promise.resolve(null);
   voice = voice || NARRATOR();
   if (badVoices.has(voice)) voice = voice === lgFound ? LG_FALLBACK : NARRATOR();
-  const key = `${voice}|${fast ? 'f' : ''}|${text}`;
+  const key = `${voice}|${fast ? 'f' : ''}|${speed}|${text}`;
   if (byKey.has(key)) return byKey.get(key);
   const p = (async () => {
-    let r = await synth(text, voice, urgent, fast);
+    let r = await synth(text, voice, urgent, fast, speed);
     if (r.error && voice !== NARRATOR() && (r.error === 404 || r.error === 400 || r.error === 422)) {
       badVoices.add(voice);
-      r = await synth(text, NARRATOR(), urgent);
+      r = await synth(text, NARRATOR(), urgent, fast, speed);
     }
     if (!r.buf) { byKey.delete(key); return null; }
     const id = crypto.randomBytes(8).toString('hex');
@@ -98,6 +127,7 @@ function audio(id) { return store.get(id)?.buf || null; }
 const LG_FALLBACK = 'cgSgspJ2msm6clMCkdW9'; // "Jessica", only if the search fails
 let lgFound = null;
 const LG = () => process.env.ELEVENLABS_LG_VOICE_ID || lgFound || LG_FALLBACK;
+const LG_SPEED = () => Math.max(0.7, Math.min(1.2, Number(process.env.ELEVENLABS_LG_SPEED || 1.12)));
 async function findIndianVoice() {
   if (!enabled() || process.env.ELEVENLABS_LG_VOICE_ID) return;
   const H = { 'xi-api-key': KEY() };
@@ -126,4 +156,4 @@ const RG = () => process.env.ELEVENLABS_RG_VOICE_ID || 'nPczCjzI2devNBz1zQrb'; /
 // Last Night in the Mansion's butler, Mortimer: an older, posh, polite British voice. Set ELEVENLABS_MN_VOICE_ID to change it.
 const MN = () => process.env.ELEVENLABS_MN_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; // "George"
 
-module.exports = { enabled, get, audio, stripTags, NARRATOR, EXEC, LG, BC, RG, MN, charVoices };
+module.exports = { enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, RG, MN, charVoices };
