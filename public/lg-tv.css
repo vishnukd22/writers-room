@@ -223,7 +223,7 @@ body[data-phase="LOBBY"] #caption { bottom: 2rem; }
 #controls { position: fixed; z-index: 6; right: .8rem; bottom: .6rem; display: flex; gap: .35rem; opacity: .2; transition: opacity .2s; }
 #controls:hover, #controls:focus-within { opacity: 1; }
 #controls button, #controls a { background: var(--night-2); color: var(--paper); border: 1px solid rgba(243,233,210,.2); border-radius: 8px; padding: .3rem .6rem; font-size: .75rem; text-decoration: none; }
-#gate { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: radial-gradient(ellipse at 30% 70%, rgba(217,164,65,.25), transparent 60%), var(--night); }
+#gate { position: fixed; inset: 0; z-index: 10; display: grid; place-items: safe center; overflow-y: auto; background: radial-gradient(ellipse at 30% 70%, rgba(217,164,65,.25), transparent 60%), var(--night); }
 #gate.hide { display: none; }
 .gate-in { max-width: 36rem; text-align: center; padding: 2rem; }
 .gate-title { font-family: var(--hand); font-size: 6rem; font-weight: 700; line-height: .9; color: var(--paper); }

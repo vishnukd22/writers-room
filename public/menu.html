@@ -5,96 +5,97 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Vishnu's Game Night</title>
 <link rel="stylesheet" href="/fonts/inter/index.css">
+<link rel="stylesheet" href="/fonts/bricolage/700.css">
+<link rel="stylesheet" href="/fonts/bricolage/800.css">
 <style>
-  /* Vishnu's Game Night: the game picker on the TV. Clean like an App Store "Today" page, with each game bringing its own colour. */
+  /* Vishnu's Game Night: the game picker on the TV. Dark and loud: every game is a chunky card in its own colour,
+     the artwork shown whole on top, the words underneath. */
   :root {
-    --bg: #F5F5F7; --ink: #1D1D1F; --sub: #6E6E73; --line: rgba(0,0,0,.08); --card: #FFFFFF;
-    --font: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-    --r: 34px; --ease: cubic-bezier(.2, .9, .25, 1);
+    --bg: #0E0C12; --panel: #18151F; --panel2: #201C29; --line: #2E2839; --ink: #F6F2FF; --sub: #A9A1BA;
+    --head: 'Bricolage Grotesque', 'Inter Variable', system-ui, sans-serif; --font: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --ease: cubic-bezier(.2, .9, .25, 1);
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; }
-  body { font-family: var(--font); background: var(--bg); color: var(--ink); min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body { font-family: var(--font); background: var(--bg); color: var(--ink); min-height: 100vh; min-height: 100dvh; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0); background-size: 22px 22px; }
+  .page { width: min(1760px, 94vw); margin: 0 auto; padding: 3vh 0 2.4vh; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; gap: 2.6vh; }
+  @media (min-width: 1201px) and (min-height: 700px) { .page { height: 100vh; height: 100dvh; } }
 
-  /* soft colour wash behind the header: every game's colour, very blurred */
-  .glow { position: fixed; inset: -20vh -10vw auto; height: 70vh; pointer-events: none; z-index: 0; filter: blur(90px); opacity: .55;
-    background: radial-gradient(30% 60% at 12% 40%, #FF9F1A 0%, transparent 70%), radial-gradient(28% 55% at 38% 30%, #FF3B6B 0%, transparent 70%),
-                radial-gradient(28% 60% at 63% 38%, #8B5CF6 0%, transparent 70%), radial-gradient(30% 60% at 88% 30%, #22C7A9 0%, transparent 70%); }
-  @media (prefers-reduced-motion: no-preference) { .glow { animation: drift 22s ease-in-out infinite alternate; } }
-  @keyframes drift { to { transform: translateX(4vw) scale(1.08); } }
+  /* header: the big logo, the question, the clock */
+  header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(1.2rem, 2.4vw, 3rem); }
+  .brand { display: block; }
+  .brand img { height: clamp(6rem, 16vh, 13rem); width: auto; display: block; filter: drop-shadow(0 10px 30px rgba(139, 92, 246, .35)); }
+  .brand .word { font: 800 clamp(3rem, 6vw, 6.5rem)/.9 var(--head); letter-spacing: -.03em; }
+  h1 { margin: 0; font: 800 clamp(2rem, min(3.3vw, 6vh), 4.4rem)/1.02 var(--head); letter-spacing: -.035em; }
+  .lede { margin: .8rem 0 0; color: var(--sub); font-size: clamp(1rem, 1.3vw, 1.5rem); font-weight: 500; }
+  .greet { text-align: right; color: var(--sub); font-weight: 600; font-size: clamp(.95rem, 1.05vw, 1.2rem); align-self: start; padding-top: 1vh; }
+  .greet b { display: block; color: var(--ink); font: 800 clamp(2rem, 3vw, 3.4rem)/1.05 var(--head); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; margin-top: .6rem; padding: .3rem .8rem; border-radius: 8px; background: #FFB21A; color: #1A1200; font-size: .85em; font-weight: 800; }
 
-  .page { position: relative; z-index: 1; width: min(1720px, 92vw); margin: 0 auto; padding: 5vh 0 4vh; min-height: 100vh; min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; gap: 3.2vh; }
-
-  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; }
-  .brand { display: flex; align-items: center; gap: .7rem; font-weight: 700; font-size: clamp(1rem, 1.2vw, 1.35rem); letter-spacing: -.01em; }
-  .brand .dots { display: flex; gap: .3rem; }
-  .brand .dots i { width: .7rem; height: .7rem; border-radius: 50%; display: block; }
-  .brand img { height: clamp(2.4rem, 4.2vh, 3.6rem); display: block; }
-  h1 { margin: .9rem 0 0; font-weight: 800; font-size: clamp(2.4rem, min(5.4vw, 8.4vh), 6.2rem); line-height: .98; letter-spacing: -.045em; }
-  .lede { margin: 1rem 0 0; color: var(--sub); font-size: clamp(1.05rem, 1.45vw, 1.6rem); font-weight: 500; letter-spacing: -.01em; }
-  .greet { text-align: right; color: var(--sub); font-weight: 600; font-size: clamp(.95rem, 1.1vw, 1.25rem); }
-  .greet b { display: block; color: var(--ink); font-size: clamp(1.6rem, 2.4vw, 2.8rem); font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-  .pill { display: inline-block; margin-top: .5rem; padding: .3rem .75rem; border-radius: 99px; background: var(--ink); color: #fff; font-size: .85em; font-weight: 700; }
-
-  /* the games: a bento of App Store style cards */
-  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 1.4vw, 28px); min-height: 0; }
-  .card { --c1: #888; --c2: #444; --glass: rgba(20,20,30,.42); position: relative; display: block; border-radius: var(--r); overflow: hidden; text-decoration: none; color: #fff; min-height: 200px;
-    background: linear-gradient(140deg, var(--c1), var(--c2)); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 18px 40px -18px color-mix(in srgb, var(--c2) 70%, transparent);
-    transition: transform .45s var(--ease), box-shadow .45s var(--ease); outline: none; isolation: isolate; }
-  .card .art { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform .8s var(--ease); z-index: -1; }
-  .card .fallback { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(5rem, 9vw, 10rem); z-index: -1; opacity: .9; text-shadow: 0 20px 40px rgba(0,0,0,.25); }
-  .card::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.35) 100%); }
-  a.card:hover, a.card:focus-visible { transform: translateY(-6px) scale(1.012); box-shadow: 0 2px 4px rgba(0,0,0,.08), 0 36px 70px -24px color-mix(in srgb, var(--c2) 85%, transparent); }
-  a.card:hover .art, a.card:focus-visible .art { transform: scale(1.05); }
-  a.card:focus-visible { box-shadow: 0 0 0 5px #fff, 0 0 0 9px var(--c1), 0 36px 70px -24px var(--c2); }
-
-  /* the frosted panel along the bottom of each card */
-  .info { position: absolute; left: 12px; right: 12px; bottom: 12px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(.7rem, 1vw, 1.2rem);
-    padding: clamp(.6rem, .8vw, .95rem); border-radius: calc(var(--r) - 12px); background: var(--glass); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); border: 1px solid rgba(255,255,255,.18); }
-  .icon { width: clamp(52px, 4.6vw, 84px); aspect-ratio: 1; border-radius: 23%; background: linear-gradient(150deg, var(--c1), var(--c2)); display: grid; place-items: center; font-size: clamp(1.6rem, 2.3vw, 2.6rem); overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.35); }
+  /* the games */
+  .grid { display: grid; grid-template-columns: minmax(0, min(50%, calc((100dvh - 500px) * 1.7778))) minmax(0, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.4vw, 26px); min-height: 0; }
+  .card { --c: #888; --cd: #333; position: relative; display: flex; flex-direction: column; text-decoration: none; color: var(--ink); background: var(--panel); border: 3px solid var(--c); border-radius: 22px; overflow: hidden;
+    box-shadow: 0 0 0 0 var(--c); transition: transform .3s var(--ease), box-shadow .3s var(--ease); outline: none; }
+  a.card:hover, a.card:focus-visible { transform: translate(-6px, -6px); box-shadow: 10px 10px 0 0 var(--c); }
+  a.card:focus-visible { outline: 4px solid #fff; outline-offset: 4px; }
+  .shot { position: relative; aspect-ratio: 16 / 9; background: linear-gradient(140deg, var(--c), var(--cd)); border-bottom: 3px solid var(--c); overflow: hidden; flex: none; }
+  .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--ease); }
+  a.card:hover .shot img, a.card:focus-visible .shot img { transform: scale(1.04); }
+  .shot .fallback { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(4rem, 7vw, 8rem); }
+  .info { flex: 1; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: clamp(.7rem, 1vw, 1.2rem); padding: clamp(.8rem, 1vw, 1.2rem); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 14%, var(--panel)), var(--panel)); }
+  .icon { width: clamp(52px, 4.2vw, 80px); aspect-ratio: 1; border-radius: 18px; background: linear-gradient(150deg, var(--c), var(--cd)); display: grid; place-items: center; font-size: clamp(1.6rem, 2.2vw, 2.5rem); overflow: hidden; border: 2px solid rgba(255,255,255,.15); }
   .icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .txt { min-width: 0; }
-  .txt b { display: block; font-size: clamp(1.15rem, 1.6vw, 1.95rem); font-weight: 750; letter-spacing: -.025em; line-height: 1.1; }
-  .txt span { display: block; margin-top: .25rem; font-size: clamp(.82rem, .95vw, 1.08rem); line-height: 1.3; color: rgba(255,255,255,.86); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .txt small { display: block; margin-top: .35rem; font-size: clamp(.75rem, .82vw, .95rem); font-weight: 600; color: rgba(255,255,255,.7); }
-  .play { padding: .55em 1.25em; border-radius: 99px; background: #fff; color: var(--c2); font-weight: 800; font-size: clamp(.85rem, 1vw, 1.15rem); letter-spacing: .01em; white-space: nowrap; transition: transform .3s var(--ease); }
-  a.card:hover .play, a.card:focus-visible .play { transform: scale(1.06); }
+  .txt b { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font: 800 clamp(1.2rem, 1.55vw, 1.9rem)/1.05 var(--head); letter-spacing: -.02em; }
+  .txt span { display: block; margin-top: .3rem; font-size: clamp(.85rem, .92vw, 1.08rem); line-height: 1.32; color: #D9D2E8; }
+  .txt small { display: block; margin-top: .35rem; font-size: clamp(.75rem, .8vw, .95rem); font-weight: 700; color: var(--c); }
+  .play { padding: .6em 1.2em; border-radius: 12px; background: var(--c); color: #120E18; font: 800 clamp(.95rem, 1.05vw, 1.25rem) var(--head); white-space: nowrap; box-shadow: 0 4px 0 0 var(--cd); transition: transform .2s var(--ease); }
+  a.card:hover .play, a.card:focus-visible .play { transform: translateY(-2px); }
+  .new { font-style: normal; font: 800 .5em/1 var(--font); padding: .4em .6em; border-radius: 6px; background: var(--c); color: #120E18; }
 
-  .bc { --c1: #FFC21A; --c2: #FF6B00; --glass: rgba(80,35,0,.38); }
-  .rg { --c1: #FF4D7D; --c2: #B5103A; --glass: rgba(70,0,20,.42); }
-  .lg { --c1: #34D399; --c2: #0B8A7C; --glass: rgba(0,50,40,.4); }
-  .wr { --c1: #4F8CFF; --c2: #2335A8; --glass: rgba(10,20,70,.42); }
-  .mn { --c1: #8B5CF6; --c2: #2A1468; --glass: rgba(25,10,60,.48); }
-  .feature { grid-row: span 2; }
-  .feature .fallback { font-size: clamp(7rem, 13vw, 15rem); }
-  .new { position: absolute; top: 16px; left: 16px; padding: .35em .9em; border-radius: 99px; background: #fff; color: var(--c2); font-weight: 800; font-size: clamp(.8rem, .95vw, 1.05rem); box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+  .mn { --c: #9B6BFF; --cd: #3B1C8C; }
+  .bc { --c: #FFB21A; --cd: #B34A00; }
+  .rg { --c: #FF3D71; --cd: #8F0A30; }
+  .lg { --c: #2BD4AE; --cd: #0B6E62; }
+  .feature { grid-row: 1 / -1; container-type: inline-size; }
+  @container (max-width: 720px) { .feature .info { grid-template-columns: auto 1fr; } .feature .play { grid-column: 1 / -1; text-align: center; padding: .5em; } .feature .txt b { font-size: 1.45rem; } .feature .txt span { font-size: 1rem; } .feature .icon { width: 64px; } }
+  .card:not(.feature) { flex-direction: row; }
+  .card:not(.feature) .shot { height: 100%; width: auto; aspect-ratio: 16 / 9; border-bottom: 0; border-right: 3px solid var(--c); }
+  .card:not(.feature) .info { min-width: 0; }
+  .feature .info { align-content: center; padding: clamp(.9rem, 1.3vw, 1.6rem); }
+  .feature .icon { width: clamp(70px, 6vw, 112px); border-radius: 24px; }
+  .feature .txt b { font-size: clamp(1.5rem, 2vw, 2.6rem); }
+  .feature .txt span { font-size: clamp(1rem, 1.2vw, 1.45rem); }
+  .feature .txt small { font-size: clamp(.85rem, .95vw, 1.15rem); }
+  .feature .play { font-size: clamp(1.1rem, 1.4vw, 1.7rem); padding: .7em 1.5em; }
 
-  /* how it works: a plain white card */
-  .how { background: var(--card); color: var(--ink); border-radius: var(--r); padding: clamp(1.2rem, 2vw, 2.4rem); display: flex; flex-direction: column; justify-content: center; gap: clamp(.8rem, 1.6vh, 1.4rem); box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 18px 40px -24px rgba(0,0,0,.25); min-height: 200px; }
-  .how h2 { margin: 0; font-size: clamp(1.3rem, 1.9vw, 2.2rem); font-weight: 800; letter-spacing: -.03em; }
-  .how ol { margin: 0; padding: 0; list-style: none; display: grid; gap: clamp(.6rem, 1.2vh, 1rem); counter-reset: s; }
-  .how li { counter-increment: s; display: grid; grid-template-columns: auto 1fr; gap: .9rem; align-items: center; font-size: clamp(.95rem, 1.15vw, 1.3rem); font-weight: 550; color: #3A3A3C; line-height: 1.3; }
-  .how li::before { content: counter(s); width: 2.1em; height: 2.1em; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--k); }
-  .how li:nth-child(1) { --k: #FF6B00; } .how li:nth-child(2) { --k: #FF3B6B; } .how li:nth-child(3) { --k: #8B5CF6; }
+  /* how it works */
+  .how { display: flex; align-items: center; gap: clamp(1rem, 2vw, 2.4rem); flex-wrap: wrap; }
+  .how h2 { margin: 0; font: 800 clamp(1rem, 1.2vw, 1.4rem) var(--head); color: var(--ink); }
+  .how ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: clamp(.8rem, 1.8vw, 2.2rem); counter-reset: s; }
+  .how li { counter-increment: s; display: grid; grid-template-columns: auto 1fr; gap: .6rem; align-items: center; font-size: clamp(.85rem, .95vw, 1.15rem); font-weight: 500; color: #D9D2E8; line-height: 1.3; }
+  .how li::before { content: counter(s); width: 1.9em; height: 1.9em; border-radius: 10px; display: grid; place-items: center; font: 800 1em var(--head); color: #120E18; background: var(--k); }
+  .how li:nth-child(1) { --k: #FFB21A; } .how li:nth-child(2) { --k: #FF3D71; } .how li:nth-child(3) { --k: #9B6BFF; }
   .how li b { color: var(--ink); }
 
-  footer { display: flex; justify-content: space-between; align-items: center; color: var(--sub); font-size: clamp(.8rem, .9vw, 1rem); font-weight: 500; }
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap; color: var(--sub); font-size: clamp(.8rem, .9vw, 1rem); font-weight: 500; }
+  footer .right { display: flex; gap: 1.4rem; align-items: center; }
   footer a { color: var(--sub); }
 
-  /* smaller screens: two columns, then one, and the page scrolls */
-  @media (max-height: 820px) and (min-width: 1101px) { .page { gap: 2.4vh; padding-top: 3.5vh; } .lede { margin-top: .6rem; } }
-  @media (max-width: 1100px) { .feature { grid-row: auto; grid-column: 1 / -1; } .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(280px, auto); } .page { min-height: 0; } }
-  @media (max-width: 680px) { .feature { grid-column: auto; } .grid { grid-template-columns: 1fr; } header { flex-direction: column; align-items: flex-start; } .greet { text-align: left; } .page { width: auto; padding: max(4vh, env(safe-area-inset-top)) 16px 3vh; } .info { grid-template-columns: auto 1fr; } .play { grid-column: 1 / -1; text-align: center; } }
-  @media (prefers-reduced-motion: reduce) { .card, .card .art, .play { transition: none; } }
+  /* smaller screens: two columns, then one */
+  @media (max-width: 1200px), (max-height: 699px) { .grid { grid-template-columns: 1fr; grid-template-rows: none; } .feature { grid-row: auto; } .card:not(.feature) .shot { height: auto; width: 42%; align-self: stretch; aspect-ratio: auto; min-height: 100%; } .card:not(.feature) .shot img { object-fit: cover; } .card:not(.feature) { min-height: 210px; } }
+  @media (max-width: 900px) { header { grid-template-columns: 1fr; } .greet { text-align: left; } }
+  @media (max-width: 680px) { .card:not(.feature) { flex-direction: column; } .card:not(.feature) .shot { width: 100%; aspect-ratio: 16 / 9; min-height: 0; border-right: 0; border-bottom: 3px solid var(--c); } .page { width: auto; padding: max(3vh, env(safe-area-inset-top)) 16px 3vh; } .info { grid-template-columns: auto 1fr; } .play { grid-column: 1 / -1; text-align: center; } }
+  @media (prefers-reduced-motion: reduce) { .card, .shot img, .play { transition: none; } }
 </style>
 </head>
 <body>
-<div class="glow" aria-hidden="true"></div>
 <div class="page">
   <header>
+    <div class="brand" id="brand"><span class="word">Vishnu's Game Night</span></div>
     <div>
-      <div class="brand" id="brand"><span class="dots" aria-hidden="true"><i style="background:#FF9F1A"></i><i style="background:#FF3B6B"></i><i style="background:#8B5CF6"></i><i style="background:#22C7A9"></i></span>Vishnu's Game Night</div>
       <h1>What are we playing tonight?</h1>
       <p class="lede">Pick a game here. Everyone else plays on their phone.</p>
     </div>
@@ -103,32 +104,33 @@
 
   <main class="grid">
     <a class="card mn feature" id="gMN" href="/tv/mansion">
-      <div class="art" id="aMN"></div><div class="fallback" aria-hidden="true">🕯️</div><span class="new">New</span>
-      <div class="info"><div class="icon" id="iMN">🕯️</div><div class="txt"><b>Last Night in the Mansion</b><span>An 8-bit haunted house. Solve its rooms together before your one candle burns out.</span><small>2 to 8 players, about 25 minutes</small></div><span class="play">Play</span></div>
+      <div class="shot" id="aMN"><div class="fallback" aria-hidden="true">🕯️</div></div>
+      <div class="info"><div class="icon" id="iMN">🕯️</div><div class="txt"><b>Last Night in the Mansion <em class="new">New</em></b><span>An 8-bit haunted house. Solve its rooms together before your one candle burns out.</span><small>2 to 8 players, about 25 minutes</small></div><span class="play">Play</span></div>
     </a>
     <a class="card bc" id="gBC" href="/tv/bidcoin">
-      <div class="art" id="aBC"></div><div class="fallback" aria-hidden="true">💰</div>
+      <div class="shot" id="aBC"><div class="fallback" aria-hidden="true">💰</div></div>
       <div class="info"><div class="icon" id="iBC">💰</div><div class="txt"><b>BID-COIN!</b><span>Bid on mystery lockers. Pray there's a Rolex inside.</span><small>2 to 8 players, about 20 minutes</small></div><span class="play">Play</span></div>
     </a>
     <a class="card rg" id="gRG" href="/tv/rigged">
-      <div class="art" id="aRG"></div><div class="fallback" aria-hidden="true">🎙️</div>
+      <div class="shot" id="aRG"><div class="fallback" aria-hidden="true">🎙️</div></div>
       <div class="info"><div class="icon" id="iRG">🎙️</div><div class="txt"><b>RIGGED!</b><span>Trivia with a crooked host. Anyone can win the race.</span><small>2 to 8 players, about 20 minutes</small></div><span class="play">Play</span></div>
     </a>
     <a class="card lg" id="gLG" href="/tv/landgrab">
-      <div class="art" id="aLG"></div><div class="fallback" aria-hidden="true">🏡</div>
+      <div class="shot" id="aLG"><div class="fallback" aria-hidden="true">🏡</div></div>
       <div class="info"><div class="icon" id="iLG">🏡</div><div class="txt"><b>Land Grab</b><span>Save the village. Someone here is the Puppet.</span><small>5 to 10 players, about 25 minutes</small></div><span class="play">Play</span></div>
     </a>
-    <section class="how" aria-label="How it works">
-      <h2>How it works</h2>
+  </main>
+
+  <footer>
+  <section class="how" aria-label="How it works">
+      <h2>How it works:</h2>
       <ol>
         <li><span><b>Pick a game</b> on this screen.</span></li>
         <li><span><b>Scan the code</b> on the TV with your phone. No app needed.</span></li>
         <li><span><b>Play together.</b> Your phone is your controller.</span></li>
       </ol>
     </section>
-  </main>
-
-  <footer><span id="foot">Short on people? The first phone can add bots.</span><a href="/">Front page</a></footer>
+  <div class="right"><span id="foot">Short on people? The first phone can add bots.</span><a href="/">Front page</a></div></footer>
 </div>
 <script>
   const q = new URLSearchParams(location.search);
@@ -139,7 +141,7 @@
   // your art, when it's there: key art fills each card, app icons replace the emoji
   fetch('/assets-manifest').then((r) => r.json()).then((m) => {
     const find = (n) => ['webp', 'png', 'jpg'].map((e) => `${n}.${e}`).find((f) => m.img.includes(f));
-    const art = (id, ...names) => { for (const n of names) { const f = find(n); if (f) { const el = document.getElementById(id); el.style.backgroundImage = `url(/assets/img/${f})`; el.nextElementSibling.hidden = true; return; } } };
+    const art = (id, ...names) => { for (const n of names) { const f = find(n); if (f) { document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; return; } } };
     const icon = (id, n) => { const f = find(n); if (f) document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; };
     art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title');
     icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn');

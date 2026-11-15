@@ -230,11 +230,11 @@ body.low #frost { opacity: 1; }
 #controls { position: fixed; right: 1vw; top: 1vh; z-index: 30; display: flex; gap: .4rem; opacity: .08; transition: opacity .2s; }
 #controls:hover, #controls:focus-within { opacity: 1; }
 #controls button, #controls a { border: 0; border-radius: 8px; background: rgba(0, 0, 0, .6); color: var(--wax); padding: .35rem .7rem; font-size: .8rem; text-decoration: none; cursor: pointer; }
-#gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 30%, #2B1830, #050308 70%); transition: opacity .6s; }
+#gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: safe center; overflow-y: auto; background: radial-gradient(ellipse at 50% 30%, #2B1830, #050308 70%); transition: opacity .6s; }
 #gate.hide { opacity: 0; pointer-events: none; }
 .gate-in { max-width: 46rem; text-align: center; display: grid; gap: 1rem; justify-items: center; padding: 2rem; font-size: 1.15rem; }
-.gate-title img { width: min(44rem, 80vw); display: block; }
-.gate-candle { width: 9rem; margin-bottom: -1rem; }
+.gate-title img { width: auto; max-width: min(44rem, 80vw); max-height: 38vh; display: block; margin: 0 auto; }
+.gate-candle { height: 11vh; width: auto; margin-bottom: -1rem; }
 .gate-title { font: 400 6.4rem/1 var(--fell); color: var(--wax); text-shadow: 0 0 40px rgba(255, 180, 67, .4); }
 .gate-sub { font: italic 400 1.6rem var(--fell); margin: 0; color: var(--flame); }
 #bOpen { font: 700 1.2rem var(--ui); padding: 1rem 2.4rem; border-radius: 99px; border: 0; background: var(--flame); color: #2A1500; cursor: pointer; }

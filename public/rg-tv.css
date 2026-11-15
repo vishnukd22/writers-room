@@ -253,7 +253,7 @@ body.wide #board { display: none; }
 #controls { position: fixed; right: 1vw; bottom: 1vh; z-index: 30; display: flex; gap: .4rem; opacity: .1; transition: opacity .2s; }
 #controls:hover, #controls:focus-within { opacity: 1; }
 #controls button, #controls a { border: 0; border-radius: 8px; background: rgba(0,0,0,.6); color: var(--cream); padding: .35rem .7rem; font-size: .8rem; text-decoration: none; }
-#gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 30%, #5E1023, #1E050B 70%); transition: opacity .5s; }
+#gate { position: fixed; inset: 0; z-index: 50; display: grid; place-items: safe center; overflow-y: auto; background: radial-gradient(ellipse at 50% 30%, #5E1023, #1E050B 70%); transition: opacity .5s; }
 #gate.hide { opacity: 0; pointer-events: none; }
 .gate-in { max-width: 44rem; text-align: center; display: grid; gap: 1rem; justify-items: center; padding: 2rem; font-size: 1.15rem; }
 .gate-title { font-family: var(--show); font-size: 7rem; color: var(--gold); text-shadow: 0 .4rem 0 #7A4E0F; transform: rotate(-3deg); line-height: 1; }
