@@ -139,6 +139,9 @@
   }
 
   // ---------------------------------------------------------------- the stage, one screen per moment
+  // the Greenwater Gazette: leaks from players who were run out of town
+  const gazette = (rm) => `<div class="gazette"><h4>The Greenwater Gazette</h4><p class="hl">${esc(rm.byName || '')} says the next file is <b class="${rm.says === 'P' ? 'fP' : 'fS'}">${rm.says === 'P' ? 'PROTECT' : 'SELL'}</b></p><small>Our reporter was run out of town. Believe them if you like.</small></div>`;
+  const scoopsRow = () => { const sc = S.x.scoops || []; return sc.length ? `<div class="scoops" id="scoops">${sc.map((s) => `<span class="scoop">${W.bust(s, 'sm')}<b>${esc(s.name)}</b> reports <em class="${s.says === 'P' ? 'fP' : 'fS'}">${s.says === 'P' ? 'Protect' : 'Sell'}</em></span>`).join('')}</div>` : ''; };
   const R = {
     LOBBY() {
       const n = S.players.length;
@@ -175,12 +178,19 @@
       const pr = S.x.pres; const rm = S.rumour && Date.now() - S.rumour.at < 60000 ? S.rumour : null;
       return `<div class="center"><div class="duo"><div class="who big">${W.bust(pr, 'lg')}<b>${esc(pr?.name || '')}</b><em class="b pres">President</em></div></div>
         <h2 class="say">${esc(pr?.name || '')} is choosing a Secretary</h2><p class="lede">Argue about it. Out loud. Send rumours from your phone.</p>${timer()}
-        <div id="rumour">${rm ? `<div class="chalk"><h4>Today's gossip</h4><p>${esc(rm.text)}</p></div>` : ''}</div></div>`;
+        <div id="rumour">${rm ? (rm.news ? gazette(rm) : `<div class="chalk"><h4>Today's gossip</h4><p>${esc(rm.text)}</p></div>`) : ''}</div>${scoopsRow()}</div>`;
+    },
+    APPEAL() {
+      const x = S.x; const who = x.who;
+      const head = `<div class="duo"><div class="who big">${W.bust(who, 'lg')}<b>${esc(who?.name || '')}</b><em class="b">Out of town</em></div></div>`;
+      if (S.step === 'vote') return `<div class="center">${head}<h2 class="say">Let ${esc(who?.name || '')} back into Greenwater?</h2><p class="lede">A Protect file passed, so the village can vote on an appeal. Nobody knows which side they're on.</p>${timer()}<p class="count" id="vcount">${x.voted} of ${x.voters} voted</p></div>`;
+      const cards = Object.entries(x.votes || {}).map(([id, v], i) => `<div class="vcard ${v ? 'yes' : 'no'}" style="--r:${rot(i)};--i:${i}">${W.bust(P_(id), 'sm')}<b>${name(id)}</b><span>${v ? 'YES' : 'NO'}</span></div>`).join('');
+      return `<div class="center">${head}<div class="vcards">${cards}</div><div class="verdict ${x.back ? 'ok' : 'bad'}">${x.back ? 'Welcome back' : 'Appeal rejected'}</div></div>`;
     },
     VOTE() {
       const x = S.x;
       const duo = `<div class="duo"><div class="who">${W.bust(x.pres, 'lg')}<b>${esc(x.pres?.name || '')}</b><em class="b pres">President</em></div><div class="plus">+</div><div class="who">${W.bust(x.sec, 'lg')}<b>${esc(x.sec?.name || '')}</b><em class="b sec">Secretary</em></div></div>`;
-      if (S.step === 'vote') return `<div class="center">${duo}<h2 class="say">Yes or no? Vote on your phone.</h2>${timer()}<p class="count" id="vcount">${x.voted} of ${x.voters} voted</p></div>`;
+      if (S.step === 'vote') return `<div class="center">${duo}<h2 class="say">Yes or no? Vote on your phone.</h2>${timer()}<p class="count" id="vcount">${x.voted} of ${x.voters} voted</p>${scoopsRow()}</div>`;
       const cards = Object.entries(x.votes || {}).map(([id, v], i) => `<div class="vcard ${v === true ? 'yes' : 'no'}" style="--r:${rot(i)};--i:${i}">${W.bust(P_(id), 'sm')}<b>${name(id)}</b><span>${v === true ? 'YES' : v === false ? 'NO' : 'NO VOTE'}</span></div>`).join('');
       return `<div class="center">${duo}<div class="vcards">${cards}</div><div class="verdict ${x.passed ? 'ok' : 'bad'}">${x.passed ? 'Elected' : 'Rejected'}</div></div>`;
     },
@@ -247,7 +257,7 @@
     if (ph === 'INTRO' || ph === 'ROLES') { key = 'lg-roles'; mood = 'dark'; }
     else if (ph === 'TUTORIAL') { key = 'lg-lobby'; mood = 'lobby'; }
     else if (ph === 'NOMINATE' || (ph === 'VOTE' && S.step === 'result')) { key = 'lg-debate'; mood = 'tense'; }
-    else if (ph === 'VOTE') { key = 'lg-vote'; mood = 'pitch'; }
+    else if (ph === 'VOTE' || ph === 'APPEAL') { key = 'lg-vote'; mood = 'pitch'; }
     else if (['FILES', 'SIGNED', 'CLAIMS'].includes(ph)) { key = 'lg-files'; mood = 'tense'; }
     else if (ph === 'POWER') { key = 'lg-power'; mood = 'dark'; }
     else if (ph === 'SHUTDOWN') { key = 'lg-shutdown'; mood = 'melodrama'; }

@@ -23,7 +23,7 @@ class Cancelled extends Error {}
 const GOSSIP = () => voice.LG(); // the tea shop gossip: an English voice with an Indian accent (see voice.js)
 const COLORS = ['#D9A441', '#5E8C4A', '#B5462F', '#3E7CA6', '#8C6BB1', '#C9637A', '#2F8F86', '#E07A3F', '#6E7F3A', '#9C5B8F'];
 const BOT_NAMES = ['Ammu', 'Babu', 'Chinnu', 'Dasan', 'Elsy', 'Felix', 'Gracy', 'Hamza', 'Indu', 'Joji'];
-const T = { roles: 45, nominate: 150, vote: 60, files: 60, veto: 25, claims: 35, power: 75, peek: 20, result: 8 };
+const T = { roles: 45, nominate: 150, vote: 60, files: 60, veto: 25, claims: 35, power: 75, peek: 20, result: 8, appeal: 30 };
 const MIN = 5; const MAX = 10; const WIN_PROTECT = 5; const WIN_SELL = 6;
 const TEAMS = { 5: [3, 1], 6: [4, 1], 7: [4, 2], 8: [5, 2], 9: [5, 3], 10: [6, 3] }; // villagers, Godfather's men (plus 1 Puppet)
 // Special powers unlocked by each Sell file, by table size (as in the original game).
@@ -158,7 +158,8 @@ class LandGrab {
     this.newBoard();
     const [v, m] = TEAMS[n];
     const roles = shuffle([...Array(v).fill('V'), ...Array(m).fill('M'), 'P']);
-    this.players.forEach((p, i) => Object.assign(p, { role: roles[i], alive: true, ready: false, tip: null, seen: [], rumoured: -1 }));
+    this.players.forEach((p, i) => Object.assign(p, { role: roles[i], alive: true, ready: false, tip: null, seen: [], rumoured: -1, returned: false, exiledAt: 0 }));
+    this.exileSeq = 0; this.press = null;
     this.powers = powersFor(n); this.n = n;
     this.deck = shuffle([...Array(6).fill('P'), ...Array(11).fill('S')]);
     // the tip-off: one villager learns one other name that is definitely a villager
@@ -220,6 +221,11 @@ class LandGrab {
     const r = { n: this.reg.length + 1, pres: pres.id, sec: null, nom: null, votes: null, passed: null, file: null, claims: {}, shutdown: false, vetoed: false, power: null };
     this.cur = r; this.hand = null; this.passed = null; this.signed = null; this.vetoAsk = false; this.vetoDenied = false;
 
+    // the Press: anyone run out of town gets a look at the next file, and can publish it (or a lie)
+    if (this.deck.length < 3) { this.deck = shuffle([...this.deck, ...this.bin]); this.bin = []; }
+    this.press = { round: r.n, top: this.deck[0], said: {} };
+    for (const p of this.players.filter((x) => !x.alive)) this.note(p, 'The Greenwater Gazette has a leak for you. Check your phone.', 'good');
+
     // 1. the President picks a Secretary while the room argues (and the tea shop gossips)
     this.setPhase('NOMINATE', {}, T.nominate);
     // she talks over the choosing: the President's phone is already live
@@ -228,7 +234,11 @@ class LandGrab {
     while (!r.nom) {
       const res = await this.wait(this.left(), () => !!r.nom || this.rumourQ.length > 0); this.guard(g);
       if (r.nom) break;
-      if (this.rumourQ.length) { const rm = this.rumourQ.shift(); this.rumour = rm; this.sync(); await this.say(g, fill(pick(L.SAY.rumour), { text: rm.text })); continue; }
+      if (this.rumourQ.length) {
+        const rm = this.rumourQ.shift(); this.rumour = rm; this.sync();
+        if (rm.news) { this.sfx('lg-paper'); await this.say(g, fill(pick(L.SAY.press), { name: rm.byName, file: rm.says === 'P' ? 'Protect' : 'Sell' })); } else await this.say(g, fill(pick(L.SAY.rumour), { text: rm.text }));
+        continue;
+      }
       if (res === 'time' || res === 'skip' || Date.now() >= (this.endsAt || 0)) { r.nom = pick(this.eligible(pres.id)).id; this.note(pres, 'Time ran out, so a Secretary was picked for you.'); }
     }
     const sec = this.P(r.nom); r.sec = sec.id; this.reg.push(r);
@@ -317,6 +327,7 @@ class LandGrab {
     await this.pause(g, 2.5);
     if (this.protect >= WIN_PROTECT) this.winner = { team: 'V', reason: 'protect' };
     else if (this.sell >= WIN_SELL) this.winner = { team: 'G', reason: 'sell' };
+    else if (type === 'P') await this.appeal(g);
     else if (type === 'S' && this.sell === 3) { this.tipsDone.delete('three'); const on = this.tipsOn; this.tipsOn = true; await this.tip(g, 'three'); this.tipsOn = on; }
   }
 
@@ -356,7 +367,7 @@ class LandGrab {
       this.setPhase('POWER', { kind, step: 'result', target: target.id });
       await this.say(g, fill(L.SAY.urgentDone, { target: target.name }));
     } else if (kind === 'runout') {
-      target.alive = false;
+      target.alive = false; target.exiledAt = ++this.exileSeq;
       this.setPhase('POWER', { kind, step: 'result', target: target.id }); this.sfx('lg-bus');
       await this.say(g, fill(L.SAY.runoutDone, { target: target.name }));
       if (target.role === 'P') { this.winner = { team: 'V', reason: 'puppetGone', name: target.name, id: target.id }; return; }
@@ -376,6 +387,35 @@ class LandGrab {
   }
 
   // ------------------------------------------------------------ what players do
+  // ------------------------------------------------------------ the Appeal: after a Protect file, the village can let an exile back in
+  async appeal(g) {
+    const out = this.players.filter((p) => !p.alive && !p.returned && p.connected !== false).sort((a, b) => (b.exiledAt || 0) - (a.exiledAt || 0));
+    const who = out[0]; if (!who) return;
+    const votes = {};
+    this.setPhase('APPEAL', { step: 'vote', who: who.id, votes }, T.appeal); this.sfx('lg-murmur');
+    this.sayOver(g, fill(L.SAY.appeal, { name: who.name }));
+    await this.wait(ms(T.appeal), () => this.alive().every((p) => p.id in votes)); this.guard(g);
+    const yes = Object.values(votes).filter(Boolean).length; const no = this.alive().length - yes;
+    const back = yes > no;
+    this.setPhase('APPEAL', { step: 'result', who: who.id, votes, back }); this.sfx(back ? 'lg-bus' : 'gavel');
+    if (back) { who.alive = true; who.returned = true; this.note(who, "You're back in Greenwater. You can vote and hold office again.", 'good'); }
+    await this.say(g, fill(back ? L.SAY.appealYes : L.SAY.appealNo, { name: who.name }));
+  }
+  pressSay(me, v) {
+    const pr = this.press;
+    if (me.alive || !pr || !['NOMINATE', 'VOTE'].includes(this.phase)) return { error: 'No leaks right now' };
+    if (pr.said[me.id] !== undefined) return { error: "You've filed your story this round" };
+    if (v !== 'P' && v !== 'S' && v !== null) return {};
+    pr.said[me.id] = v;
+    if (v) {
+      const item = { id: uid(), news: true, by: me.id, byName: me.name, says: v, text: `${me.name} says the next file is ${v === 'P' ? 'Protect' : 'Sell'}`, at: Date.now() };
+      (this.cur.scoops = this.cur.scoops || []).push({ by: me.id, says: v });
+      if (this.phase === 'NOMINATE') this.rumourQ.push(item);
+      else { this.rumour = item; this.sayOver(this.runId, fill(pick(L.SAY.press), { name: me.name, file: v === 'P' ? 'Protect' : 'Sell' })); }
+    }
+    this.check(); this.sync(); return { ok: true };
+  }
+
   act(pid, a) {
     const me = this.P(pid); if (!me) return { error: 'Not in a game' };
     this.lastActive = Date.now();
@@ -430,6 +470,11 @@ class LandGrab {
         if (this.d.target || !(this.d.targets || []).includes(a.id)) return {};
         this.d.target = a.id; this.check(); this.sync(); return { ok: true };
       }
+      case 'press': return this.pressSay(me, a.v === 'P' || a.v === 'S' ? a.v : null);
+      case 'appeal': {
+        if (this.phase !== 'APPEAL' || this.d.step !== 'vote' || !me.alive) return {};
+        this.d.votes[pid] = !!a.yes; this.check(); this.sync(); return { ok: true };
+      }
       case 'rumour': {
         if (['LOBBY', 'INTRO', 'END'].includes(this.phase)) return { error: 'Not now' };
         const round = this.reg.length;
@@ -445,16 +490,21 @@ class LandGrab {
   // ------------------------------------------------------------ bots (test mode): simple, believable choices
   suspicion(id) { return this.reg.reduce((s, r) => s + ((r.file && !r.shutdown && (r.pres === id || r.sec === id)) ? (r.file.type === 'S' ? 1 : -0.5) : 0), 0); }
   botTurn() {
-    const bots = this.players.filter((p) => p.bot && p.alive); if (!bots.length) return;
     const g = this.runId; const key = `${this.phase}|${this.d.step || ''}|${this.reg.length}`;
     const go = (p, fn, base = 1.5) => this.later(g, Math.round((base + Math.random() * 2.5) * 1000 * BOT_PACE * Math.min(1, SPEED * 4)), () => { if (`${this.phase}|${this.d.step || ''}|${this.reg.length}` === key) fn(); });
     const r = this.cur; const ph = this.phase; const step = this.d.step;
+    // exiled bots work for the Gazette: villagers mostly tell the truth, the Godfather's people mostly lie
+    for (const b of this.players.filter((p) => p.bot && !p.alive && p.role)) {
+      if (ph === 'NOMINATE' && this.press && this.press.said[b.id] === undefined) go(b, () => { const top = this.press.top; const truth = teamOf(b.role) === 'V' ? Math.random() < 0.85 : Math.random() < 0.3; this.act(b.id, { type: 'press', v: Math.random() < 0.25 ? null : truth ? top : (top === 'P' ? 'S' : 'P') }); }, 2);
+    }
+    const bots = this.players.filter((p) => p.bot && p.alive); if (!bots.length) return;
     for (const b of bots) {
       const team = teamOf(b.role); const pres = r && r.pres === b.id; const sec = r && r.sec === b.id;
       if (ph === 'ROLES') go(b, () => this.act(b.id, { type: 'ready' }), 0.5);
       if (ph === 'NOMINATE' && pres) go(b, () => this.act(b.id, { type: 'nominate', id: this.botNominee(b) }), 3);
       if (ph === 'NOMINATE' && Math.random() < 0.3) go(b, () => this.act(b.id, { type: 'rumour', text: this.botRumour(b) }), 1);
       if (ph === 'VOTE' && step === 'vote') go(b, () => this.act(b.id, { type: 'vote', yes: this.botVote(b) }));
+      if (ph === 'APPEAL' && step === 'vote') go(b, () => { const w = this.P(this.d.who); const friend = w && teamOf(w.role) === team && team === 'G'; this.act(b.id, { type: 'appeal', yes: friend || this.suspicion(this.d.who) <= 0.5 }); });
       if (ph === 'FILES' && step === 'pres' && pres) go(b, () => this.act(b.id, { type: 'discard', i: this.botDiscard(b) }), 2);
       if (ph === 'FILES' && step === 'sec' && sec) go(b, () => { const c = this.botSign(b); this.act(b.id, c === 'veto' ? { type: 'veto' } : { type: 'sign', i: c }); }, 2);
       if (ph === 'FILES' && step === 'veto' && pres) go(b, () => this.act(b.id, { type: 'vetoAnswer', yes: team === 'V' && this.passed.every((f) => f === 'S') }));
@@ -523,7 +573,7 @@ class LandGrab {
   regPub(r) {
     return {
       n: r.n, pres: r.pres, sec: r.sec, passed: r.passed, votes: r.votes, shutdown: r.shutdown, vetoed: r.vetoed, clash: !!r.clash,
-      file: r.file ? { type: r.file.type, title: r.file.title } : null,
+      file: r.file ? { type: r.file.type, title: r.file.title } : null, scoops: r.scoops || [],
       claims: { pres: r.claims.pres === undefined ? undefined : r.claims.pres, sec: r.claims.sec === undefined ? undefined : r.claims.sec },
       power: r.power ? { kind: r.power.kind, label: POWER_LABEL[r.power.kind], target: r.power.target } : null,
     };
@@ -564,6 +614,13 @@ class LandGrab {
       if (me && v.me.pres && d.step === 'veto') x.passed = this.passed;
       if (me && v.me.sec && d.step === 'sec') x.passed = this.signed ? null : this.passed;
       x.binned = !!this.passed; x.asked = !!this.vetoAsk;
+    }
+    if (me && !me.alive && this.press && ['NOMINATE', 'VOTE'].includes(ph)) x.press = { top: this.press.top, said: this.press.said[me.id] === undefined ? undefined : this.press.said[me.id] };
+    if (['NOMINATE', 'VOTE'].includes(ph) && r) x.scoops = (r.scoops || []).map((sc) => ({ ...this.pub(this.P(sc.by)), says: sc.says }));
+    if (ph === 'APPEAL') {
+      x.who = this.pub(this.P(d.who)); x.voted = Object.keys(d.votes || {}).length; x.voters = nAlive;
+      if (d.step === 'result') { x.votes = d.votes; x.back = d.back; }
+      if (me) x.myVote = d.votes && me.id in d.votes ? d.votes[me.id] : null;
     }
     if (ph === 'SIGNED') { x.type = d.type; x.title = d.title; x.headline = d.headline; x.shutdown = !!d.shutdown; }
     if (ph === 'CLAIMS') {

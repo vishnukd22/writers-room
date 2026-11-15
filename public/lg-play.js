@@ -53,7 +53,7 @@
   function feel() {
     if (!P || !S.me) return;
     if (P.phase !== S.phase || P.step !== S.step) window.scrollTo(0, 0);
-    const myTurn = (s) => (s.phase === 'NOMINATE' && s.me?.pres) || (s.phase === 'FILES' && ((s.step === 'pres' && s.me?.pres) || (s.step === 'sec' && s.me?.sec) || (s.step === 'veto' && s.me?.pres))) || (s.phase === 'POWER' && s.step === 'choose' && s.me?.pres) || (s.phase === 'VOTE' && s.step === 'vote');
+    const myTurn = (s) => (s.phase === 'NOMINATE' && s.me?.pres) || (s.phase === 'FILES' && ((s.step === 'pres' && s.me?.pres) || (s.step === 'sec' && s.me?.sec) || (s.step === 'veto' && s.me?.pres))) || (s.phase === 'POWER' && s.step === 'choose' && s.me?.pres) || (s.phase === 'VOTE' && s.step === 'vote') || (s.phase === 'APPEAL' && s.step === 'vote' && s.me?.alive);
     if (myTurn(S) && !(P.phase === S.phase && P.step === S.step)) buzz([80, 50, 80]);
   }
 
@@ -68,6 +68,13 @@
   const fileImg = (t) => W.thumb(t === 'P' ? 'lg-file-protect' : 'lg-file-sell');
   const fileBtn = (t, i, act, sel) => `<button class="file ${t === 'P' ? 'protect' : 'sell'} ${sel ? 'sel' : ''}" data-a="choose" data-i="${i}" data-act="${act}">${fileImg(t) ? `<img src="${fileImg(t)}" alt="">` : ''}<span class="stamp">${t === 'P' ? 'PROTECT' : 'SELL'}</span></button>`;
   const fileMini = (t) => `<span class="mini ${t === 'P' ? 'protect' : 'sell'}">${t === 'P' ? 'Protect' : 'Sell'}</span>`;
+  // the Press: exiles see the next file and can publish it (or lie)
+  const pressBox = () => {
+    const pr = S.x.press; if (!pr) return '';
+    const file = pr.top === 'P' ? '<b class="fP">PROTECT</b>' : '<b class="fS">SELL</b>';
+    if (pr.said !== undefined) return `<div class="gazette done"><h4>The Greenwater Gazette</h4><p>${pr.said === null ? 'You kept quiet this round.' : `You reported: the next file is ${pr.said === 'P' ? 'PROTECT' : 'SELL'}.`}</p></div>`;
+    return `<div class="gazette"><h4>The Greenwater Gazette</h4><p>You're out of town, so you write for the paper. Your source says the next file is ${file}.</p><p class="hint">Publish it, publish a lie, or keep quiet. Your name goes on the story.</p><div class="pressbtns"><button class="btn fP" data-a="press" data-v="P">Report PROTECT</button><button class="btn fS" data-a="press" data-v="S">Report SELL</button></div><button class="btn ghost" data-a="press" data-v="none">Keep quiet</button></div>`;
+  };
   const rumourBox = () => {
     if (me().rumoured) return '<p class="hint center">Your rumour is with the tea shop. You get one per round.</p>';
     const id = `rum_${roundId()}`;
@@ -115,13 +122,21 @@
         const el = x.eligible || [];
         return [`NOM|pres|${roundId()}`, `<h2 class="h">You're President</h2><p class="lead">Pick your Secretary. You'll pass them two files.</p>${people(el, 'nominate')}${all.some((p) => !el.includes(p.id)) ? `<p class="hint">Can't be Secretary this round: ${all.filter((p) => !el.includes(p.id)).map((p) => esc(p.name)).join(', ')} (they were just in charge).</p>` : ''}`];
       }
-      return [`NOM|wait|${roundId()}|${m.rumoured}|${m.alive}`, `${tv(`${esc(x.pres?.name || 'The President')} is picking a Secretary`, m.alive ? 'Make your case out loud.' : "You're out of town, but you can still gossip.", '🗳️')}${rumourBox()}`];
+      return [`NOM|wait|${roundId()}|${m.rumoured}|${m.alive}|${x.press ? x.press.said : ''}`, `${tv(`${esc(x.pres?.name || 'The President')} is picking a Secretary`, m.alive ? 'Make your case out loud.' : "You're out of town, but you can still gossip.", '🗳️')}${pressBox()}${rumourBox()}`];
+    },
+    APPEAL() {
+      const m = me(); const x = S.x; const who = x.who;
+      if (S.step === 'result') return [`AP|res|${roundId()}`, tv(x.back ? `${esc(who?.name || '')} is back` : `${esc(who?.name || '')} stays out`, '', x.back ? '🚌' : '🚫')];
+      if (who && who.id === m.id) return [`AP|me|${roundId()}`, tv('Your appeal', `The village is voting on letting you back into Greenwater. ${x.voted} of ${x.voters} have voted.`, '🙏')];
+      if (!m.alive) return [`AP|out|${roundId()}`, tv('An appeal', `The village is voting on letting ${esc(who?.name || '')} back in.`, '🚌')];
+      if (x.myVote !== null && x.myVote !== undefined) return [`AP|done|${roundId()}|${x.myVote}|${x.voted}`, tv(`You voted ${x.myVote ? 'yes' : 'no'}`, `${x.voted} of ${x.voters} voted.`, '🗳️')];
+      return [`AP|vote|${roundId()}`, `<h2 class="h">Let them back in?</h2><div class="pair">${W.bust(who, 'md')}<b>${esc(who?.name || '')}</b><span>wants to come back to Greenwater. If they return, they can vote and hold office again. Nobody knows which side they're on.</span></div><div class="yn"><button class="yes" data-a="appeal" data-yes="1">Yes</button><button class="no" data-a="appeal" data-yes="0">No</button></div><p class="hint center">Everyone sees how you voted.</p>`];
     },
     VOTE() {
       const m = me(); const x = S.x;
       const pair = `<div class="pair">${W.bust(x.pres, 'md')}<b>${esc(x.pres?.name || '')}</b><span>as President, with</span>${W.bust(x.sec, 'md')}<b>${esc(x.sec?.name || '')}</b><span>as Secretary</span></div>`;
       if (S.step === 'result') { const mine = x.votes?.[m.id]; return [`VOTE|res|${roundId()}`, tv(x.passed ? 'Elected' : 'Rejected', mine === undefined ? '' : `You voted ${mine === true ? 'yes' : mine === false ? 'no' : 'nothing'}.`, x.passed ? '✅' : '❌')]; }
-      if (!m.alive) return [`VOTE|dead|${roundId()}`, tv("You can't vote", "You're out of town.", '🚌')];
+      if (!m.alive) return [`VOTE|dead|${roundId()}|${x.press ? x.press.said : ''}`, `${tv("You can't vote", "You're out of town.", '🚌')}${pressBox()}`];
       if (x.myVote !== null && x.myVote !== undefined) return [`VOTE|done|${roundId()}|${x.myVote}|${x.voted}`, `${tv(`You voted ${x.myVote ? 'yes' : 'no'}`, `${x.voted} of ${x.voters} voted. You can change your mind until everyone is in.`, '🗳️')}<div class="yn small"><button class="yes ${x.myVote ? 'on' : ''}" data-a="vote" data-yes="1">Yes</button><button class="no ${x.myVote ? '' : 'on'}" data-a="vote" data-yes="0">No</button></div>`];
       return [`VOTE|vote|${roundId()}`, `<h2 class="h">Do you trust them?</h2>${pair}<div class="yn"><button class="yes" data-a="vote" data-yes="1">Yes</button><button class="no" data-a="vote" data-yes="0">No</button></div><p class="hint center">Everyone sees how you voted.</p>`];
     },
@@ -229,6 +244,8 @@
     if (a === 'ready') return send('ready');
     if (a === 'nominate') { buzz(20); return send('nominate', { id: b.dataset.id }); }
     if (a === 'vote') { buzz(20); return send('vote', { yes: b.dataset.yes === '1' }); }
+    if (a === 'appeal') { buzz(20); return send('appeal', { yes: b.dataset.yes === '1' }); }
+    if (a === 'press') { buzz(20); document.querySelectorAll('[data-a=press]').forEach((x) => { x.disabled = true; }); return send('press', { v: b.dataset.v === 'none' ? null : b.dataset.v }); }
     if (a === 'choose') { chosen = Number(b.dataset.i); chosenKey = `${roundId()}|${S.step}`; screenKey = null; return render(); }
     if (a === 'confirm') { const i = chosen; chosen = null; chosenKey = null; buzz(30); return send(b.dataset.act, { i }); }
     if (a === 'veto') return send('veto');

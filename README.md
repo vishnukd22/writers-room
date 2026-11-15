@@ -39,6 +39,13 @@ A hidden-role game for 5 to 10 players, about 30 to 45 minutes. A developer call
 
 Extras: anyone can send an anonymous rumour to the TV once per round, and one villager gets a secret tip-off at the start naming another villager.
 
+**Run out of town, but not out of the game:**
+
+- **The Press:** players who have been run out of town write for the Greenwater Gazette. Each round, their phone shows the next file in the tray. They can publish it under their name, publish a lie, or keep quiet. The narrator reads the scoop out and the TV shows it during the nomination and the vote. They might be on either side, so the village decides whether to believe them.
+- **The Appeal:** every time a Protect file passes, the village votes on letting the most recent exile come back. A majority yes brings them back with their old role, able to vote and hold office again. Each exile can come back only once.
+
+The narrator uses ElevenLabs' fast voice model at 1.12x speed (change it with `ELEVENLABS_LG_SPEED`, from 0.7 to 1.2), and talks while players act instead of before.
+
 ### Testing Land Grab on your own
 
 Open `/tv/landgrab?test` on the TV (or `/tv?test` and pick Land Grab). The lobby then has **Add a bot**, **Fill to 5**, **Remove bots** and **Start** buttons. Bots play every role. Join on your phone as usual and play with them.

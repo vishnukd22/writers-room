@@ -147,3 +147,13 @@ body.rules #rules { display: block; }
 .rulescard h3 { font-family: var(--hand); font-size: 1.25rem; margin: .9rem 0 .2rem; color: #A8321F; }
 .rulescard p { margin: .3rem 0; line-height: 1.45; font-size: .98rem; }
 .rulescard .close { position: absolute; top: .6rem; right: .6rem; width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 2px solid var(--ink); background: transparent; font-size: 1.1rem; font-weight: 800; color: var(--ink); }
+
+/* ---------------------------------------------------------------- the Greenwater Gazette (you write for it once you're run out of town) */
+.gazette { margin: 1rem 0; background: var(--paper); color: var(--ink); border-radius: 6px; padding: .9rem 1rem; }
+.gazette h4 { margin: 0 0 .4rem; font-family: Georgia, serif; font-size: 1.25rem; border-bottom: 3px double var(--ink); padding-bottom: .3rem; text-align: center; }
+.gazette p { margin: .3rem 0; line-height: 1.4; } .gazette .hint { color: #6B5E4E; font-size: .9rem; }
+.gazette b.fP { color: var(--leaf); } .gazette b.fS { color: var(--brick); }
+.pressbtns { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin: .6rem 0 .4rem; }
+.btn.fP { background: var(--leaf); color: #fff; } .btn.fS { background: var(--brick); color: #fff; }
+.gazette .btn.ghost { color: var(--ink); border-color: rgba(42,36,32,.3); width: 100%; }
+.gazette.done { opacity: .85; }

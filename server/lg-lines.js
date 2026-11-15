@@ -42,6 +42,10 @@ const SAY = {
   winGodfather: "It's over. Greenwater belongs to the Godfather. My tea is a premium experience from tomorrow.",
   winPuppetElected: '{name} was the Puppet, and now runs the council. The Godfather wins.',
   winPuppetGone: '{name} was the Puppet! Run out of town! Greenwater is saved!',
+  press: ['Breaking news from the Gazette. {name} says the next file is {file}.', 'Hot off the press. {name} reports the next file is {file}.', 'The Gazette has a leak. {name} says {file}.'],
+  appeal: '{name} wants to come back to Greenwater. Let them in? Vote on your phone.',
+  appealYes: 'Welcome back, {name}. Try not to get run out again.',
+  appealNo: 'Sorry, {name}. The bus back is full.',
   reveal: "Let's see who was who.",
   goodnight: 'Same time next week. If the village is still here.',
 };
