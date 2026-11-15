@@ -24,12 +24,16 @@ function phone(code, name, stop, stats) {
       try {
         // the 8-bit rooms: walk about, tap the extra buttons, pick in the battle menus, wiggle the heart
         if (S.phase === 'DOORS' && S.step === 'vote' && S.x.doors && !S.x.doors.mine) { await act({ type: 'vote', k: pick(S.x.doors.opts).key }); continue; }
+        if (S.phase === 'ACCUSE' && S.step === 'vote' && S.x.accuse && !S.x.accuse.mine) { await act({ type: 'accuse', id: pick(S.players.filter((p) => p.id !== S.me.id)).id }); continue; }
         const px = S.me.px;
         if (px && px.ui) {
           if (px.room === 'doll') await act({ type: 'px', a: Math.random() < 0.97 ? 'sneak' : 'moved' });
           else if (px.room === 'hide') { if (px.phase === 'hide' && !px.mine) await act({ type: 'px', a: 'hide', k: pick(px.spots).k }); else if (px.phase === 'plan' && !px.choice) await act({ type: 'px', a: 'plan', do: pick(['stay', 'pebble', 'sneak']), at: pick(px.spots).k }); }
           else if (px.room === 'seance') await act({ type: 'px', a: 'pull', d: Math.random() < 0.5 ? px.dirs : [] });
           else if (px.room === 'mercy') await act({ type: 'px', a: 'hold', on: true });
+          else if (px.room === 'kitchen') await act({ type: 'px', a: 'throw', k: pick(px.mine).k });
+          else if (px.room === 'fuse' && px.box) await act({ type: 'px', ...pick([{ a: 'cut', i: Math.floor(Math.random() * px.box.wires.length) }, { a: 'sym', s: pick(px.box.four) }, { a: 'lever', d: pick(['up', 'down']) }]) });
+          if (S.x.poss) await act({ type: 'px', a: pick(['giggle', 'jolt', 'short']) });
           continue;
         }
         if (px) {

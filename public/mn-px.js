@@ -79,13 +79,14 @@ window.PX = (() => {
     // candle light: the dark closes in as the candle burns down
     if (!view.dark) view.dark = document.createElement('canvas');
     const dk = view.dark; dk.width = LS.w * Z; dk.height = LS.h * Z; const dc = dk.getContext('2d'); dc.setTransform(Z, 0, 0, Z, 0, 0);
-    const base = d.theme === 'mercy' ? 0.35 : 0.3 + (1 - Math.max(0, Math.min(100, candle)) / 100) * 0.4;
+    const base = d.nodark ? 0 : d.dark ? 0.97 : d.theme === 'mercy' ? 0.35 : 0.3 + (1 - Math.max(0, Math.min(100, candle)) / 100) * 0.4;
     dc.fillStyle = `rgba(8,4,18,${base})`; dc.fillRect(0, 0, LS.w, LS.h); dc.globalCompositeOperation = 'destination-out';
     const glow = (x, y, r, a) => { const g = dc.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); dc.fillStyle = g; dc.fillRect(x - r, y - r, r * 2, r * 2); };
-    acts.forEach((a) => { const s = view.sprites[a.id]; glow(ox + s.x * T + 8, oy + (s.y + 1) * T + 8, T * 3.2, 0.9); });
+    acts.forEach((a) => { const s = view.sprites[a.id]; glow(ox + s.x * T + 8, oy + (s.y + 1) * T + 8, d.dark ? T * 1.7 : T * 3.2, d.dark ? 0.95 : 0.9); });
     (d.stands || []).filter((s) => s.lit).forEach((s) => glow(ox + s.x * T + 8, oy + (s.y + 1) * T + 8, T * 2.5, 0.9));
     if (d.doors) d.doors.filter((x) => x.open && !x.hide).forEach((x) => glow(ox + x.x * T + 8, oy, T * 1.6, 0.6));
     dc.globalCompositeOperation = 'source-over'; ctx.drawImage(dk, 0, 0, LS.w, LS.h);
+    if (d.cracks) d.cracks.forEach(([x, y]) => { const px = ox + x * T, py = oy + (y + 1) * T; ctx.strokeStyle = '#ff3b3b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px + 3, py + 3); ctx.lineTo(px + 13, py + 13); ctx.moveTo(px + 13, py + 3); ctx.lineTo(px + 3, py + 13); ctx.stroke(); });
     // names on top of everything
     acts.forEach((a) => { const s = view.sprites[a.id]; nameTag(ctx, a.name, Math.round(ox + s.x * T + 8), Math.round(oy + (s.y + 1) * T - 1), a.c); });
     if (d.msg) { const m = `${d.msg.by} ${d.msg.text}`; banner(ctx, m, LS.w / 2, LS.h - 10); }
@@ -119,12 +120,12 @@ window.PX = (() => {
 
   // ---------------------------------------------------------------- TV
   let tvEl = null; let tvCanvas = null; let tvHud = null; let tvS = null; let raf = 0; let lastTvKey = '';
-  const STAGES = [['demo', 'Watch'], ['practice', 'Practice'], [1, 'Stage 1'], [2, 'Stage 2'], [3, 'Stage 3']];
+  const STAGES = [[1, 'Round 1'], [2, 'Round 2']];
   function tvSetup(root) {
     tvEl = root; root.innerHTML = '<canvas id="pxc"></canvas><div id="pxhud"></div>'; tvCanvas = root.querySelector('#pxc'); tvHud = root.querySelector('#pxhud');
     const loop = () => { raf = requestAnimationFrame(loop); try { tvFrame(); } catch (e) { console.error(e); } }; loop();
   }
-  function stagePips(S) { if (!S.x.room || ['hub', 'mercy', 'boss'].includes(S.x.room.key)) return ''; return `<div class="pips">${STAGES.map(([k, l]) => `<span class="${S.x.kind === k ? 'on' : ''}">${l}</span>`).join('')}</div>`; }
+  function stagePips(S) { if (!S.x.room || ['hub', 'mercy', 'boss'].includes(S.x.room.key)) return ''; if (S.x.kind === 'quick') return '<div class="pips"><span class="on">The Collapse: fast!</span></div>'; return `<div class="pips">${STAGES.map(([k, l]) => `<span class="${S.x.kind === k ? 'on' : ''}">${l}</span>`).join('')}</div>`; }
   function candleBar(S) { const c = Math.max(0, Math.min(100, S.candle)); return `<div class="pxcandle ${c < 20 ? 'low' : ''}"><b>Candle</b><i><u style="width:${c}%"></u></i><span>${Math.round(c)}%</span></div>`; }
   function keysRow(S) { const n = S.x.ctx ? S.x.ctx.keys : S.keys; return `<div class="pxkeys">${[0, 1, 2, 3].map((i) => `<span class="${i < n ? 'on' : ''}"></span>`).join('')}<b>Key pieces</b></div>`; }
   function timerBar(S) { if (!S.x.ends || !S.x.start) return ''; return `<div class="pxtimer"><i data-pxends="${S.x.ends}" data-start="${S.x.start}"></i></div>`; }
@@ -221,15 +222,22 @@ window.PX = (() => {
     root.hidden = !active; document.body.classList.toggle('pxphone', active);
     if (!active) { phKey = ''; stopHold(); return false; }
     phEl = root; heart.c = m.color || '#f33';
-    const mode = px.battle ? (px.menu ? 'menu' : 'box') : 'pad';
+    const mode = px.battle ? (px.menu ? 'menu' : 'box') : px.lanternMap ? 'map' : 'pad';
     const key = `${mode}|${S.phase}|${S.x.room?.key}|${S.x.kind}`;
-    if (key !== phKey) { phKey = key; stopHold(); root.innerHTML = mode === 'pad' ? padHtml() : mode === 'box' ? boxHtml() : '<div id="pxmenu"></div>'; bindPhone(root, mode); }
-    if (mode === 'pad') { mount(root.querySelector('#pxinfo'), padInfo(S, px)); }
+    if (key !== phKey) { phKey = key; stopHold(); root.innerHTML = mode === 'pad' ? padHtml() : mode === 'box' ? boxHtml() : mode === 'map' ? '<div class="pxph"><div id="pxinfo"></div><canvas id="pxmap"></canvas></div>' : '<div id="pxmenu"></div>'; bindPhone(root, mode); }
+    if (mode === 'pad') { mount(root.querySelector('#pxinfo'), padInfo(S, px)); drawMini(root, px.mini); }
+    if (mode === 'map') { mount(root.querySelector('#pxinfo'), padInfo(S, px)); drawMini(root, { ...px.lanternMap, nodark: true }, '#pxmap'); }
     if (mode === 'menu') mount(root.querySelector('#pxmenu'), menuHtml(S, px));
     if (mode === 'box') { mount(root.querySelector('#pxinfo'), `<p>${esc(px.text || '')}</p>`); if (px.wave && (!heart.wave || heart.wave.seed !== px.wave.seed)) { heart.wave = px.wave; const mine = (px.hearts || []).find((h) => h.id === px.me); if (mine) { heart.x = mine.x; heart.y = mine.y; } heart.inv = 0; } }
     return true;
   }
-  const padHtml = () => `<div class="pxph"><div id="pxinfo"></div><div class="dpad"><button data-d="u" aria-label="Up">▲</button><button data-d="l" aria-label="Left">◀</button><span class="mid"></span><button data-d="r" aria-label="Right">▶</button><button data-d="d" aria-label="Down">▼</button></div></div>`;
+  // a small copy of the map on a phone (lantern holder, thin-ice spotters); redrawn every frame while it shows
+  let miniData = null; let miniSel = null; let miniRaf = 0;
+  function drawMini(root, data, sel = '#pxmini') {
+    miniData = data ? { ...data, nodark: true } : null; miniSel = sel; const c = root.querySelector(sel); if (c) c.hidden = !data; if (!data) return;
+    if (!miniRaf) { const loop = () => { miniRaf = requestAnimationFrame(loop); const cv = document.querySelector(miniSel); if (!cv || !miniData) return; const w = (miniData.map[0].length + 2) * T, h = (miniData.map.length + 3) * T; const ctx = prep(cv, w, h); cv.style.width = '100%'; cv.style.height = 'auto'; drawMap(ctx, miniData, performance.now(), 100); }; loop(); }
+  }
+  const padHtml = () => `<div class="pxph"><div id="pxinfo"></div><canvas id="pxmini" hidden></canvas><div class="dpad"><button data-d="u" aria-label="Up">▲</button><button data-d="l" aria-label="Left">◀</button><span class="mid"></span><button data-d="r" aria-label="Right">▶</button><button data-d="d" aria-label="Down">▼</button></div></div>`;
   function padInfo(S, px) {
     const btns = (px.btns || []).map(([a, l]) => `<button class="pxbtn" data-pa="${a}">${esc(l)}</button>`).join('');
     const skip = S.step === 'practice' && me()?.vip ? '<button class="pxbtn ghost" data-pa="skip">Skip practice</button>' : '';

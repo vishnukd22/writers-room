@@ -83,3 +83,8 @@ body.pxphone #main { display: none; }
 .pxsaid p { margin: 0; background: #000; border: 0.2vw solid #9FE7FF; padding: 1vh .8vw; font-size: 1.15vw; line-height: 1.35; }
 .pxsaid b { color: #9FE7FF; font-weight: normal; display: block; }
 .pxcandle b, .pxkeys b, .pips span, .pxtitle { font-weight: 700; }
+
+#pxmini, #pxmap { display: block; width: 100%; image-rendering: pixelated; border: 3px solid #fff; background: #120c18; }
+#pxmini[hidden] { display: none; }
+.pxph:has(#pxmini:not([hidden])) .dpad { width: min(62vw, 250px); }
+.pxph:has(#pxmini:not([hidden])) #pxinfo { min-height: 0; }

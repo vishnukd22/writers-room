@@ -88,6 +88,7 @@
     }
     if (ph === 'PX') { const r = x.room || {}; return `<div class="plac"><span class="n">${r.key === 'mercy' ? 'A small kindness' : `Room ${S.roomN} of ${S.rooms}`}</span><h1>${esc(r.name || '')}</h1></div><div class="tbox">${S.step === 'play' && x.ends ? timer(x.ends, x.start) : ''}</div>`; }
     if (ph === 'DOORS') return '<div class="plac"><span class="n">Hollowmere House</span><h1>Choose a door</h1></div>';
+    if (ph === 'ACCUSE') return '<div class="plac poss"><span class="n">The possessed</span><h1>Point the finger</h1></div>';
     if (ph === 'COLLAPSE') return `<div class="plac poss"><span class="n">The Collapse${x.collapse?.n ? `: ${x.collapse.n} of ${x.collapse.of}` : ''}</span><h1>${esc(x.room?.name || 'Run!')}</h1></div><div class="tbox">${S.step === 'play' && x.ends ? timer(x.ends, x.start) : ''}</div>`;
     if (ph === 'POSSESS') return `<div class="plac poss"><span class="n">A possession</span><h1>${esc(x.poss?.name || '')}</h1></div><div class="tbox">${S.step === 'play' && x.ends ? timer(x.ends, x.start) : ''}</div>`;
     return `<div class="plac"><span class="n">Hollowmere House</span><h1>${ph === 'HALL' ? 'The hallway' : 'The front hall'}</h1></div>`;
@@ -115,6 +116,7 @@
   // ---------------------------------------------------------------- the screens
   const R = {
     DOORS() { return MP.tv(S); },
+    ACCUSE() { return MP.tv(S); },
     COLLAPSE() { return MP.tv(S); },
     PX() { return MP.tv(S); },
     LOBBY() {
@@ -217,6 +219,7 @@
     if (['HUB', 'PX', 'BOSS', 'COLLAPSE'].includes(ph) && S.x.room?.music) { key = S.x.room.music; mood = 'tense'; }
     if (ph === 'COLLAPSE') { key = 'mn-finale'; mood = 'tense'; }
     if (ph === 'DOORS') { key = 'mn-intro'; mood = 'dark'; }
+    if (ph === 'ACCUSE') { key = 'mn-possessed'; mood = 'tense'; }
     if (ph === 'STORY') { key = 'px-story'; mood = 'gentle'; }
     if (ph === 'END') { key = S.x.end?.escaped ? 'mn-dawn' : 'mn-lost'; mood = S.x.end?.escaped ? 'gentle' : 'dark'; }
     // Hold Still: the music box stops dead when the doll turns

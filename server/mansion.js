@@ -9,7 +9,7 @@ const path = require('path');
 const { ROOMS, rint, pick, shuffle } = require('./mn-rooms');
 const { POSSESS } = require('./mn-possess');
 const { SAY, ROOM_LINES, PX, STORY, ROOM_INTRO, M2 } = require('./mn-lines');
-const { ROOMS2, MERCY2 } = require('./mn-rooms2');
+const { ROOMS2, MERCY2, POSSESS: POSSESS2 } = require('./mn-rooms2');
 const PXR = require('./mn-px');
 const voice = require('./voice');
 
@@ -122,7 +122,7 @@ class Mansion {
     [M2.welcome, M2.rules].forEach((t) => this.prefetch(t, true));
     [...fixedLines(M2), SAY.welcomeBots, SAY.lost].forEach((t) => this.prefetch(t)); // made while people join, so none arrive late
   }
-  reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false, ctx: null, scareFx: null, bigScares: 0, vote: null }); }
+  reset() { Object.assign(this, { candle: 100, keys: 0, roomN: 0, plan: [], active: null, results: [], scares: 0, scareBudget: rint(1, 2), scareFx: null, flash: null, warned: {}, dead: false, lastPossessed: null, usedPoss: [], end: null, addedBots: false, ctx: null, scareFx: null, bigScares: 0, vote: null, poss: null, nightPoss: 0, accuse: null }); }
 
   // ------------------------------------------------------------ plumbing (same as the other games)
   P(id) { return this.players.find((p) => p.id === id); }
@@ -270,7 +270,8 @@ class Mansion {
     const X = {
       R, seats: G.players, n: G.players.length, level: R.level || 1,
       P: (id) => G.P(id), now: () => G.clock(), wall: (t) => G.wall(t), gameTime: (w) => w - (Date.now() - G.clock()),
-      drip: (a, why, p) => G.drip(a, why, p), gain: (a) => G.gain(a), win: () => { if (!R.done) R.done = 'win'; G.wake('done'); }, fail: () => { if (!R.done) R.done = 'fail'; G.wake('done'); },
+      // a round can only drain so much, however wildly people tap
+      drip: (a, why, p) => { if (R.dripCap != null) { if ((R.dripped || 0) >= R.dripCap) return; R.dripped = (R.dripped || 0) + a; } G.drip(a, why, p); }, gain: (a) => G.gain(a), win: () => { if (!R.done) R.done = 'win'; G.wake('done'); }, fail: () => { if (!R.done) R.done = 'fail'; G.wake('done'); },
       bubble: (p, t) => G.bubble(p, t), sfx: (n) => G.sfx(n), note: (p, t, k) => G.note(p, t, k), buzz: (p, k) => G.buzz(p, k),
       flashAll: (k) => { G.flash = { id: (G.flash?.id || 0) + 1, kind: k }; },
       scare: (kind, id) => G.scareNow(kind, id),
@@ -371,16 +372,20 @@ class Mansion {
     const def = ROOMS2[key]; const R = this.pxR(key); const X = this.makeX(R); this.active = { px: true, def, X, R };
     const c = this.ctx; c.todo = c.todo.filter((k) => k !== key); this.roomN = c.done.length + 1;
     this.setPhase('PX', { step: 'intro', key }); this.sfx(pick(['mn-creak', 'mn-creak2']));
-    await this.say(g, M2.intro[key]); await this.hold(g, 2.5);
+    await this.say(g, M2.intro[key] || M2.intro2[key]); await this.hold(g, 2.5);
     let wins = 0;
     for (const n of [1, 2]) {
-      this.setPhase('PX', { step: 'ready', key, kind: n }); this.sayOver(g, M2.round[n]); await this.hold(g, 2.5);
+      // round two of some rooms: one player is secretly possessed
+      const humans = this.players.filter((p) => !p.bot && p.connected);
+      if (n === 2 && POSSESS2[key] && this.nightPoss < 2 && humans.length >= 2 && this.players.length >= 3 && Math.random() < 0.6) { const who = pick(humans); this.poss = { id: who.id, key, power: POSSESS2[key].power }; R.possId = who.id; this.nightPoss++; }
+      this.setPhase('PX', { step: 'ready', key, kind: n }); this.sayOver(g, R.possId && n === 2 ? M2.possessed : M2.round[n]); await this.hold(g, R.possId && n === 2 ? 4.5 : 2.5);
       const res = await this.pxStage(g, def, n, 'play');
       if (this.dead) { this.active = null; return; }
       if (res === 'win') { wins++; this.gain(3); this.sfx('mn-clear'); this.setPhase('PX', { step: 'won', key, kind: n }); this.sayOver(g, line(M2.win)); }
       else { this.drip(6, null); this.sfx('mn-fail'); this.setPhase('PX', { step: 'lost', key, kind: n }); this.sayOver(g, line(M2.fail)); }
       if (this.dead) { this.active = null; return; }
       await this.hold(g, 3);
+      if (n === 2 && this.poss) await this.accuseVote(g);
     }
     const gotKey = wins >= 1; if (gotKey) { c.keys++; this.keys++; }
     c.done.push(key); c.played.push(key); this.results.push({ key, win: gotKey, wins });
@@ -389,6 +394,21 @@ class Mansion {
     this.active = null;
     if (this.candle < 50 && !this.warned.half) { this.warned.half = true; await this.say(g, M2.candleHalf); }
     if (this.candle < 20 && !this.warned.low) { this.warned.low = true; await this.say(g, M2.candleLow); }
+  }
+  async accuseVote(g) {
+    const poss = this.poss; this.accuse = { votes: {}, until: this.clock() + ms(14), id: poss.id };
+    this.setPhase('ACCUSE', { step: 'vote' }); this.sayOver(g, M2.accuse);
+    const voters = () => this.players.filter((p) => p.connected && !p.bot);
+    while (this.clock() < this.accuse.until && !(voters().every((p) => this.accuse.votes[p.id]))) {
+      this.players.filter((p) => p.bot && !this.accuse.votes[p.id] && Math.random() < 0.1).forEach((p) => { this.accuse.votes[p.id] = pick(this.players.filter((o) => o.id !== p.id)).id; });
+      await this.wait(250); this.guard(g); this.sync();
+    }
+    const tally = {}; Object.values(this.accuse.votes).forEach((id) => { tally[id] = (tally[id] || 0) + 1; });
+    const best = Math.max(0, ...Object.values(tally)); const top = Object.keys(tally).filter((id) => tally[id] === best);
+    const caught = top.length === 1 && top[0] === poss.id; this.accuse.caught = caught; this.accuse.tally = tally;
+    if (caught) { this.gain(6); this.sfx('mn-clear'); } else { this.drip(4, null); this.sfx('mn-giggle'); }
+    this.setPhase('ACCUSE', { step: 'reveal' }); await this.say(g, line(caught ? M2.caught : M2.missed)); await this.hold(g, 1.5);
+    this.poss = null; this.accuse = null;
   }
   async mercy2(g) {
     this.ctx.mercyUsed = true; const def = MERCY2; const R = this.pxR('mercy'); const X = this.makeX(R); this.active = { px: true, def, X, R };
@@ -437,7 +457,8 @@ class Mansion {
     const A = this.active; const { X, R } = A;
     PXR.GHOST.mx = {}; this.players.forEach((p) => { p.mx = {}; });
     const arg = kind === 'boss' || kind === 'hub' ? this.ctx : kind;
-    R.st = def.make(X, arg); R.st.t0 = this.clock(); R.kind = kind;
+    R.dripped = 0; R.dripCap = kind === 'quick' ? 8 : 14;
+    R.st = def.make(X, arg); R.st.t0 = this.clock(); R.kind = kind; if (R.possId && kind === 2) R.st.poss = R.possId;
     const secs = def.secs ? def.secs[kind] || 120 : 9999;
     // stage clocks run in real seconds: the attacks and puzzles are played at real speed even in quick tests
     R.start = this.clock(); R.ends = R.start + secs * 1000;
@@ -636,6 +657,7 @@ class Mansion {
       case 'addBot': if (this.phase === 'LOBBY' && this.vip()?.id === pid) return this.addBot(true); return {};
       case 'removeBots': if (this.phase === 'LOBBY' && this.vip()?.id === pid) this.removeBots(); return {};
       case 'kick': this.kick(pid, a.id); return {};
+      case 'accuse': { if (this.phase !== 'ACCUSE' || this.d.step !== 'vote' || !this.accuse || a.id === pid || !this.P(a.id)) return {}; this.accuse.votes[pid] = a.id; this.sync(); return { ok: true }; }
       case 'vote': { if (this.phase !== 'DOORS' || this.d.step !== 'vote' || !this.vote || !this.vote.opts.includes(a.k)) return {}; this.vote.votes[pid] = a.k; this.sfx('mn-floor'); this.sync(); return { ok: true }; }
       case 'scareLevel': { if (this.phase !== 'LOBBY' || this.vip()?.id !== pid || !SCARES.hasOwnProperty(a.v)) return {}; this.scareLevel = a.v; this.sync(); return { ok: true }; }
       case 'px': {
@@ -681,9 +703,12 @@ class Mansion {
     x.scareLevel = this.scareLevel || 'spooky';
     if (ph === 'DOORS' && this.vote) x.doors = { opts: this.vote.opts.map((k) => { const df = k === 'mercy' ? MERCY2 : ROOMS2[k]; return { key: k, name: df.name, goal: df.goal, art: df.art, style: df.style }; }), voted: Object.keys(this.vote.votes), mine: me ? this.vote.votes[me.id] || null : null, choice: this.vote.choice || null, tally: d.step === 'chosen' ? this.vote.tally || null : null, until: this.vote.until ? this.wall(this.vote.until) : null };
     if (ph === 'COLLAPSE') x.collapse = { n: d.n || 0, of: d.of || 0 };
+    if (ph === 'ACCUSE' && this.accuse) x.accuse = { voted: Object.keys(this.accuse.votes), mine: me ? this.accuse.votes[me.id] || null : null, until: this.wall(this.accuse.until), reveal: d.step === 'reveal' ? { id: this.accuse.id, caught: this.accuse.caught, tally: this.accuse.tally } : null };
+    if (me && this.poss && this.poss.id === me.id && ['PX', 'ACCUSE'].includes(ph)) x.poss = { power: this.poss.power, key: this.poss.key };
+    if (this.poss && ['PX'].includes(ph)) x.possActive = true;
     if (['HUB', 'PX', 'STORY', 'BOSS', 'COLLAPSE'].includes(ph)) {
       const def = d.key === 'mercy' ? MERCY2 : ROOMS2[d.key] || (ph === 'HUB' ? PXR.HUB : ph === 'BOSS' ? PXR.BOSS : PXR.PX_ROOMS[d.key]);
-      if (def) x.room = { key: def.key, name: def.name, style: def.style, how: def.goal || def.how, goal: def.goal || def.how, art: def.art, music: def.music };
+      if (def) x.room = { key: def.key, name: def.name, style: def.style, how: def.goal || def.how, goal: (d.kind === 2 && def.goal2) || def.goal || def.how, art: def.art, music: def.music };
       x.kind = d.kind ?? null; x.wins = d.wins; x.gotKey = d.gotKey; x.gained = d.gained;
       if (ph === 'STORY') x.story = { key: d.key, mem: PXR.MEMORIES[d.key]?.act || '', text: STORY[d.key] };
       if (this.ctx) x.ctx = { done: this.ctx.done, keys: this.ctx.keys };

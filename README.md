@@ -11,7 +11,12 @@ The group shares one candle. Mortimer, the dead butler, locks you in. Each turn 
 - **Hold Still**: tap SNEAK while the doll's back is turned. When she turns, freeze: the phone's motion sensor sees any wobble (phones without one use press-and-hold instead).
 - **Hide and Seek**: everyone hides somewhere secret. The ghost searches wherever it hears noise. Stay quiet, sneak, or throw a pebble to send it somewhere else.
 - **The Séance**: each phone can only pull the pointer one way. Spell the word together (round two is a riddle).
-- **The Ice Hall** (8-bit): slide on the ice, hold every red button at once, then everyone out.
+- **The Ice Hall** (8-bit): slide on the ice, hold every red button at once, then everyone out. Round two has thin ice that only two players can see.
+- **Lights Out** (8-bit): the TV goes dark. Only the lantern holder's phone shows the maze and the ghosts; they guide everyone out by voice.
+- **The Fuse Box**: only the electrician's phone shows the box (wires, symbols, a lever). Everyone else holds a different page of the manual.
+- **The Kitchen**: the ghost cook calls a dish. Everyone holds different ingredients; throw the right ones in the pot.
+
+Each night plays 5 of these 7 rooms. In round two of some rooms one player is secretly **possessed**, with a way to ruin things (make the doll turn early, jolt the pointer, poison the pot, black out the electrician, see every hiding spot). Afterwards everyone votes: catch them for candle, miss and it drips. A single round can never drain more than 14% of the candle, however wildly people tap.
 - **Mortimer's Mercy**: when the candle drops below 30%, a third door: everyone holds the flame together to win candle back.
 
 The finale is **The Collapse**: every room again, fast, while the house falls down. Jump scares hit the TV and every phone at once (lights out, a fake "connection lost", a face); people caught in a room get a scare on their own phone. The first player picks Mild, Spooky or Nightmare in the lobby. Mortimer uses the expressive voice model with acting directions, and the TV adds a hall echo. `ELEVENLABS_MN_STABILITY` (0, 0.5 or 1, default 0) sets how theatrical he is; `off` turns it off.

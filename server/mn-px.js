@@ -46,7 +46,7 @@ function iceSlide(st, id, x, y, d) {
   const [dx, dy] = DIRS[d]; const g = st.g; let n = 0;
   for (;;) {
     const nx = x + dx, ny = y + dy; if (!inb(g, nx, ny)) break; const c = g[ny][nx];
-    if (c === '#' || (c === 'g' && !st.open)) break;
+    if (c === '#' || c === 'x' || (c === 'g' && !st.open)) break;
     if (id !== null && actors(st).some(([oid, q]) => oid !== id && q.x === nx && q.y === ny)) break;
     x = nx; y = ny; n++;
     if (c !== '~') break;

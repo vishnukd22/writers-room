@@ -20,6 +20,7 @@ window.MP = (() => {
   function tv(S) {
     const ph = S.phase; const st = S.step; const px = S.x.px;
     if (ph === 'DOORS') return tvDoors(S);
+    if (ph === 'ACCUSE') return tvAccuse(S);
     if (ph === 'COLLAPSE' && st !== 'play') {
       if (st === 'intro') return '<div class="pc collapse"><h2>The house is coming down!</h2><p class="goal">Every room again, fast. Don\'t stop.</p></div>';
       if (st === 'quake') return `<div class="pc collapse quake"><span class="pc-k">${S.x.collapse.n} of ${S.x.collapse.of}</span><h2>${esc(S.x.room?.name || '')}</h2><p class="goal">${esc(S.x.room?.goal || '')}</p></div>`;
@@ -33,6 +34,11 @@ window.MP = (() => {
     const cards = d.opts.map((o) => { const n = d.tally ? d.tally[o.key] || 0 : null; const on = d.choice === o.key; return `<div class="door ${on ? 'on' : ''} ${d.choice && !on ? 'off' : ''} ${o.key === 'mercy' ? 'mercy' : ''}">${pic(o.art, 'door-art')}<div class="door-txt"><h3>${esc(o.name)}</h3><p>${esc(o.goal)}</p>${n !== null ? `<b class="votes">${n} vote${n === 1 ? '' : 's'}</b>` : ''}</div></div>`; }).join('');
     const who = S.players.map((p) => `<span class="vchip ${voted.includes(p.id) ? 'on' : ''}">${esc(p.name)}</span>`).join('');
     return `<div class="doors"><h2 class="doors-h">${d.choice ? 'Through here, then.' : 'Choose a door on your phone'}${d.until && !d.choice ? ` <small>${secsLeft(d.until)}</small>` : ''}</h2><div class="door-row n${d.opts.length}">${cards}</div><div class="vchips">${who}</div></div>`;
+  }
+  function tvAccuse(S) {
+    const a = S.x.accuse || {}; const r = a.reveal;
+    const faces = S.players.map((p) => { const n = r && r.tally ? r.tally[p.id] || 0 : 0; const it = r && r.id === p.id; return `<div class="acc ${it ? 'it' : ''} ${(a.voted || []).includes(p.id) ? 'voted' : ''}">${W.bust(p, 'lg')}<b>${esc(p.name)}</b>${r ? `<span>${n} vote${n === 1 ? '' : 's'}</span>` : ''}${it ? '<em>POSSESSED</em>' : ''}</div>`; }).join('');
+    return `<div class="accuse"><h2 class="doors-h">${r ? (r.caught ? 'Caught! The spirit lets go.' : 'Wrong! The spirit got away.') : 'Someone was possessed. Who?'}${!r && a.until ? ` <small>${secsLeft(a.until)}</small>` : ''}</h2><div class="accs">${faces}</div>${r ? '' : '<p class="pc-k" style="text-align:center">Vote on your phone</p>'}</div>`;
   }
   const TV = {
     doll(S, d) {
@@ -63,6 +69,16 @@ window.MP = (() => {
         <div class="board" id="mpBoard">${boardLetters()}<div class="planch" id="mpPlanch"><i id="mpDwell"></i></div></div>
         <div class="pulls">${pulls || '<span class="none">Nobody is pulling</span>'}</div></div>`;
     },
+    fuse(S, d) {
+      const mods = d.mods.map((m) => `<span class="fmod ${m.done ? 'done' : ''}">${{ wires: 'Wires', symbols: 'Symbols', lever: 'Lever' }[m.m]}${m.done ? ' ✓' : ''}</span>`).join('');
+      const readers = d.readers.map((r) => `<span><b>${esc(r.name)}</b> has the ${r.ms.map((m) => ({ wires: 'Wires', symbols: 'Symbols', lever: 'Lever' }[m])).join(' and ')} page</span>`).join('');
+      const bp = (d.botPages || []).map((pg) => `<div class="botpage ${pg.cols ? 'sym' : ''}"><b>${esc(pg.name)} reads out ${esc(pg.title)}:</b>${pg.cols ? `<div class="symcols">${pg.cols.map((c) => `<span>${c.join(' ')}</span>`).join('')}</div>` : ''}${pg.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>`).join('');
+      return `<div class="fuse ${d.spark ? 'spark' : ''}"><h2 class="hide-h">${esc(d.elec)} is the electrician${d.elecBot ? ' (and is working it out)' : ''}</h2><div class="fmods">${mods}</div><div class="freaders">${readers}</div>${bp ? `<div class="botpages">${bp}</div>` : ''}${d.sparks ? `<p class="fsparks">Sparks: ${d.sparks}</p>` : ''}</div>`;
+    },
+    kitchen(S, d) {
+      const items = d.dish.items.map((it) => `<div class="ing ${it.in ? 'in' : ''}"><span>${it.e}</span><b>${esc(it.l)}</b></div>`).join('');
+      return `<div class="kitchen"><h2 class="hide-h">Cook wants: <em>${esc(d.dish.name)}</em>${d.until ? ` <small>${secsLeft(d.until)}</small>` : ''}</h2><div class="ings">${items}</div><div class="pot">${d.splat ? `<div class="splat">${d.splat.e} SPLAT! ${esc(d.splat.by)} ${d.splat.k ? 'ruined it' : ''}</div>` : d.last ? `<div class="plop">${d.last.e}</div>` : ''}<span class="potemoji">🍲</span></div><p class="hide-foot">Dishes served: ${d.served} of ${d.need}</p></div>`;
+    },
     mercy(S, d) { return `<div class="pc won mercy"><h2>Hold the flame together</h2>${pic('mn-candle', 'mercy-candle')}<div class="doll-bar"><i style="width:${d.fed}%"></i><span>${d.fed}%</span></div><p>${d.waiting.length ? `Waiting for: ${d.waiting.map(esc).join(', ')}` : 'Everyone is holding. Keep going!'}</p></div>`; },
   };
   // the board letters, placed like the server's BOARD (A to M on top, N to Z below, YES and NO in the corners)
@@ -91,18 +107,25 @@ window.MP = (() => {
       if (d.choice) { const o = d.opts.find((x) => x.key === d.choice) || {}; return `<div class="mp"><div class="mp-card"><span class="pc-k">Through this door</span><h2>${esc(o.name || '')}</h2><p>${esc(o.goal || '')}</p></div></div>`; }
       return `<div class="mp"><h2 class="mp-h">Which door? <small>${secsLeft(d.until)}</small></h2>${d.opts.map((o) => `<button class="mp-door ${d.mine === o.key ? 'on' : ''} ${o.key === 'mercy' ? 'mercy' : ''}" data-x='{"type":"vote","k":"${o.key}"}'>${pic(o.art, 'mp-door-art')}<span><b>${esc(o.name)}</b><small>${esc(o.goal)}</small></span></button>`).join('')}<p class="mp-hint">The door with the most votes opens.</p></div>`;
     }
+    if (ph === 'ACCUSE') {
+      const a = S.x.accuse || {};
+      if (a.reveal) { const it = S.players.find((p) => p.id === a.reveal.id); return `<div class="mp"><div class="mp-card ${a.reveal.caught ? 'won' : 'lost'}"><h2>${a.reveal.caught ? 'Caught!' : 'Wrong!'}</h2><p>${esc(it ? it.name : '')} was possessed.</p></div></div>`; }
+      const meId = S.me?.id; return `<div class="mp"><h2 class="mp-h">Who was possessed? <small>${secsLeft(a.until)}</small></h2><div class="mp-spots">${S.players.filter((p) => p.id !== meId).map((p) => `<button class="mp-spot ${a.mine === p.id ? 'on' : ''}" data-x='{"type":"accuse","id":"${p.id}"}'>${W.bust(p, 'md')}<b>${esc(p.name)}</b></button>`).join('')}</div>${S.x.poss ? '<p class="mp-hint">It was you. Act natural.</p>' : ''}</div>`;
+    }
     if (ph === 'COLLAPSE' && st !== 'play') return `<div class="mp"><div class="mp-card collapse"><h2>${st === 'intro' ? 'The house is coming down!' : st === 'quake' ? esc(S.x.room?.name || '') : 'The front door...'}</h2><p>${st === 'quake' ? esc(S.x.room?.goal || '') : 'Look at the TV.'}</p></div></div>`;
     if (st !== 'play' || !px || !px.ui) {
       const r = S.x.room || {};
       const motion = r.key === 'doll' && motionState() !== 'on' && motionState() !== 'hold' ? `<button class="mp-big" data-motion="1">Turn on the motion sensor</button><p class="mp-hint">The doll uses it to see if you move.</p>` : '';
       if (st === 'intro') return `<div class="mp"><div class="mp-card">${pic(r.art, 'mp-art')}<h2>${esc(r.name || '')}</h2><p class="goal">${esc(r.goal || '')}</p></div>${motion}</div>`;
+      if (st === 'ready' && S.x.poss) return `<div class="mp"><div class="mp-card poss"><span class="pc-k">Secret. Don't show anyone.</span><h2>You are possessed</h2><p class="goal">${esc(S.x.poss.power)}</p><p>Ruin this round without getting caught. Everyone votes afterwards.</p></div>${motion}</div>`;
       if (st === 'ready') return `<div class="mp"><div class="mp-card"><h2>${S.x.kind === 'quick' ? 'Fast!' : `Round ${S.x.kind}`}</h2><p class="goal">${esc(r.goal || '')}</p></div>${motion}</div>`;
       if (st === 'won') return '<div class="mp"><div class="mp-card won"><h2>Round won!</h2></div></div>';
       if (st === 'lost') return '<div class="mp"><div class="mp-card lost"><h2>Round lost</h2><p>The candle drips.</p></div></div>';
       if (st === 'result') return `<div class="mp"><div class="mp-card ${S.x.gotKey ? 'won' : 'lost'}"><h2>${r.key === 'mercy' ? `Candle +${S.x.gained || 0}%` : S.x.gotKey ? 'A key piece!' : 'No key piece'}</h2></div></div>`;
       return '';
     }
-    return (PH[px.room] || (() => ''))(S, px);
+    const possBar = S.x.poss ? `<div class="possbar"><b>You are possessed.</b> ${esc(S.x.poss.power)}${{ doll: '<button data-tap=\'{"type":"px","a":"giggle"}\'>GIGGLE</button>', seance: '<button data-tap=\'{"type":"px","a":"jolt"}\'>JOLT</button>', fuse: '<button data-tap=\'{"type":"px","a":"short"}\'>SHORT CIRCUIT</button>' }[S.x.poss.key] || ''}</div>` : '';
+    return possBar + (PH[px.room] || (() => ''))(S, px);
   }
   const PH = {
     doll(S, d) {
@@ -116,12 +139,13 @@ window.MP = (() => {
       const where = d.spots.find((s) => s.k === d.mine);
       const grid = (act, label) => `<div class="mp-spots">${d.spots.map((s) => `<button class="mp-spot ${(act === 'hide' && d.mine === s.k) || (d.choice && d.choice.at === s.k) ? 'on' : ''} ${act !== 'hide' && s.k === d.mine && !d.found ? 'mine' : ''}" data-x='${JSON.stringify(act === 'hide' ? { type: 'px', a: 'hide', k: s.k } : { type: 'px', a: 'plan', do: act, at: s.k })}'><span>${s.e}</span><b>${esc(s.l)}</b>${s.k === d.mine && act !== 'hide' && !d.found ? '<small>you</small>' : ''}</button>`).join('')}</div>${label ? `<p class="mp-hint">${label}</p>` : ''}`;
       if (d.phase === 'hide') return `<div class="mp"><h2 class="mp-h">Hide! <small>${secsLeft(d.until)}</small></h2>${grid('hide', 'Keep it secret. Or don\'t.')}</div>`;
+      const seen = d.everyone ? `<p class="mp-hint poss-see">You can see: ${d.everyone.map((e) => `${esc(e.name)} in the ${esc((d.spots.find((s) => s.k === e.k) || {}).l || '?')}${e.found ? ' (found)' : ''}`).join(', ')}</p>` : '';
       if (d.phase === 'plan') {
         if (hideTurn !== d.turn) { hideTurn = d.turn; phoneHideMode = null; }
         const c = d.choice || { do: 'stay' }; const mode = d.found ? 'pebble' : phoneHideMode || 'stay';
         const tabs = d.found ? '' : `<div class="mp-tabs">${[['stay', 'Stay quiet'], ['sneak', 'Sneak'], ['pebble', 'Throw pebble']].map(([k, l]) => `<button class="${mode === k ? 'on' : ''}" data-hidemode="${k}">${l}</button>`).join('')}</div>`;
         const body = mode === 'stay' ? `<button class="mp-big ${c.do === 'stay' && d.choice ? 'on' : ''}" data-x='{"type":"px","a":"plan","do":"stay"}'>Stay quiet${c.do === 'stay' && d.choice ? ' ✓' : ''}</button>` : grid(mode, mode === 'sneak' ? 'Move to a new spot. You might creak.' : 'The ghost will check where the pebble lands. Don\'t hit a friend!');
-        return `<div class="mp"><h2 class="mp-h">${d.found ? 'You were found. Throw pebbles to help!' : `You're in: ${esc(where ? where.l : '?')}`} <small>${secsLeft(d.until)}</small></h2>${tabs}${body}</div>`;
+        return `${seen}<div class="mp"><h2 class="mp-h">${d.found ? 'You were found. Throw pebbles to help!' : `You're in: ${esc(where ? where.l : '?')}`} <small>${secsLeft(d.until)}</small></h2>${tabs}${body}</div>`;
       }
       if (d.phase === 'search') { const me = (d.hits || []).some((h) => h.k === d.mine); return `<div class="mp"><div class="mp-card ${d.found ? 'lost' : ''}"><h2>${d.found ? (me ? 'FOUND YOU' : 'You were found') : 'Shh...'}</h2><p>${esc(where ? `You're in: ${where.l}` : '')}</p></div></div>`; }
       return '<div class="mp"><div class="mp-card"><h2>Look at the TV</h2></div></div>';
@@ -130,6 +154,22 @@ window.MP = (() => {
       const slots = d.letters.map((c, i) => `<span class="${i < d.got ? 'got' : ''}">${i < d.got || d.word ? esc(c) : '?'}</span>`).join('');
       const btns = d.dirs.map((x) => `<button class="mp-pull" data-hold="pull:${x}"><span>${ARROW[x]}</span>PULL ${DNAME[x]}</button>`).join('');
       return `<div class="mp sea">${d.riddle ? `<p class="mp-riddle">"${esc(d.riddle)}"</p>` : ''}<div class="slots mp-slots">${slots}</div><div class="mp-pulls n${d.dirs.length}">${btns}</div><p class="mp-hint">Hold to pull. Only you can pull this way. Shout to the others!</p></div>`;
+    },
+    fuse(S, d) {
+      const mods = `<div class="fmods">${d.mods.map((m) => `<span class="fmod ${m.done ? 'done' : ''}">${{ wires: 'Wires', symbols: 'Symbols', lever: 'Lever' }[m.m]}${m.done ? ' ✓' : ''}</span>`).join('')}</div>`;
+      if (d.box) {
+        if (d.dark) return `<div class="mp"><div class="mp-card lost"><h2>The power cut out!</h2><p>Wait a moment...</p></div></div>`;
+        const b = d.box; const done = (m) => d.mods.find((x) => x.m === m)?.done;
+        const wires = `<div class="fbox"><h3>Wires ${done('wires') ? '✓' : ''}</h3>${b.wires.map((c, i) => `<button class="wire w-${c} ${b.cut.includes(i) ? 'cut' : ''}" data-x='{"type":"px","a":"cut","i":${i}}' ${done('wires') ? 'disabled' : ''}><span>${i + 1}</span><i></i><small>${c}</small></button>`).join('')}</div>`;
+        const syms = d.mods.some((x) => x.m === 'symbols') ? `<div class="fbox"><h3>Symbols ${done('symbols') ? '✓' : ''}</h3><div class="syms">${b.four.map((s) => `<button class="${b.pressed.includes(s) ? 'on' : ''}" data-x='{"type":"px","a":"sym","s":"${s}"}' ${done('symbols') ? 'disabled' : ''}>${s}</button>`).join('')}</div></div>` : '';
+        const lever = b.lever ? `<div class="fbox"><h3>Lever ${done('lever') ? '✓' : ''}</h3><div class="lever"><span class="light l-${b.lever.c}"></span><b>${b.lever.n}</b><button data-x='{"type":"px","a":"lever","d":"up"}' ${done('lever') ? 'disabled' : ''}>UP</button><button data-x='{"type":"px","a":"lever","d":"down"}' ${done('lever') ? 'disabled' : ''}>DOWN</button></div><small class="mp-hint">The light is ${b.lever.c}.</small></div>` : '';
+        return `<div class="mp mpfuse ${d.spark ? 'spark' : ''}"><h2 class="mp-h">You're the electrician</h2><p class="mp-hint">Describe what you see. Don't touch anything until the others tell you.</p>${wires}${syms}${lever}</div>`;
+      }
+      const pages = (d.pages || []).map((pg) => `<div class="fpage"><h3>${esc(pg.title)}</h3>${pg.cols ? `<div class="symcols">${pg.cols.map((c, i) => `<span><b>${i + 1}</b>${c.join(' ')}</span>`).join('')}</div>` : ''}${pg.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div>`).join('');
+      return `<div class="mp"><h2 class="mp-h">${esc(d.elec)} sees the fuse box</h2>${mods}${pages || '<div class="mp-card"><p>No page for you this time. Help the others!</p></div>'}</div>`;
+    },
+    kitchen(S, d) {
+      return `<div class="mp"><div class="mp-dish"><span>Cook wants: <b>${esc(d.dish)}</b></span><div>${d.items.map((it) => `<i class="${it.in ? 'in' : ''}">${it.e}</i>`).join('')}</div></div><div class="mp-pantry">${d.mine.map((f) => `<button class="food ${f.k === 'poison' ? 'poison' : ''}" data-tap='{"type":"px","a":"throw","k":"${f.k}"}'><span>${f.e}</span><b>${esc(f.l)}</b></button>`).join('')}</div><p class="mp-hint">Tap to throw it in the pot. Shout for what you don't have! Served ${d.served} of ${d.need}.</p></div>`;
     },
     mercy(S, d) { return `<div class="mp"><button class="mp-flame ${d.on ? 'on' : ''}" data-hold="flame">${pic('mn-candle', 'mp-flame-img')}<span>${d.on ? 'Holding...' : 'Press and hold'}</span></button><div class="doll-bar mp-bar"><i style="width:${d.fed}%"></i><span>${d.fed}%</span></div></div>`; },
   };

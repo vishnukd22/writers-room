@@ -106,6 +106,7 @@
     HUB() { return tv('The hallway', 'Look at the TV.', '🚪'); },
     STORY() { return `${tv('A memory', esc(S.x.story?.mem || ''), '📜')}${skipBtn()}`; },
     DOORS() { return MP.phone(S); },
+    ACCUSE() { return MP.phone(S); },
     COLLAPSE() { return MP.phone(S); },
     PX() {
       if (S.x.room && (S.x.room.style === 'paint' || S.step !== 'play')) return MP.phone(S);
