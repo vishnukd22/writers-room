@@ -52,7 +52,7 @@
   <p class="host">Hosting on a TV or laptop? <a href="/tv">Open the game menu</a></p>
 </div>
 <script>
-  fetch('/assets-manifest').then((r) => r.json()).then((m) => { const f = ['webp', 'png'].map((e) => `gn-logo.${e}`).find((x) => m.img.includes(x)); if (f) document.getElementById('logo').innerHTML = `<img src="/assets/img/${f}" alt="Vishnu's Game Night">`; }).catch(() => {});
+  fetch('/assets-manifest').then((r) => r.json()).then((m) => { const f = ['gn-neon.webp', 'gn-logo.webp', 'gn-logo.png'].find((x) => m.img.includes(x)); if (f) document.getElementById('logo').innerHTML = `<img src="/assets/img/${f}" alt="Vishnu's Game Night">`; }).catch(() => {});
   const f = document.getElementById('f'); const code = document.getElementById('code'); const err = document.getElementById('err'); const go = document.getElementById('go');
   code.addEventListener('input', () => { code.value = code.value.toUpperCase().replace(/[^A-Z]/g, ''); err.textContent = ''; });
   f.addEventListener('submit', async (e) => {

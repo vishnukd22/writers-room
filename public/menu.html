@@ -161,7 +161,7 @@
     const icon = (id, n) => { const f = find(n); if (f) document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; };
     art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title'); art('aSG', 'sg-logo'); art('aNTD', 'ntd-logo');
     icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn'); icon('iSG', 'gn-icon-sg'); icon('iNTD', 'gn-icon-ntd');
-    const logo = find('gn-logo'); if (logo) document.getElementById('brand').innerHTML = `<img src="/assets/img/${logo}" alt="Vishnu's Game Night">`;
+    const logo = find('gn-neon') || find('gn-logo'); if (logo) document.getElementById('brand').innerHTML = `<img src="/assets/img/${logo}" alt="Vishnu's Game Night">`;
   }).catch(() => {});
 </script>
 </body>
