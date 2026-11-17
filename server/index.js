@@ -11,8 +11,10 @@ const { BidCoin } = require('./bidcoin');
 const { Rigged } = require('./rigged');
 const { Mansion } = require('./mansion');
 const { Shotgun } = require('./shotgun');
+const { NothingToDeclare } = require('./ntd');
 const pausable = require('./pausable');
 const BCI = require('./bc-items');
+const NTDI = require('./ntd-items');
 const BCP = require('./bc-photos');
 const voice = require('./voice');
 const ai = require('./ai');
@@ -51,7 +53,7 @@ app.get('/mn', (_q, r) => r.sendFile(path.join(PUBLIC, 'mn-play.html')));
 app.get(['/bidcoin/gallery', '/bidcoin/credits'], (_q, r) => r.sendFile(path.join(PUBLIC, 'bc-gallery.html')));
 app.get('/bidcoin/items.json', (_q, r) => {
   const row = (i) => { const f = BCP.info(i.id); return { id: i.id, name: i.name, cat: i.cat, rar: i.rar || 's', value: i.value ?? null, line: i.line, q: i.q, photo: BCP.urlFor(i.id), credit: f ? { text: f.credit, page: f.page } : null }; };
-  r.set('Cache-Control', 'no-cache'); r.json({ items: [...BCI.ITEMS.map(row), ...BCI.CONTAINERS.map(row)], cats: BCI.CATS, status: BCP.status() });
+  r.set('Cache-Control', 'no-cache'); r.json({ items: [...BCI.ITEMS.map(row), ...BCI.CONTAINERS.map(row), ...NTDI.ITEMS.map((i) => row({ ...i, cat: `ntd-${i.cat}` }))], cats: { ...BCI.CATS, ...Object.fromEntries(Object.entries(NTDI.CATS).map(([k, c]) => [`ntd-${k}`, { ...c, name: `Nothing to Declare: ${c.name}` }])) }, status: BCP.status() });
 });
 // item photos, served from this website (the server keeps a copy of each one)
 app.get('/bidcoin/photo/:id', async (q, r) => {
@@ -90,6 +92,8 @@ app.use('/fonts/fell', express.static(path.join(NM, '@fontsource', 'im-fell-engl
 app.use('/vendor/three', express.static(path.join(NM, 'three'), { maxAge: '30d' }));
 app.get('/tv/shotgun', (_q, r) => r.sendFile(path.join(PUBLIC, 'sg-tv.html')));
 app.get('/sg', (_q, r) => r.sendFile(path.join(PUBLIC, 'sg-play.html')));
+app.get('/tv/nothing-to-declare', (_q, r) => r.sendFile(path.join(PUBLIC, 'ntd-tv.html')));
+app.get('/ntd', (_q, r) => r.sendFile(path.join(PUBLIC, 'ntd-play.html')));
 app.get('/shotgun-look', (_q, r) => r.sendFile(path.join(PUBLIC, 'sg-look.html')));
 app.use('/assets', express.static(path.join(PUBLIC, 'assets'), { maxAge: '7d' }));
 app.use(express.static(PUBLIC, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
@@ -104,8 +108,8 @@ function originOf(socket) {
   return `${proto}://${h['x-forwarded-host'] || h.host}`;
 }
 // kind: 'wr' (Writers' Room), 'lg' (Land Grab), 'bc' (BID-COIN!) or 'rg' (RIGGED!). test: the bot buttons.
-const KINDS = ['wr', 'lg', 'bc', 'rg', 'mn', 'sg'];
-const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : kind === 'mn' ? `/mn?room=${code}` : kind === 'sg' ? `/sg?room=${code}` : `/?room=${code}`);
+const KINDS = ['wr', 'lg', 'bc', 'rg', 'mn', 'sg', 'ntd'];
+const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : kind === 'mn' ? `/mn?room=${code}` : kind === 'sg' ? `/sg?room=${code}` : kind === 'ntd' ? `/ntd?room=${code}` : `/?room=${code}`);
 async function createRoom(socket, kind = 'wr', test = false) {
   const code = newCode();
   const hooks = {
@@ -116,7 +120,7 @@ async function createRoom(socket, kind = 'wr', test = false) {
     blast: (ev, data) => io.to(`room:${code}`).emit(ev, data), // tiny instant messages to everyone in the room (bids)
     host: (ev, data) => io.to(`host:${code}`).emit(ev, data), // straight to the TV (Shotgun's controls)
   };
-  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : kind === 'mn' ? new Mansion(code, hooks, { test }) : kind === 'sg' ? new Shotgun(code, hooks, { test }) : new Game(code, hooks);
+  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : kind === 'mn' ? new Mansion(code, hooks, { test }) : kind === 'ntd' ? new NothingToDeclare(code, hooks, { test }) : kind === 'sg' ? new Shotgun(code, hooks, { test }) : new Game(code, hooks);
   game.kind = kind;
   // pause, resume and quit from any phone (every game except the old Writers' Room)
   if (kind !== 'wr') pausable.install(game, { shift: (dt) => game.shiftClock?.(dt) });

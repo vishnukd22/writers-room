@@ -12,7 +12,7 @@ MAXS = float(os.environ.get('MAXS', '900'))
 # visible area in Safari with its address bar showing (the tightest case)
 PHONES = [('iPhone SE', 375, 553), ('iPhone 13 mini', 375, 629), ('iPhone 15', 393, 659), ('iPhone 15 Pro Max', 430, 739)]
 UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
-GAME = {'bc': ('/tv/bidcoin', '/bc', 3), 'lg': ('/tv/landgrab', '/lg', 2), 'rg': ('/tv/rigged', '/rg', 2), 'mn': ('/tv/mansion', '/mn', 0), 'sg': ('/tv/shotgun?norender&tscale=2', '/sg', 0)}
+GAME = {'bc': ('/tv/bidcoin', '/bc', 3), 'lg': ('/tv/landgrab', '/lg', 2), 'rg': ('/tv/rigged', '/rg', 2), 'mn': ('/tv/mansion', '/mn', 0), 'sg': ('/tv/shotgun?norender&tscale=2', '/sg', 0), 'ntd': ('/tv/nothing-to-declare', '/ntd', 1)}
 
 # runs inside each phone: returns every problem on the screen right now
 CHECK = r"""() => {

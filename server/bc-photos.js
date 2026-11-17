@@ -109,8 +109,11 @@ async function lookup(item) {
   return null;
 }
 
-const ALL = () => [...C.ITEMS, ...C.CONTAINERS];
-const byId = (id) => C.BY_ID[id] || C.CONTAINERS.find((c) => c.id === id);
+// other games (Nothing to Declare) add their own items here, so they share the same photo finder
+const EXTRA = new Map();
+function register(items) { for (const it of items) EXTRA.set(it.id, it); }
+const ALL = () => [...C.ITEMS, ...C.CONTAINERS, ...EXTRA.values()];
+const byId = (id) => C.BY_ID[id] || C.CONTAINERS.find((c) => c.id === id) || EXTRA.get(id);
 function resolve(id) {
   if (local.has(id) || found.has(id)) return Promise.resolve(found.get(id) || null);
   if (busy.has(id)) return busy.get(id);
@@ -195,4 +198,4 @@ function status() {
   return { items: all.length, withPhoto: all.filter((i) => urlFor(i.id)).length, stillLooking: queue.length + running, noPhotoFound: [...found].filter(([, v]) => v.none).map(([k]) => k), ...stats, sinceSeconds: Math.round((Date.now() - stats.started) / 1000) };
 }
 
-module.exports = { urlFor, creditFor, info, warm, status, resolve, scanLocal, serve };
+module.exports = { urlFor, creditFor, info, warm, status, resolve, scanLocal, serve, register };

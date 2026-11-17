@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" class="gn-phone">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F4A4C">
+<title>Nothing to Declare</title>
+<link rel="stylesheet" href="/gn.css">
+<link rel="stylesheet" href="/fonts/shrikhand/400.css">
+<link rel="stylesheet" href="/fonts/bricolage/600.css">
+<link rel="stylesheet" href="/fonts/bricolage/800.css">
+<link rel="stylesheet" href="/fonts/courier/700.css">
+<link rel="stylesheet" href="/ntd/play.css">
+</head>
+<body>
+<section id="join">
+  <div class="jtitle">Nothing to Declare<span>Smuggle. Bribe. Lie.</span></div>
+  <form id="jform" autocomplete="off">
+    <label>Room code<input id="jcode" maxlength="4" autocapitalize="characters" spellcheck="false" placeholder="ABCD" required></label>
+    <label>Your name<input id="jname" maxlength="12" placeholder="Vishnu" required></label>
+    <button class="btn primary big" type="submit">Board the plane</button>
+    <p id="jerr" class="err" role="alert"></p>
+  </form>
+</section>
+<section id="app" hidden>
+  <header id="top"></header>
+  <main id="main"></main>
+</section>
+<div id="toasts" aria-live="polite"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/ntd/play.js"></script>
+<script src="/gn-controls.js"></script>
+</body>
+</html>

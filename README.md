@@ -1,4 +1,4 @@
-# Vishnu's Game Night: Shotgun, Last Night in the Mansion, BID-COIN!, RIGGED! and Land Grab
+# Vishnu's Game Night: Nothing to Declare, Shotgun, Last Night in the Mansion, BID-COIN!, RIGGED! and Land Grab
 
 Party games for the TV and everyone's phones. Open `/tv` on the TV and pick one. Phones join with the code on screen.
 
@@ -121,6 +121,30 @@ A trivia game show for 2 to 8 players (bots can fill seats), about 20 minutes. E
 
 **Testing on your own:** open `/tv/rigged?test`. The lobby has **Add a bot**, **Fill to 4**, **Remove bots** and **Start**. In a normal game, the first player's phone has **Add a bot** too.
 
+## Nothing to Declare
+
+A smuggling and bluffing game for 2 to 8 players, about 25 minutes (closer to 35 with 8). It's airport customs, inspired by the board game Sheriff of Nottingham. Supervisor Brenda runs the hall over the tannoy, and Biscuit the beagle helps at the desk.
+
+1. Each round, one player is the customs officer. Everyone else is a traveller. The officer job moves round, so everyone gets a turn.
+2. Travellers get a hand of real items on their phone, with real UAE prices: perfume, sweets, gadgets and fashion, plus contraband (a gold bar, a live macaw, Cuban cigars, a haggis, chewing gum for Singapore...). Each round you can swap up to 2 items for new ones.
+3. Pack your suitcase and pick a lane:
+   - **Nothing to Declare (green):** up to 4 items, and you say what kind they are ("3 bottles of perfume"). You can lie. You can also leave a bribe on the desk.
+   - **Goods to Declare (red):** pay 5% duty and you are never searched. No contraband allowed.
+4. At the desk, one green bag at a time, the officer waves it through or opens it. Everyone argues for 25 seconds. Once per round, the officer can send Biscuit, who barks if there's contraband.
+   - **Waved through:** everything gets in, and the officer keeps any bribe.
+   - **Opened and you lied:** anything that isn't what you said is seized, and you pay the officer half its value.
+   - **Opened and you were honest:** the officer pays you AED 500 for every item.
+5. Everyone starts with AED 5,000. You can go into debt.
+6. **The Customs Awards Night** at the end reveals what everyone really smuggled. Bonuses: most items of each legal kind gets AED 3,000 (second gets AED 1,500), and the Smuggler of the Year (most contraband through) gets AED 5,000. Cash plus the value of your goods plus bonuses decides the winner.
+
+**Two Bags:** with 2 or 3 players, every traveller packs two suitcases each round, and there are 6 rounds.
+
+The item photos come from Wikimedia Commons, the same way as BID-COIN!'s. To check them, open `/bidcoin/gallery`. The items are at the bottom, under "Nothing to Declare". If a photo is wrong, put a better search in `server/bc-photo-overrides.json` (the item's name in the game starts with `ntd-`).
+
+### Testing Nothing to Declare on your own
+
+Open `/tv/nothing-to-declare?test` on the TV. The lobby then has **Add bot**, **Fill to 4**, **No bots** and **Start** buttons. Join on your phone and play with the bots.
+
 ## Shotgun
 
 A team driving game for 2 to 8 players, about 15 minutes. Everyone is in one car, delivering a five-tier wedding cake, and each phone controls one part of it: Left, Right, Pedals (gas, brake and the gearbox) or Co-pilot (map, nitro, horn and lights). With fewer players, people get more than one part. Nobody can see the whole picture, so you have to shout at each other. Dolly, the wedding planner, calls on the TV throughout. She is not calm.
@@ -159,7 +183,7 @@ The game still works without either key. It uses backup scripts and the browser'
 
 ## Art, music and sounds
 
-Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<name>`, `bust-01` onward, small `t-` copies for phones, Land Grab's `lg-` pictures, BID-COIN!'s `bc-` pictures, RIGGED!'s `rg-` pictures and Shotgun's `sg-` pictures), Shotgun's 3D models in `sg/models`, music in `music` (one track per game stage and per genre) and sound effects in `sfx`. Anything missing is drawn or played by the game itself, so a file can be removed or swapped at any time with the same name.
+Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<name>`, `bust-01` onward, small `t-` copies for phones, Land Grab's `lg-` pictures, BID-COIN!'s `bc-` pictures, RIGGED!'s `rg-` pictures, Shotgun's `sg-` pictures and Nothing to Declare's `ntd-` pictures), Shotgun's 3D models in `sg/models`, music in `music` (one track per game stage and per genre) and sound effects in `sfx`. Anything missing is drawn or played by the game itself, so a file can be removed or swapped at any time with the same name.
 
 ## Optional settings (Render, Environment tab)
 
@@ -170,6 +194,7 @@ Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<na
 | `ELEVENLABS_LG_VOICE_ID` | Land Grab's tea shop gossip. If not set, an English voice with an Indian accent is picked from the ElevenLabs voice library |
 | `ELEVENLABS_BC_VOICE_ID` | BID-COIN!'s auctioneer (default is Charlie) |
 | `ELEVENLABS_RG_VOICE_ID` | RIGGED!'s host, Vince Velvet (default is Brian) |
+| `ELEVENLABS_NTD_VOICE_ID` | Nothing to Declare's Supervisor Brenda (default is Alice) |
 | `ELEVENLABS_SG_VOICE_ID` | Shotgun's wedding planner, Dolly (default is Domi) |
 | `ELEVENLABS_MN_VOICE_ID` | The Mansion's butler, Mortimer (default is George, an older British voice) |
 | `BC_LOCKERS` | How many lockers in a BID-COIN! game (default 8) |
