@@ -22,6 +22,10 @@ async function one() {
     if (s.locker?.syn && !synSeen.has(s.locker.n)) { synSeen.add(s.locker.n); stats.synLockers++; }
     if (s.phase === 'BACKROOM' && s.step === 'won' && s.x.br && !brSeen.has(s.x.br.owner + s.x.br.price + phases.length)) { brSeen.add(s.x.br.owner + s.x.br.price + phases.length); stats.brSales++; }
     if (s.locker?.bets) for (const b of Object.values(s.locker.bets)) if (b.all) stats.allIn++;
+    // Sid's crew and Sid's loan
+    if (s.locker?.result?.commission && !seen[`cm${s.locker.n}`]) { seen[`cm${s.locker.n}`] = 1; stats.commission = (stats.commission || 0) + s.locker.result.commission; }
+    if (s.locker?.result?.caught && !seen[`ca${s.locker.n}`]) { seen[`ca${s.locker.n}`] = 1; stats.caught = (stats.caught || 0) + 1; }
+    if (s.phase === 'FINALE' && s.x.step === 'repo' && s.x.settled && !seen.repo) { seen.repo = 1; stats.repaid = s.x.bills.filter((b) => !b.short).length; stats.repo = s.x.bills.filter((b) => b.short).length; }
     if (s.phase === 'END' && s.x.ranks) end = s;
   });
   // one phone, played by a script: bids when it can, bets, plays cards, passes

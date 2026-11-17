@@ -113,8 +113,15 @@
       return `<button class="bid b${i}" data-bid="${inc}" ${off ? 'disabled' : ''}><b>+${num(inc)}</b><span>${to > purse ? 'Too much' : `to ${num(to)}`}</span></button>`;
     }).join('');
     const teamTag = purse !== m.cash ? `<div class="teambox">🤝 Team money: ${aed(purse)}</div>` : '';
+    // Sid's crew: fake bids for players under AED 5,000
+    const cr = S.x.crew; let crew = '';
+    if (cr) {
+      const can = !a.done && cr.left > 0 && a.leader !== 'phantom' && !mine;
+      crew = `<div class="crewbox">${W.img('t-bc-shill') ? `<img src="${W.img('t-bc-shill')}" alt="">` : ''}<div><b>Sid's crew</b><p>Fake bid +${num(cr.inc)}. Someone bids over it: Sid pays you ${num(cr.commission)}. Nobody does: you're caught, fined ${num(cr.fine)}.</p>
+        <button class="btn shillbtn" data-a="shill" ${can ? '' : 'disabled'}>${cr.left > 0 ? `Fake bid (${cr.left} left)` : 'No fake bids left'}</button></div></div>`;
+    }
     return `${teamTag}<div class="pricebox ${a.calls ? 'hot' : ''}"><small>AED</small><b>${num(a.price)}</b>${call}</div>${status}<div class="hammer"><i id="hbar"></i></div>
-      <div class="bids ${frozenMs ? 'iced' : ''}">${btns}${frozenMs ? `<div class="ice">🧊 Frozen<span data-ice="${Date.now() + frozenMs}">${Math.ceil(frozenMs / 1000)}</span></div>` : ''}</div>`;
+      <div class="bids ${frozenMs ? 'iced' : ''} ${cr ? 'crew' : ''}">${btns}${frozenMs ? `<div class="ice">🧊 Frozen<span data-ice="${Date.now() + frozenMs}">${Math.ceil(frozenMs / 1000)}</span></div>` : ''}</div>${crew}`;
   }
   (function loop() {
     const el = document.getElementById('hbar');
@@ -135,6 +142,13 @@
       else if (r?.error) toast(r.error, 'bad');
     });
   });
+
+  // Sid's loan: once a game, for anyone under AED 5,000. Two taps, so nobody borrows by accident.
+  const loanBox = () => {
+    const l = S.x.loan; if (!l) return '<div id="loanbox"></div>';
+    return `<div id="loanbox"><div class="loanbox"><b>Shifty Sid's loan</b><p>Borrow <b>${aed(l.got)}</b> now. Pay back <b>${aed(l.owe)}</b> at the end. Can't pay? Sid takes everything you have.</p><button class="btn loanbtn" data-a="loan">Borrow ${aed(l.got)}</button></div></div>`;
+  };
+  const debtLine = () => (me().debt ? `<p class="hint center debt">You owe Shifty Sid ${aed(me().debt)} at the end.</p>` : '');
 
   // ---------------------------------------------------------------- screens
   const R = {
@@ -162,18 +176,19 @@
         deal = `<div class="deal" id="deal"><h3>Deal time</h3><p class="hint">You're in the bottom half. Pool your cash with another player for this locker. You split the cost and the profit.</p>${team}${inv}${mates ? `<div class="mates">${mates}</div>` : ''}</div>`;
       }
       return [`peek${lk.n}`, `<h2 class="h">Your peek</h2><p class="lead">Keep a straight face. ${lk.count} things inside.</p><div id="peeks">${body}${tip}</div>${deal}<div id="pcards">${cardsRow(['xray', 'tip', 'plant'])}</div>
-        <div id="readybox"><button class="btn primary big" data-a="ready" ${m.ready ? 'disabled' : ''}>${m.ready ? 'Waiting for the others' : 'Seen it'}</button></div>`];
+        <div id="readybox"><button class="btn primary big" data-a="ready" ${m.ready ? 'disabled' : ''}>${m.ready ? 'Waiting for the others' : 'Seen it'}</button></div>${loanBox()}`];
     },
     AUCTION() {
       const m = me(); const lk = S.locker;
       const recap = (m.peek || []).length ? `<div class="recap">${m.peek.map((it) => `<span>${pic(it)}<i>${esc(it.name)}</i></span>`).join('')}</div>` : '';
-      return [`auc${lk.n}`, `<div id="paddle" class="paddlebox">${paddle()}</div><div id="acards">${cardsRow(['freeze', 'phantom'])}</div>${recap}${m.tip ? `<p class="hint center">Tip: ${aed(m.tip.lo)} to ${aed(m.tip.hi)}</p>` : ''}`];
+      return [`auc${lk.n}`, `<div id="paddle" class="paddlebox">${paddle()}</div><div id="acards">${cardsRow(['freeze', 'phantom'])}</div>${loanBox()}${recap}${m.tip ? `<p class="hint center">Tip: ${aed(m.tip.lo)} to ${aed(m.tip.hi)}</p>` : ''}`];
     },
     BET() {
       const lk = S.locker; const m = me(); const x = S.x;
       if (S.step === 'none') return ['nobid', tv('No takers', 'Nobody bid. Watch what you missed.', '🤷')];
       const mine = lk.owner === m.id || !!x.myTeam;
-      const head = mine ? `<div class="bought"><h2 class="h">${x.myTeam ? 'Your team bought it!' : 'You bought it!'}</h2><p class="lead">${aed(lk.price)}. Fingers crossed.</p></div><p class="hint center">Everyone else is betting on whether you make money.</p>${(m.peek || []).length ? `<div class="recap">${m.peek.map((it) => `<span>${pic(it)}<i>${esc(it.name)}</i></span>`).join('')}</div>` : ''}` : `<h2 class="h">${lk.phantom ? 'The mystery bidder won it' : `${name(lk.owner)} bought it`}</h2><p class="lead">For ${aed(lk.price)}. Will they make money?</p>`;
+      const head = mine ? `<div class="bought"><h2 class="h">${x.myTeam ? 'Your team bought it!' : 'You bought it!'}</h2><p class="lead">${aed(lk.price)}. Fingers crossed.</p></div><p class="hint center">Everyone else is betting on whether you make money.</p>${(m.peek || []).length ? `<div class="recap">${m.peek.map((it) => `<span>${pic(it)}<i>${esc(it.name)}</i></span>`).join('')}</div>` : ''}` : lk.caught ? `<h2 class="h">${lk.caught.id === m.id ? 'You got caught!' : `${name(lk.caught.id)} got caught!`}</h2><p class="lead">${lk.caught.id === m.id ? `Nobody bid over your fake bid. Fined ${aed(lk.caught.fine)}.` : `They were faking bids for Shifty Sid. Nobody gets the locker.`} Will it boom anyway?</p>`
+        : `<h2 class="h">${lk.phantom ? 'The mystery bidder won it' : `${name(lk.owner)} bought it`}</h2><p class="lead">For ${aed(lk.price)}. Will they make money?</p>`;
       const bet = mine ? '' : m.bet ? placedHtml(m.bet) : x.canBet && x.betOpt ? betPicker(x.betOpt, '') : '<div class="placed">Not enough cash to bet.</div>';
       const steal = usable(['steal']).length ? `<div class="cardsrow">${cardBtn(usable(['steal'])[0], `<em>Costs ${aed(x.stealPrice)}</em>`)}</div>` : '';
       return [`bet${lk.n}|${lk.owner}`, `${head}<div id="betbox">${bet}</div><div id="stealbox">${steal}</div>`];
@@ -207,9 +222,12 @@
       const lk = S.locker; const m = me(); const r = lk.result || {};
       const rank = [...S.players].sort((a, b) => b.cash - a.cash).findIndex((p) => p.id === m.id) + 1;
       const sp = r.split?.[m.id]; const mine = sp ? `<p class="lead big ${sp.got - sp.paid >= 0 ? 'g' : 'rd'}">Your team share: ${sp.got - sp.paid >= 0 ? '+' : '-'}${aed(Math.abs(sp.got - sp.paid))}</p>` : r.owner === m.id ? `<p class="lead big ${r.profit >= 0 ? 'g' : 'rd'}">${r.profit >= 0 ? 'You made' : 'You lost'} ${aed(Math.abs(r.profit))}</p>` : '';
-      return [`res${lk.n}`, `<div class="tv"><div class="ico">💰</div><h2 class="h">${aed(m.cash)}</h2>${mine}<p class="lead">You're ${ordinal(rank)} of ${S.players.length}.</p></div>`];
+      return [`res${lk.n}`, `<div class="tv"><div class="ico">💰</div><h2 class="h">${aed(m.cash)}</h2>${mine}<p class="lead">You're ${ordinal(rank)} of ${S.players.length}.</p></div>${debtLine()}${loanBox()}`];
     },
-    FINALE() { return [`fin${S.x.step}${S.x.box?.name || ''}`, tv('The sealed boxes', 'Watch the TV.', '🔒')]; },
+    FINALE() {
+      if (S.x.step === 'repo') { const b = (S.x.bills || []).find((x) => x.id === me().id); return [`fin-repo${S.x.settled}`, tv('Sid collects', b ? (S.x.settled ? (b.short ? `You could only pay ${aed(b.paid)}. Sid took everything.` : `You paid Sid back ${aed(b.owe)}.`) : `You owe Sid ${aed(b.owe)}.`) : 'Watch the TV.', '🕴️')]; }
+      return [`fin${S.x.step}${S.x.box?.name || ''}`, tv('The sealed boxes', 'Watch the TV.', '🔒')];
+    },
     END() {
       const m = me(); const ranks = S.x.ranks || []; const i = ranks.findIndex((p) => p.id === m.id);
       const vip = m.vip ? '<button class="btn primary big" data-a="again">Play again</button><button class="btn big" data-a="menu">Back to the game menu</button>' : `<p class="hint center">${name(S.vipId)} can start another game.</p>`;
@@ -226,7 +244,7 @@
 
   function hudHtml() {
     const m = me();
-    return `<div class="who" style="--c:${m.color}">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="money">${aed(m.cash)}</div><button class="hcards" data-a="drawer">${m.hand.length ? m.hand.map((c) => `<i>${CARD[c.k][1]}</i>`).join('') : 'No cards'}${m.cursed.length ? `<i class="cu">🧿${m.cursed.length}</i>` : ''}${m.sealed.length ? `<i>🔒${m.sealed.length}</i>` : ''}${m.freeLock ? '<i class="lk" title="Free Lock">🛡️</i>' : ''}</button>`;
+    return `<div class="who" style="--c:${m.color}">${W.bust(m, 'sm')}<b>${esc(m.name)}</b></div><div class="money">${aed(m.cash)}</div><button class="hcards" data-a="drawer">${m.hand.length ? m.hand.map((c) => `<i>${CARD[c.k][1]}</i>`).join('') : 'No cards'}${m.cursed.length ? `<i class="cu">🧿${m.cursed.length}</i>` : ''}${m.sealed.length ? `<i>🔒${m.sealed.length}</i>` : ''}${m.freeLock ? '<i class="lk" title="Free Lock">🛡️</i>' : ''}${m.debt ? '<i class="dt" title="You owe Sid">🕴️</i>' : ''}</button>`;
   }
   function drawerHtml() {
     const m = me();
@@ -234,7 +252,8 @@
     const curse = m.cursed.length ? `<h3>Cursed things</h3><p class="hint">These cost you money at the end, unless you pass them on.</p>${m.cursed.map((c) => `<p class="row">🧿 ${esc(c.name)}<b>${aed(c.value)}</b></p>`).join('')}` : '';
     const sealed = m.sealed.length ? `<h3>Sealed boxes</h3><p class="hint">Opened at the very end.</p>${m.sealed.map((s) => `<p class="row">🔒 ${esc(s.name)}</p>`).join('')}` : '';
     const lock = `<h3>Locks</h3><p class="hint">${m.locks ? `You have ${m.locks === 1 ? 'one Lock' : `${m.locks} Locks`}${m.freeLock ? ' (one is your free Lock)' : ''}. When someone plays Steal, Tax, Swap, Curse or Freeze on you, you get five seconds to block it.` : 'No Locks left. Win a locker or a bet for a chance at a Lock card.'}</p>`;
-    return `<div class="sheet"><button class="btn ghost sm close" data-a="closeDrawer">Close</button><h3>Your power cards (${m.hand.length} of ${S.rules.hand})</h3>${cards}${lock}${curse}${sealed}</div>`;
+    const crew = `<h3>Shifty Sid</h3><p class="hint">Drop under ${aed(S.rules.crewLine || 5000)} and Sid recruits you. In auctions you can place fake bids, and once a game you can borrow from him.${m.debt ? ` You owe him <b>${aed(m.debt)}</b> at the end.` : ''}</p>`;
+    return `<div class="sheet"><button class="btn ghost sm close" data-a="closeDrawer">Close</button><h3>Your power cards (${m.hand.length} of ${S.rules.hand})</h3>${cards}${lock}${curse}${sealed}${crew}</div>`;
   }
 
   // ---------------------------------------------------------------- render
@@ -294,6 +313,11 @@
     if (a === 'synYes' || a === 'synNo') { b.disabled = true; send('synAnswer', { id: b.dataset.id, yes: a === 'synYes' }); }
     if (a === 'brBid') { document.querySelectorAll('[data-a=brBid]').forEach((x) => { x.disabled = true; }); buzz(20); send('brBid', { amt: b.dataset.v === 'pass' ? 'pass' : Number(b.dataset.v) }, (r) => { if (r.error) document.querySelectorAll('[data-a=brBid]').forEach((x) => { x.disabled = false; }); }); }
     if (a === 'pass') send('pass');
+    if (a === 'shill') { b.disabled = true; buzz(25); send('shill', {}, (r) => { if (r.auc) takeAuc(r.auc, false); if (r.ok) toast('Fake bid placed. Now look innocent.', 'good'); }); }
+    if (a === 'loan') {
+      if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to shake on it'; b.classList.add('sure'); buzz(15); return; }
+      b.disabled = true; buzz([30, 30, 60]); send('loan');
+    }
     if (a === 'card') { const k = b.dataset.k; if (TARGET[k]) openPicker(k); else { b.disabled = true; buzz(25); send('card', { k }, (r) => { if (r.ok) toast(`${CARD[k][0]} played`, 'good'); }); } }
     if (a === 'target') { const k = b.dataset.k; closePicker(); buzz(25); send('card', { k, target: b.dataset.id }, (r) => { if (r.ok) toast(`${CARD[k][0]} played`, 'good'); }); }
     if (a === 'closePicker') closePicker();

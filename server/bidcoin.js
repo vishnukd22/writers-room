@@ -44,6 +44,11 @@ const BET_AMTS = [1000, 2500, 5000, 10000]; const BET_TOP_PCT = 0.25; const BET_
 const BR_BIDS = [500, 1000, 2000, 3000, 5000, 8000, 12000];
 // Syndicates: bottom-half players team up before an auction and bid with their cash pooled.
 const SYN_MAX = (n) => (n >= 7 ? 3 : 2);
+// Sid's Crew: anyone under AED 5,000 can place fake "mystery" bids (+3,000, two per locker).
+// Outbid by a real bidder: Sid pays a 1,000 commission. Hammer falls on it: caught, fined 2,000, nobody gets the locker.
+const CREW_LINE = 5000; const SHILLS = 2; const COMMISSION = 1000; const CAUGHT_FINE = 2000;
+// Sid's loan: once a game, for anyone under AED 5,000. Half the table's average cash, paid back with 60% on top at the end.
+const LOAN_RATE = 1.6; const LOAN_MIN = 10000; const LOAN_MAX = 60000;
 
 const CARDS = {
   xray: { name: 'X-Ray Specs', when: 'peek', text: 'See three more things in this locker.' },
@@ -96,9 +101,11 @@ class BidCoin {
     this.reset();
     // record the voice lines in the order they're needed: the welcome and the rules first, then the auction calls
     [L.SAY.welcome, ...L.TUTORIAL.map((t) => t.line), L.SAY.once, L.SAY.twice, L.SAY.sold].forEach((t) => this.prefetch(t, true));
-    for (const t of Object.values(L.SAY)) for (const x of [].concat(t)) if (!x.includes('{')) this.prefetch(x);
+    // Shifty Sid's lines are recorded in Sid's voice, everything else in the auctioneer's
+    const SID = new Set(['brIntro', 'brInvite', 'brNoBids', 'brWon', 'crewJoin', 'caught', 'loan', 'repoIntro', 'repoPaid', 'repoTaken']);
+    for (const [k, t] of Object.entries(L.SAY)) for (const x of [].concat(t)) if (!x.includes('{')) this.prefetch(x, false, SID.has(k) ? 'sid' : null);
   }
-  reset() { this.br = null; this.lowSet = null; Object.assign(this, { lockers: [], li: -1, lk: null, auc: null, log: [], legends: [], atk: [] }); }
+  reset() { this.br = null; this.lowSet = null; this.crewTold = false; Object.assign(this, { lockers: [], li: -1, lk: null, auc: null, log: [], legends: [], atk: [] }); }
 
   // ------------------------------------------------------------ plumbing (same as the other games)
   P(id) { return this.players.find((p) => p.id === id); }
@@ -178,7 +185,7 @@ class BidCoin {
     const free = this.busts.filter((b) => !this.players.some((x) => x.bust === b));
     return { id: uid(), token: uid(), name, color: COLORS.find((c) => !used.has(c)) || pick(COLORS), connected: true, bot, bust: free.length ? pick(free) : pick(this.busts), notes: [], noteSeq: 0, ...this.fresh() };
   }
-  fresh() { return { cash: START_CASH, freeLock: true, hand: [], shelf: [], cursed: [], sealed: [], peek: [], tip: null, bids: 0, played: 0, wins: 0, ready: false, est: 0, nextBot: 0 }; }
+  fresh() { return { cash: START_CASH, loan: null, crewed: false, commission: 0, caughtN: 0, freeLock: true, hand: [], shelf: [], cursed: [], sealed: [], peek: [], tip: null, bids: 0, played: 0, wins: 0, ready: false, est: 0, nextBot: 0 }; }
   // bots: from the TV in test mode, or from the first player's phone in any game (to make up the numbers)
   addBot(fromVip = false) {
     if ((!this.test && !fromVip) || this.phase !== 'LOBBY' || this.players.length >= MAX) return { error: 'No room for more bots' };
@@ -395,6 +402,7 @@ class BidCoin {
     // 1. the door rolls up
     this.setPhase('LOCKER', {}); this.sfx('bc-door');
     await this.say(g, lk.introLine);
+    await this.recruit(g);
 
     // 2. the peek: everyone sees something different
     this.dealPeeks(lk);
@@ -417,14 +425,24 @@ class BidCoin {
         sy.members.forEach((id, i) => { const p = this.P(id); const part = i === sy.members.length - 1 ? left : Math.min(p.cash, roundTo(lk.price * sy.shares[id])); p.cash -= part; left -= part; p.wins++; sy.paid = { ...(sy.paid || {}), [id]: part }; });
       } else { const o = this.P(lk.owner); o.cash -= lk.price; o.wins++; }
     }
-    else if (a.leader === 'phantom') { lk.phantom = true; lk.price = a.price; }
+    else if (a.leader === 'phantom') {
+      lk.phantom = true; lk.price = a.price;
+      // the hammer fell on one of Sid's fake bids: caught red-handed
+      const sh = a.mystery?.shill ? this.P(a.mystery.by) : null;
+      if (sh) { const fine = Math.min(CAUGHT_FINE, Math.max(0, sh.cash)); sh.cash -= fine; sh.caughtN++; lk.caught = { id: sh.id, fine }; }
+    }
+    lk.commission = a.commission || 0;
     if (!a.leader) {
       this.setPhase('BET', { step: 'none' });
       await this.say(g, L.SAY.noTakers);
     } else {
       // boom or bust, and a last chance to steal it
       this.setPhase('BET', { step: 'bet' }, T.bet);
-      if (lk.phantom) await this.say(g, L.SAY.phantomWins);
+      if (lk.caught) {
+        this.sfx('bc-caught'); // the BET screen itself shows the CAUGHT! picture
+        this.note(this.P(lk.caught.id), `Caught! The hammer fell on your fake bid. Fined AED ${money(lk.caught.fine)}.`, 'bad');
+        await this.say(g, fill(pick(L.SAY.caught), { name: this.nameOf(lk.caught.id), fine: money(lk.caught.fine) }), { who: 'sid' });
+      } else if (lk.phantom) await this.say(g, L.SAY.phantomWins);
       else this.sayOver(g, fill(pick(L.SAY.soldTo), { name: lk.syn ? `team ${lk.syn.members.map((id) => this.nameOf(id)).join(' and ')}` : this.nameOf(lk.owner), price: money(lk.price) }));
       this.prefetchVerdict(lk);
       await this.wait(ms(T.bet), () => !this.atk.length && this.players.every((p) => p.bet || this.isOwner(p.id, lk) || !p.connected || p.cash < BET_AMTS[0])); this.guard(g);
@@ -447,6 +465,7 @@ class BidCoin {
     // 7. pay out and show the money
     this.payout(lk);
     this.setPhase('RESULT', {});
+    if (lk.commission) this.sfx('bc-commission');
     await this.pause(g, T.result);
   }
 
@@ -496,7 +515,8 @@ class BidCoin {
       sy.shares = Object.fromEntries(sy.members.map((id) => [id, sy.purse ? Math.max(0, this.P(id).cash) / sy.purse : 1 / sy.members.length]));
     }
     if ((lk.synds || []).length) this.later(g, 400, () => this.sayOver(g, fill(pick(L.SAY.synOpen), { names: lk.synds.map((sy) => sy.members.map((id) => this.nameOf(id)).join(' and ')).join(', and ') })));
-    const a = this.auc = { price: OPEN, leader: null, n: 0, calls: 0, start: Date.now(), last: Date.now(), hist: [], frozen: {}, phantomBy: null, done: false, seq: 0 };
+    const a = this.auc = { price: OPEN, leader: null, n: 0, calls: 0, start: Date.now(), last: Date.now(), hist: [], frozen: {}, phantomBy: null, done: false, seq: 0,
+      crew: new Set(this.players.filter((p) => p.cash < CREW_LINE).map((p) => p.id)), shills: {}, mystery: null, commission: 0 };
     this.setPhase('AUCTION', {});
     this.sayOver(g, pick(L.SAY.open));
     for (const b of this.players.filter((p) => p.bot)) { b.est = this.botEstimate(b, lk); b.nextBot = Date.now() + ms(0.8 + Math.random() * 2); }
@@ -531,13 +551,64 @@ class BidCoin {
     // the bid is "my number plus this much". If someone beat you to a higher number, it doesn't count.
     const seen = Number.isFinite(Number(at)) ? Math.min(Number(at), a.price) : a.price;
     const price = seen + inc;
-    if (price <= a.price) return { stale: true, error: `${a.leader === 'phantom' ? 'The mystery bidder' : this.nameOf(a.leader)} got there first`, auc: this.aucPub() };
+    if (price <= a.price) return { stale: true, error: `${a.leader === 'phantom' ? 'A mystery bidder' : this.nameOf(a.leader)} got there first`, auc: this.aucPub() };
     if (price > this.purse(me)) return { error: sy ? `Your team only has AED ${money(this.purse(me))}` : `You only have AED ${money(me.cash)}` };
+    // a real bid over one of Sid's fake bids: the shill gets paid
+    if (a.leader === 'phantom' && a.mystery?.shill && a.mystery.by !== me.id) {
+      const sh = this.P(a.mystery.by);
+      if (sh) { sh.cash += COMMISSION; sh.commission += COMMISSION; a.commission += COMMISSION; this.note(sh, `${me.name} took the bait. Sid pays you AED ${money(COMMISSION)}.`, 'good'); }
+    }
+    a.mystery = null;
     a.price = price; a.leader = me.id; a.n++; a.calls = 0; a.last = Date.now(); a.hist.push({ who: me.id, inc, price }); if (a.hist.length > 8) a.hist.shift();
     me.bids++; this.lastActive = Date.now(); this.progress();
     if (this.cue && /Going/.test(this.cue.text)) this.cue = null;
     this.blastAuc();
     return { ok: true, auc: this.aucPub() };
+  }
+
+  // ------------------------------------------------------------ Sid's Crew and Sid's loan
+  canShill(me) {
+    const a = this.auc;
+    return this.phase === 'AUCTION' && !!a && !a.done && a.crew.has(me.id) && (a.shills[me.id] || 0) < SHILLS && a.leader !== 'phantom' && a.leader !== me.id && !this.synOf(me.id)?.members.includes(a.leader);
+  }
+  shill(me) {
+    const a = this.auc;
+    if (!this.canShill(me)) {
+      if (!a || a.done || this.phase !== 'AUCTION') return { error: 'Bidding is closed' };
+      if (!a.crew.has(me.id)) return { error: "Sid's crew is only for players under AED 5,000" };
+      if ((a.shills[me.id] || 0) >= SHILLS) return { error: 'Two fake bids per locker. Sid has limits.' };
+      return { error: a.leader === 'phantom' ? 'A mystery bid is already on top' : "You can't fake-bid right now" };
+    }
+    a.shills[me.id] = (a.shills[me.id] || 0) + 1;
+    a.price += PHANTOM; a.leader = 'phantom'; a.mystery = { by: me.id, shill: true }; a.n++; a.calls = 0; a.last = Date.now();
+    a.hist.push({ who: 'phantom', inc: PHANTOM, price: a.price }); if (a.hist.length > 8) a.hist.shift();
+    if (this.cue && /Going/.test(this.cue.text)) this.cue = null;
+    this.lastActive = Date.now(); this.progress();
+    this.splashOut('phantom', null); this.blastAuc();
+    return { ok: true, auc: this.aucPub() };
+  }
+  loanAmount() {
+    const avg = this.players.reduce((t, p) => t + Math.max(0, p.cash), 0) / Math.max(1, this.players.length);
+    return Math.max(LOAN_MIN, Math.min(LOAN_MAX, Math.round(avg / 2 / 500) * 500));
+  }
+  canLoan(me) { return !me.loan && me.cash < CREW_LINE && !['LOBBY', 'INTRO', 'TUTORIAL', 'FINALE', 'END'].includes(this.phase); }
+  takeLoan(me) {
+    if (me.loan) return { error: 'Sid only lends once' };
+    if (!this.canLoan(me)) return { error: me.cash >= CREW_LINE ? 'Sid only lends to players under AED 5,000' : 'Not right now' };
+    const got = this.loanAmount(); const owe = Math.round(got * LOAN_RATE / 500) * 500;
+    me.loan = { got, owe }; me.cash += got;
+    this.splashOut('loan', me.id, { amount: got, owe });
+    this.note(me, `Sid lent you AED ${money(got)}. You pay back AED ${money(owe)} at the end.`, 'good');
+    this.later(this.runId, 300, () => this.sayOver(this.runId, fill(pick(L.SAY.loan), { name: me.name, amount: money(got), owe: money(owe) }), { who: 'sid' }));
+    this.check(); this.sync(); this.botTurn();
+    return { ok: true };
+  }
+  // newly broke players are quietly recruited into Sid's crew (Sid says so out loud the first time)
+  async recruit(g) {
+    const fresh = this.players.filter((p) => p.cash < CREW_LINE && !p.crewed);
+    if (!fresh.length) return;
+    for (const p of fresh) { p.crewed = true; this.note(p, "Shifty Sid has recruited you. In auctions you can now place fake bids, and you can borrow from Sid once.", 'good'); }
+    if (!this.crewTold) { this.crewTold = true; this.sfx('bc-sid'); await this.say(g, pick(L.SAY.crewJoin), { who: 'sid' }); }
   }
 
   // ------------------------------------------------------------ reveal
@@ -675,7 +746,7 @@ class BidCoin {
         break;
       }
       case 'phantom': {
-        const a = this.auc; a.price += PHANTOM; a.leader = 'phantom'; a.phantomBy = me.id; a.n++; a.calls = 0; a.last = Date.now(); a.hist.push({ who: 'phantom', inc: PHANTOM, price: a.price });
+        const a = this.auc; a.price += PHANTOM; a.leader = 'phantom'; a.phantomBy = me.id; a.mystery = { by: me.id, shill: false }; a.n++; a.calls = 0; a.last = Date.now(); a.hist.push({ who: 'phantom', inc: PHANTOM, price: a.price });
         this.splashOut('phantom', null); this.blastAuc();
         break;
       }
@@ -856,7 +927,7 @@ class BidCoin {
     for (const e of lk.effects.filter((x) => x.k === 'tax')) { const cut = profitAll > 0 ? roundTo(profitAll * TAX_CUT) : 0; e.cut = cut; net -= cut; profitAll -= cut; const t = this.P(e.by); if (t) t.cash += cut; }
     const split = {};
     sy.members.forEach((id) => { const p = this.P(id); if (!p) return; let part = roundTo(net * sy.shares[id]); if (part < 0) part = -Math.min(-part, Math.max(0, p.cash)); p.cash += part; split[id] = { got: part, paid: sy.paid?.[id] || 0 }; });
-    lk.result = { owner: lk.owner, syn: sy.members, split, price: lk.price, paid: net, profit: net - lk.price, cursed: 0, disaster: 0 };
+    lk.result = { owner: lk.owner, syn: sy.members, split, price: lk.price, paid: net, profit: net - lk.price, cursed: 0, disaster: 0, commission: lk.commission || 0 };
   }
   payout(lk) {
     if (lk.syn) { this.payoutSyndicate(lk); return; }
@@ -881,7 +952,8 @@ class BidCoin {
       // cursed things count against what you found, but are paid for at the end
       const cursed = lk.items.filter((it) => it.rar === 'x').reduce((s, it) => s + it.value, 0);
       lk.result = { owner: o.id, price: lk.price, paid: found, profit, cursed, disaster };
-    } else lk.result = { owner: null, price: lk.price, paid: 0, profit: 0, phantom: lk.phantom };
+    } else lk.result = { owner: null, price: lk.price, paid: 0, profit: 0, phantom: lk.phantom, caught: lk.caught || null };
+    lk.result.commission = lk.commission || 0;
     this.log.push({ n: lk.n, owner: lk.owner, price: lk.price, profit: lk.result.profit, best: [...lk.items].sort((a, b) => b.value - a.value)[0]?.name });
   }
 
@@ -908,6 +980,18 @@ class BidCoin {
       for (const p of cursed) { p.cash += p.cursed.reduce((s, c) => s + c.value, 0); p.cursed = []; }
       this.sync(); await this.pause(g, 3);
     }
+    // Sid collects his loans. Can't pay? His associates take everything.
+    const debtors = this.players.filter((p) => p.loan && !p.loan.done);
+    if (debtors.length) {
+      const bills = debtors.map((p) => ({ id: p.id, owe: p.loan.owe, got: p.loan.got, paid: Math.min(p.loan.owe, Math.max(0, p.cash)), short: p.cash < p.loan.owe }));
+      const short = bills.filter((b) => b.short);
+      this.setPhase('FINALE', { step: 'repo', bills, repo: short.length > 0 }); this.sfx(short.length ? 'bc-repo' : 'bc-loan');
+      await this.say(g, pick(L.SAY.repoIntro), { who: 'sid' });
+      for (const b of bills) { const p = this.P(b.id); p.cash -= b.paid; p.loan.done = true; }
+      this.d.settled = true; this.sync();
+      await this.say(g, short.length ? fill(pick(L.SAY.repoTaken), { names: short.map((b) => this.nameOf(b.id)).join(' and ') }) : pick(L.SAY.repoPaid), { who: 'sid' });
+      await this.pause(g, 1.5);
+    }
     const r = this.ranking();
     this.setPhase('END', { step: 'ranks', ...r }); this.sfx('fanfare');
     await this.say(g, fill(L.SAY.winner, { name: r.ranks[0]?.name || 'Nobody', cash: money(r.ranks[0]?.cash || 0) }));
@@ -921,6 +1005,7 @@ class BidCoin {
     const best = [...sold].sort((a, b) => b.profit - a.profit)[0]; const worst = [...sold].sort((a, b) => a.profit - b.profit)[0];
     if (best && best.profit > 0) awards.push({ title: 'Best buy', who: best.owner, text: `Locker ${best.n}: +AED ${money(best.profit)}` });
     if (worst && worst.profit < 0) awards.push({ title: 'Worst buy', who: worst.owner, text: `Locker ${worst.n}: -AED ${money(-worst.profit)}` });
+    const shill = [...this.players].sort((a, b) => b.commission - a.commission)[0]; if (shill?.commission) awards.push({ title: "Sid's best shill", who: shill.id, text: `AED ${money(shill.commission)} in commission` });
     const bidder = [...this.players].sort((a, b) => b.bids - a.bids)[0]; if (bidder?.bids) awards.push({ title: 'Loudest paddle', who: bidder.id, text: `${bidder.bids} bids` });
     const shark = [...this.players].sort((a, b) => b.played - a.played)[0]; if (shark?.played) awards.push({ title: 'Card shark', who: shark.id, text: `${shark.played} power cards played` });
     return { ranks, awards: awards.slice(0, 4) };
@@ -933,6 +1018,8 @@ class BidCoin {
     const lk = this.lk;
     switch (a.type) {
       case 'bid': return this.bid(me, a.inc, a.at);
+      case 'shill': return this.shill(me);
+      case 'loan': return this.takeLoan(me);
       case 'start': return this.start(pid);
       case 'bust': if (this.phase !== 'LOBBY') return {}; return this.setBust(pid, a.n);
       case 'again': this.playAgain(pid); return {};
@@ -977,6 +1064,8 @@ class BidCoin {
       // a few powers, now and then
       if (a.leader && a.leader !== 'phantom' && a.leader !== b.id && b.hand.some((c) => c.k === 'freeze') && Math.random() < 0.25) { this.playCard(b, 'freeze', a.leader); continue; }
       if (a.n > 0 && a.price < b.est * 0.5 && b.hand.some((c) => c.k === 'phantom') && Math.random() < 0.15) { this.playCard(b, 'phantom'); continue; }
+      // Sid's crew: push the price up while a real bidder still looks keen
+      if (this.canShill(b) && a.leader && a.price + PHANTOM < b.est * 0.8 && Math.random() < 0.3) { this.shill(b); continue; }
       if (a.price + 500 > cap) continue;
       if (Math.random() < 0.35) continue; // hesitate
       const gap = cap - a.price;
@@ -996,6 +1085,7 @@ class BidCoin {
           const low = this.lowSet || new Set();
           if (low.has(b.id) && !this.synOf(b.id) && Math.random() < 0.35) { const mates = this.players.filter((p) => p !== b && low.has(p.id) && !this.synOf(p.id)); if (mates.length) this.synInvite(b, pick(mates).id); }
         }, 0.6);
+        if (this.canLoan(b) && Math.random() < Number(process.env.BC_BOT_LOAN ?? 0.6)) go(() => { if (this.canLoan(b)) this.takeLoan(b); }, 0.3);
         go(() => { if (has('xray') && Math.random() < 0.5) this.playCard(b, 'xray'); if (has('tip') && Math.random() < 0.5) this.playCard(b, 'tip'); if (has('plant') && Math.random() < 0.35) this.playCard(b, 'plant'); this.act(b.id, { type: 'ready' }); }, 1.5);
       }
       if (this.phase === 'BET' && this.d.step === 'bet' && lk) {
@@ -1040,9 +1130,9 @@ class BidCoin {
     const ph = this.phase; const d = this.d; const lk = this.lk;
     const v = {
       game: 'bc', phase: ph, step: d.step || null, code: this.code, endsAt: this.endsAt, now: Date.now(), vipId: this.vip()?.id, test: this.test,
-      players: this.players.map((p) => ({ ...this.pub(p), connected: p.connected, bot: p.bot, cash: p.cash, cards: p.hand.length, cursed: p.cursed.length, sealed: p.sealed.length, ready: !!p.ready, bet: !!p.bet, passed: !!p.passed })),
+      players: this.players.map((p) => ({ ...this.pub(p), connected: p.connected, bot: p.bot, cash: p.cash, debt: p.loan && !p.loan.done ? p.loan.owe : 0, cards: p.hand.length, cursed: p.cursed.length, sealed: p.sealed.length, ready: !!p.ready, bet: !!p.bet, passed: !!p.passed })),
       locker: this.lockerPub(), auc: ph === 'AUCTION' || ph === 'BET' ? this.aucPub() : null, splash: this.splash, fx: this.fx, x: {},
-      rules: { start: START_CASH, stake: STAKE, inc: INC, hand: HAND, lockers: this.lockers.length || LOCKERS() },
+      rules: { start: START_CASH, stake: STAKE, inc: INC, hand: HAND, lockers: this.lockers.length || LOCKERS(), crewLine: CREW_LINE },
     };
     const x = v.x;
     if (!me) {
@@ -1059,6 +1149,9 @@ class BidCoin {
       if (lk && ph === 'BET') { x.canBet = !this.isOwner(me.id, lk) && !me.bet && me.cash >= BET_AMTS[0] && d.step === 'bet'; x.stealPrice = lk.owner ? this.stealPrice(lk) : 0; x.myTeam = lk.syn?.members.includes(me.id) || false; }
       if (x.canBet || (ph === 'BACKROOM' && d.step === 'bid' && this.br && !this.br.invited.has(me.id) && !me.bet && me.cash >= BET_AMTS[0])) { x.betOpt = this.betOptions(me); if (ph === 'BACKROOM') x.canBet = true; }
       v.me.purse = this.purse(me);
+      v.me.debt = me.loan && !me.loan.done ? me.loan.owe : 0;
+      if (this.canLoan(me)) { const got = this.loanAmount(); x.loan = { got, owe: Math.round(got * LOAN_RATE / 500) * 500 }; }
+      if (ph === 'AUCTION' && this.auc && this.auc.crew.has(me.id)) x.crew = { left: SHILLS - (this.auc.shills[me.id] || 0), can: this.canShill(me), commission: COMMISSION, fine: CAUGHT_FINE, inc: PHANTOM };
       if (lk && ph === 'PEEK') {
         const low = this.lowSet || new Set(); const sy = this.synOf(me.id);
         x.deal = { low: low.has(me.id), team: sy ? sy.members : null, full: !!sy && sy.members.length >= SYN_MAX(this.players.length),
@@ -1075,7 +1168,7 @@ class BidCoin {
         allBids: ['won', 'reveal', 'verdict'].includes(d.step) ? Object.entries(br.bids).map(([id, b]) => ({ id, amt: b.amt })).sort((p, q) => q.amt - p.amt) : null };
     }
     if (ph === 'TUTORIAL') { x.slide = d.step; x.slides = L.TUTORIAL.length; x.key = L.TUTORIAL[d.step]?.key; x.title = L.TUTORIAL[d.step]?.title; }
-    if (ph === 'FINALE') { x.step = d.step; x.who = d.who; x.box = d.box; x.inner = d.inner; x.bills = d.bills; }
+    if (ph === 'FINALE') { x.step = d.step; x.who = d.who; x.box = d.box; x.inner = d.inner; x.bills = d.bills; x.repo = !!d.repo; x.settled = !!d.settled; }
     if (ph === 'END') { x.ranks = d.ranks; x.awards = d.awards; }
     if (ph === 'LOBBY') { x.min = MIN; x.busts = this.busts.map((n) => ({ n, by: this.players.find((p) => p.bust === n)?.id || null })); }
     return v;

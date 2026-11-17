@@ -49,6 +49,13 @@ const SAY = {
   brInvite: ["{names}. Yeah, you lot. I've got a locker. Bit grubby. Very cheap. Interested?", "This one's just for {names}. Nobody else. Capiche?"],
   brRules: ['One secret bid each. Highest bid takes it. Everyone else, bet on it.', 'Sealed bids only. The rest of you, boom or bust?'],
   brNoBids: ["Nobody? Fine. I'll sell it to the pigeons.", 'No bids. Your loss. Sid is out of here.'],
+  // Sid's Crew and Sid's loan
+  crewJoin: ["Psst. Some of you are skint. Sid's got work for you. Check your phones. Quietly.", "Times are hard, eh? Sid is hiring. If you're short of cash, look at your phone. Say nothing."],
+  caught: ['{name}! You muppet. Nobody bid over you. That is a {fine} dirham fine, and the locker comes back to Sid.', 'Oh, {name}. The hammer fell on your fake bid. {fine} dirhams. Sid is very disappointed.'],
+  loan: ["{name} has borrowed {amount} dirhams from Sid. Pays back {owe}. Sid always collects.", 'A loan for {name}. {amount} now, {owe} at the end. Lovely doing business.'],
+  repoIntro: ["Before anyone counts their money. Sid's loans. Pay up.", 'One last thing. Sid lent some of you money. Time to settle.'],
+  repoPaid: ['Paid in full. Pleasure doing business.', 'Every dirham back. Sid likes you. For now.'],
+  repoTaken: ["{names} can't pay. Boys, take everything.", "Not enough, {names}? Sid's associates will take the lot."],
   brWon: ['{name}, it is yours. {price} dirhams. No refunds. No questions.', 'Sold to {name}. {price}. Pleasure doing business.'],
 };
 

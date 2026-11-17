@@ -313,3 +313,15 @@ body { overflow: hidden; background: var(--asphalt); }
 .brguests { display: flex; gap: 1.6rem; justify-content: center; margin: 1rem 0; } .brguests .g { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
 .brbids { list-style: none; padding: 0; margin: 1rem auto; min-width: 26rem; } .brbids li { display: flex; align-items: center; gap: .8rem; padding: .6rem 1rem; border-radius: 12px; font-size: 1.5rem; }
 .brbids li span { flex: 1; text-align: left; } .brbids li.top { background: rgba(242, 194, 48, .2); box-shadow: inset 0 0 0 2px #F2C230; }
+
+/* ---------------- Sid's Crew and Sid's loan ---------------- */
+.shillart { width: 7rem; height: 7rem; object-fit: cover; border-radius: 14px; box-shadow: 0 0 0 4px #E8C35A, 0 0 30px rgba(232,195,90,.5); animation: float 2s ease-in-out infinite alternate; }
+.shillart.sm { width: 5rem; height: 5rem; }
+.winner .shillart { width: 11rem; height: 11rem; }
+.wideart { width: min(62rem, 70vw); aspect-ratio: 16 / 9; object-fit: cover; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: slam .45s cubic-bezier(.2,1.4,.4,1) both; }
+.wideart.sm { width: min(40rem, 46vw); }
+.caught .say, .repo .say { margin-top: 1rem; }
+#splash .sp.wide img { width: min(56rem, 66vw); aspect-ratio: 16 / 9; object-fit: cover; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); animation: flip .6s cubic-bezier(.2,1.4,.4,1) both; }
+#splash.mini .sp.wide img { width: 9rem; }
+#splash .pcard.shill .full { object-fit: cover; }
+.bill .short { color: #C62828; font-weight: 700; } .bill .paidup { color: #1E7B45; font-weight: 700; }

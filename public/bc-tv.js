@@ -76,6 +76,8 @@
   const pic = (it) => (photo(it.img) ? `<img src="${esc(photo(it.img))}" alt="" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : `<div class="noph"><span>${CATS[it.cat] || '📦'}</span></div>`);
   const tagFor = (it) => (it.sealed ? '<b>???</b><i>Sealed</i>' : `<b>${aed(it.value)}</b><i>${it.pct ? `${Math.round(it.pct * 100)}% of cash` : RAR[it.rar] || ''}${it.appraised ? ' x1.5' : ''}</i>`);
   const itemCard = (it, i, cls = '') => `<div class="item r-${it.rar} ${it.back ? 'back' : ''} ${it.legend ? 'one' : ''} ${it.swapped ? 'swapped' : ''} ${cls}" style="--r:${rot(i)}deg;--i:${i}"><div class="ph">${pic(it)}</div><div class="nm">${esc(it.name)}</div><div class="tag">${tagFor(it)}</div>${it.legend ? '<em class="onebadge">One of a kind</em>' : ''}${it.was ? `<em class="wasbadge">Looked like: ${esc(it.was)}</em>` : ''}${it.swapped ? '<em class="stamp sw">Swapped</em>' : ''}</div>`;
+  // the mystery bidder: a power card or one of Sid's crew, nobody can tell which
+  const mystery = (cls = '') => (W.img('bc-shill') ? `<img class="shillart ${cls}" src="${W.img('bc-shill')}" alt="Mystery bidder">` : `<div class="phantom ${cls}">👻</div>`);
   const cardArt = (k) => (W.img(`bc-card-${k}`) ? `<img class="full" src="${W.img(`bc-card-${k}`)}" alt="${esc(CARD[k]?.[0] || '')}">` : `<div class="cemo">${CARD[k]?.[1] || '🃏'}</div>`);
 
   // ---------------------------------------------------------------- the yard behind everything (your art if it's there)
@@ -156,7 +158,9 @@
     BET() {
       const lk = S.locker; const a = S.auc;
       if (S.step === 'none') return `<div class="center"><div class="stampbig grey">No takers</div><p class="lede">Nobody bid. Let's see what you missed.</p></div>`;
-      const who = lk.phantom ? '<div class="phantom">👻</div><b>The mystery bidder</b>' : lk.syn ? `${teamBusts(lk.syn.members, 'lg')}<b>Team ${teamName(lk.syn.members)}</b>` : `${W.bust(P_(lk.owner), 'xl')}<b>${name(lk.owner)}</b>`;
+      if (lk.caught) return `<div class="center caught">${W.img('bc-caught') ? `<img class="wideart" src="${W.img('bc-caught')}" alt="Caught">` : '<div class="stampbig">CAUGHT!</div>'}
+        <h2 class="say">${name(lk.caught.id)} was one of Sid's crew</h2><p class="lede">Nobody bid over the fake bid. Fined ${aed(lk.caught.fine)}, and nobody gets the locker. Will it boom anyway?</p>${timer()}<p class="count" id="bets">${lk.betCount || 0} bets placed${lk.betPot ? `, ${aed(lk.betPot)} riding on it` : ''}</p></div>`;
+      const who = lk.phantom ? `${mystery()}<b>The mystery bidder</b>` : lk.syn ? `${teamBusts(lk.syn.members, 'lg')}<b>Team ${teamName(lk.syn.members)}</b>` : `${W.bust(P_(lk.owner), 'xl')}<b>${name(lk.owner)}</b>`;
       return `<div class="center"><div class="sold"><div class="soldstamp">SOLD</div><div class="winner" style="--c:${P_(lk.owner)?.color || '#888'}">${who}<span class="price">${aed(lk.price || a?.price || 0)}</span>${lk.stolen ? `<em class="stolen">Stolen from ${name(lk.stolen.from)}</em>` : ''}</div></div>
         <h2 class="say">${lk.phantom ? 'Nobody gets it. But will it boom?' : 'Boom or bust? Bet on your phone'}</h2>${timer()}<p class="count" id="bets">${lk.betCount || 0} bets placed${lk.betPot ? `, ${aed(lk.betPot)} riding on it` : ''}</p></div>`;
     },
@@ -178,8 +182,8 @@
       const lk = S.locker; const r = lk.result || {};
       const ranked = [...S.players].sort((a, b) => b.cash - a.cash);
       const max = Math.max(1, ...ranked.map((p) => p.cash));
-      const head = r.syn ? `<h2 class="say">Team ${teamName(r.syn)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2><p class="lede">${r.syn.map((id) => `${name(id)} ${signed((r.split?.[id]?.got || 0) - (r.split?.[id]?.paid || 0))}`).join('. ')}</p>` : r.owner ? `<h2 class="say">${name(r.owner)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2>` : `<h2 class="say">${r.phantom ? 'The phantom kept it' : 'Nobody bought it'}</h2>`;
-      const fx = (lk.effects || []).filter((e) => e.k === 'tax' && e.cut).map((e) => `<p class="lede">The Tax Man took ${aed(e.cut)} for ${name(e.by)}.</p>`).join('');
+      const head = r.syn ? `<h2 class="say">Team ${teamName(r.syn)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2><p class="lede">${r.syn.map((id) => `${name(id)} ${signed((r.split?.[id]?.got || 0) - (r.split?.[id]?.paid || 0))}`).join('. ')}</p>` : r.owner ? `<h2 class="say">${name(r.owner)} ${r.profit >= 0 ? 'made' : 'lost'} <span class="${r.profit >= 0 ? 'g' : 'rd'}">${aed(Math.abs(r.profit))}</span></h2>` : `<h2 class="say">${r.caught ? `${name(r.caught.id)} got caught. Sid takes it back` : r.phantom ? 'The mystery bidder kept it' : 'Nobody bought it'}</h2>`;
+      const fx = (r.commission ? `<p class="lede">Shifty Sid paid his crew ${aed(r.commission)} in commission this round.</p>` : '') + (lk.effects || []).filter((e) => e.k === 'tax' && e.cut).map((e) => `<p class="lede">The Tax Man took ${aed(e.cut)} for ${name(e.by)}.</p>`).join('');
       const bars = ranked.map((p, i) => `<div class="bar" style="--c:${p.color};--w:${Math.max(4, (p.cash / max) * 100)}%;--i:${i}">${W.bust(p, 'sm')}<b>${esc(p.name)}</b><span><i></i></span><em>${aed(p.cash)}</em></div>`).join('');
       return `<div class="center result">${head}${fx}<div class="bars">${bars}</div><p class="hint">${lk.n < lk.total ? `Next: locker ${lk.n + 1}` : 'That was the last one'}</p></div>`;
     },
@@ -188,6 +192,11 @@
       if (x.step === 'box') {
         const p = P_(x.who); const it = x.inner;
         return `<div class="center finale"><div class="owner">${W.bust(p, 'md')}<b>${name(x.who)}'s sealed box</b></div><div class="boxes">${itemCard({ ...x.box, cat: 'sealed', rar: 's', sealed: true }, 0, it ? 'opened' : 'shake')}${it ? itemCard(it, 1, 'pop') : ''}</div>${it ? `<p class="lede">${esc(it.line || '')}</p>` : '<p class="lede">Drumroll...</p>'}</div>`;
+      }
+      if (x.step === 'repo') {
+        const art = W.img(x.repo ? 'bc-repo' : 'bc-loan');
+        const bills = (x.bills || []).map((b, i) => `<div class="bill" style="--r:${rot(i)}deg">${W.bust(P_(b.id), 'sm')}<b>${name(b.id)}</b><p>Borrowed<span>${aed(b.got)}</span></p><p class="tot">Owes Sid<span>${aed(b.owe)}</span></p>${x.settled ? `<p class="${b.short ? 'short' : 'paidup'}">${b.short ? `Could only pay ${aed(b.paid)}. Everything taken.` : 'Paid in full'}</p>` : ''}</div>`).join('');
+        return `<div class="center finale repo">${art ? `<img class="wideart sm" src="${art}" alt="">` : ''}<h2 class="say">Sid collects</h2><div class="bills">${bills}</div></div>`;
       }
       if (x.step === 'curse') return `<div class="center finale"><h2 class="say">The cursed bills</h2><div class="bills">${(x.bills || []).map((b, i) => `<div class="bill" style="--r:${rot(i)}deg">${W.bust(P_(b.id), 'sm')}<b>${name(b.id)}</b>${b.items.map((c) => `<p>${esc(c.name)}<span>${aed(c.value)}</span></p>`).join('')}<p class="tot">Total<span>${aed(b.total)}</span></p></div>`).join('')}</div></div>`;
       return `<div class="center"><h1 class="mark">The sealed boxes</h1><p class="lede">Everything locked up gets opened now.</p></div>`;
@@ -236,7 +245,7 @@
     const a = AUC || S.auc; if (!a) return '';
     const lead = a.leader; const lp = P_(lead);
     const call = a.done && lead ? '<div class="call sold">SOLD</div>' : a.calls === 2 ? '<div class="call c2">Going twice</div>' : a.calls === 1 ? '<div class="call c1">Going once</div>' : '';
-    const who = lead === 'phantom' ? '<div class="leader ph"><div class="phantom sm">👻</div><b>Mystery bidder</b></div>' : a.team ? `<div class="leader" style="--c:${lp?.color || '#888'}">${teamBusts(a.team, 'md')}<b>Team ${teamName(a.team)}</b></div>` : lp ? `<div class="leader" style="--c:${lp.color}">${W.bust(lp, 'lg')}<b>${esc(lp.name)}</b></div>` : '<div class="leader none"><b>No bids yet</b><small>Opening at</small></div>';
+    const who = lead === 'phantom' ? `<div class="leader ph">${mystery('sm')}<b>Mystery bidder</b></div>` : a.team ? `<div class="leader" style="--c:${lp?.color || '#888'}">${teamBusts(a.team, 'md')}<b>Team ${teamName(a.team)}</b></div>` : lp ? `<div class="leader" style="--c:${lp.color}">${W.bust(lp, 'lg')}<b>${esc(lp.name)}</b></div>` : '<div class="leader none"><b>No bids yet</b><small>Opening at</small></div>';
     const hist = a.hist.slice().reverse().map((h, i) => `<li class="${i === 0 ? 'top' : ''}"><span>${name(h.who)}</span><b>+${num(h.inc)}</b><em>${num(h.price)}</em></li>`).join('');
     const frozen = Object.keys(a.frozen || {}).map((id) => `<span class="chip ice">🧊 ${name(id)}</span>`).join('');
     return `<div class="price ${a.calls ? 'hot' : ''}" id="price"><small>AED</small>${num(a.price)}</div>${who}${call}<div class="hammer"><i id="hbar" style="--dl:${a.dl}ms;--win:${a.win}ms" class="${a.done ? 'done' : ''}" data-k="${a.seq}"></i></div><ol class="hist">${hist}</ol>${frozen ? `<div class="frozen">${frozen}</div>` : ''}`;
@@ -255,11 +264,14 @@
     const fresh = P !== null; lastSplash = sp.id; if (!fresh) return;
     const by = sp.by ? name(sp.by) : 'Someone'; const t = sp.target ? name(sp.target) : '';
     const text = {
-      freeze: `${by} froze ${t}! No bidding for 10 seconds.`, phantom: 'A mystery bid! +AED 3,000 from nowhere.', steal: `${by} stole it from ${t} for ${aed(sp.price || 0)}!`,
+      freeze: `${by} froze ${t}! No bidding for 10 seconds.`, phantom: "A mystery bid! +AED 3,000. A power card, or one of Sid's crew?", loan: `${by} borrows ${aed(sp.amount || 0)} from Shifty Sid. Pays back ${aed(sp.owe || 0)} at the end.`, caught: `CAUGHT! ${by} was faking bids for Sid. Fined ${aed(sp.fine || 0)}.`, steal: `${by} stole it from ${t} for ${aed(sp.price || 0)}!`,
       tax: `${by} sends the Tax Man after ${t}. 15% of the profit.`, lock: `BLOCKED! ${by} locks out ${t}'s ${esc(CARD[sp.blocked]?.[0] || 'card')}.`, swap: `${by} swaps ${sp.mine ? esc(sp.mine) : 'some cash'} for the ${esc(sp.item || 'best find')}!`,
       appraise: `${by} gets the ${esc(sp.item || 'best find')} appraised. Worth 50% more!`, curse: `${by} passes the ${esc(sp.item || 'curse')} to ${t}!`,
     }[sp.k] || '';
-    splashEl.innerHTML = `<div class="sp k-${sp.k}"><div class="pcard big">${cardArt(sp.k)}<b>${esc(sp.name)}</b></div><p>${text}</p></div>`;
+    const wide = { loan: 'bc-loan', caught: 'bc-caught' }[sp.k];
+    splashEl.innerHTML = wide && W.img(wide) ? `<div class="sp wide k-${sp.k}"><img src="${W.img(wide)}" alt=""><p>${text}</p></div>`
+      : sp.k === 'phantom' && W.img('bc-shill') ? `<div class="sp k-phantom"><div class="pcard big shill"><img class="full" src="${W.img('bc-shill')}" alt=""><b>Mystery bid</b></div><p>${text}</p></div>`
+      : `<div class="sp k-${sp.k}"><div class="pcard big">${cardArt(sp.k)}<b>${esc(sp.name)}</b></div><p>${text}</p></div>`;
     // during the auction the splash stays small, so nobody loses sight of the price
     const mini = S.phase === 'AUCTION';
     splashEl.className = `show${mini ? ' mini' : ''}`; clearTimeout(showSplash.t); showSplash.t = setTimeout(() => { splashEl.className = mini ? 'mini' : ''; }, mini ? 2000 : 2600);

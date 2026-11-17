@@ -166,3 +166,15 @@ html, body { overflow-x: hidden; }
 .teambox { text-align: center; font-weight: 800; padding: .45rem; border-radius: 10px; background: #6E4BD8; color: #fff; margin-bottom: .4rem; }
 .brgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin: .8rem 0; }
 .btn.brb { font-size: 1.15rem; padding: 1rem .3rem; background: #2A2418; color: #F2C230; border: 2px solid #6B5A2A; }
+
+/* Sid's crew and Sid's loan */
+.crewbox { display: flex; gap: .6rem; align-items: center; margin-top: .7rem; background: #2A2418; border: 2px dashed #E8C35A; border-radius: 14px; padding: .7rem; text-align: left; }
+.crewbox img { width: 3.4rem; height: 3.4rem; object-fit: cover; border-radius: 10px; flex: none; }
+.crewbox b { color: #E8C35A; } .crewbox p { margin: .15rem 0 .4rem; font-size: .8rem; line-height: 1.3; color: var(--receipt); }
+.btn.shillbtn { background: #E8C35A; color: var(--ink); width: 100%; padding: .65rem .8rem; }
+.loanbox { margin-top: 1rem; background: #2A1E1E; border: 2px solid #C9873C; border-radius: 14px; padding: .8rem .9rem; text-align: left; }
+.loanbox > b { color: #F0B35A; font-size: 1.05rem; } .loanbox p { margin: .3rem 0 .6rem; font-size: .9rem; line-height: 1.35; }
+.btn.loanbtn { width: 100%; background: #C9873C; color: var(--ink); } .btn.loanbtn.sure { background: var(--hot); color: #fff; }
+.debt { color: #F0B35A; }
+#hud .hcards i.dt { filter: drop-shadow(0 0 4px #F0B35A); }
+.bids.crew .bid { height: 3.6rem; } .bids.crew .bid b { font-size: 1.8rem; }
