@@ -1,4 +1,4 @@
-# Vishnu's Game Night: Last Night in the Mansion, BID-COIN!, RIGGED! and Land Grab
+# Vishnu's Game Night: Shotgun, Last Night in the Mansion, BID-COIN!, RIGGED! and Land Grab
 
 Party games for the TV and everyone's phones. Open `/tv` on the TV and pick one. Phones join with the code on screen.
 
@@ -121,6 +121,23 @@ A trivia game show for 2 to 8 players (bots can fill seats), about 20 minutes. E
 
 **Testing on your own:** open `/tv/rigged?test`. The lobby has **Add a bot**, **Fill to 4**, **Remove bots** and **Start**. In a normal game, the first player's phone has **Add a bot** too.
 
+## Shotgun
+
+A team driving game for 2 to 8 players, about 15 minutes. Everyone is in one car, delivering a five-tier wedding cake, and each phone controls one part of it: Left, Right, Pedals (gas, brake and the gearbox) or Co-pilot (map, nitro, horn and lights). With fewer players, people get more than one part. Nobody can see the whole picture, so you have to shout at each other. Dolly, the wedding planner, calls on the TV throughout. She is not calm.
+
+1. Every crash, bump and kerb costs the cake a little. The cake meter on the TV is the score. Arriving late melts the icing too.
+2. Stage 1 is always Rush Hour. After each stage, everyone votes on which way to go next, from two choices. Five more stages are picked this way.
+3. Jobs move one seat after every stage, so everyone gets a turn at everything.
+4. The stages: **Rush Hour** (traffic and roadworks, honk to clear the way), **The Parallel Park** (reverse into a space between two supercars), **Night Road** (the lights drain the battery, so switch them on and off), **The Jump** (a broken bridge, use nitro on the ramp and lean in the air), **Police Chase** (road blocks, and the police ram you), **Pit Stop** (stop in the box, then everyone does a quick task on their phone that repairs the cake) and **Desert Dunes** (the steering in the sand reacts late).
+5. **The Grand Entrance:** the finale. The car is parked and the team carries the cake into the hotel on a tray. Players are split into left and right, and each side holds LIFT when the tray dips their way. Watch out for the steps, the uncle, the waiter and the toddler.
+6. The ending depends on how much cake is left: perfect (70% or more), damaged, or ruined.
+
+The TV draws the game in 3D, so use a laptop or computer that's not too old for the TV. If it struggles, it lowers its own quality after a few seconds. You can also set it yourself by adding `?q=0` (fastest) up to `?q=3` (best) to the TV address.
+
+### Testing Shotgun on your own
+
+Open `/tv/shotgun?test` on the TV. The lobby then has **Add bot**, **Fill to 4**, **No bots** and **Start** buttons. Bots do their jobs well, so join on your phone and see how you compare.
+
 ## Put it online (Render, free)
 
 1. Make a new GitHub repository called `writers-room`.
@@ -142,7 +159,7 @@ The game still works without either key. It uses backup scripts and the browser'
 
 ## Art, music and sounds
 
-Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<name>`, `bust-01` onward, small `t-` copies for phones, Land Grab's `lg-` pictures, BID-COIN!'s `bc-` pictures and RIGGED!'s `rg-` pictures), music in `music` (one track per game stage and per genre) and sound effects in `sfx`. Anything missing is drawn or played by the game itself, so a file can be removed or swapped at any time with the same name.
+Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<name>`, `bust-01` onward, small `t-` copies for phones, Land Grab's `lg-` pictures, BID-COIN!'s `bc-` pictures, RIGGED!'s `rg-` pictures and Shotgun's `sg-` pictures), Shotgun's 3D models in `sg/models`, music in `music` (one track per game stage and per genre) and sound effects in `sfx`. Anything missing is drawn or played by the game itself, so a file can be removed or swapped at any time with the same name.
 
 ## Optional settings (Render, Environment tab)
 
@@ -153,6 +170,7 @@ Everything lives in `public/assets`: pictures in `img` (title, rooms, `genre-<na
 | `ELEVENLABS_LG_VOICE_ID` | Land Grab's tea shop gossip. If not set, an English voice with an Indian accent is picked from the ElevenLabs voice library |
 | `ELEVENLABS_BC_VOICE_ID` | BID-COIN!'s auctioneer (default is Charlie) |
 | `ELEVENLABS_RG_VOICE_ID` | RIGGED!'s host, Vince Velvet (default is Brian) |
+| `ELEVENLABS_SG_VOICE_ID` | Shotgun's wedding planner, Dolly (default is Domi) |
 | `ELEVENLABS_MN_VOICE_ID` | The Mansion's butler, Mortimer (default is George, an older British voice) |
 | `BC_LOCKERS` | How many lockers in a BID-COIN! game (default 8) |
 | `ELEVENLABS_FAST_MODEL` | The quick voice model for Writers' Room characters (default `eleven_flash_v2_5`) |

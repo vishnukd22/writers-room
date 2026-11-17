@@ -1,0 +1,51 @@
+:root { --ink: #1B1530; --cream: #FFF6E9; --sun: #FFD23F; --pink: #FF4F8B; --red: #D63430; --mint: #3ED6A0; --sky: #4FB6FF;
+  --sign: 'Bungee', system-ui, sans-serif; --ui: 'Baloo 2 Variable', system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #F4C99A; font-family: var(--ui); color: var(--ink); }
+#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+#vig { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(40,15,30,.38) 100%); }
+#hud { position: fixed; inset: 0; pointer-events: none; font-size: 1.15vw; }
+/* stickers: chunky ink outline, hard shadow */
+.stk, #stage, #clock, #cake, #call, .job { background: var(--cream); border: .22em solid var(--ink); border-radius: 1em; box-shadow: .35em .35em 0 var(--ink); }
+#logo { position: absolute; left: 2.2em; top: 1.4em; font-family: var(--sign); font-size: 3.4em; color: var(--sun); -webkit-text-stroke: .07em var(--ink); text-shadow: .08em .08em 0 var(--red), .14em .14em 0 var(--ink); transform: rotate(-3deg); letter-spacing: .02em; }
+#stage { position: absolute; left: 50%; top: 1.6em; transform: translateX(-50%) rotate(1deg); padding: .35em 1.4em .45em; text-align: center; transition: opacity .4s; }
+#stage small { display: block; font-weight: 800; font-size: .9em; color: var(--pink); text-transform: none; }
+#stage b { font-family: var(--sign); font-weight: 400; font-size: 1.9em; line-height: 1; }
+#clock { position: absolute; right: 2.2em; top: 1.6em; font-family: var(--sign); font-size: 2.4em; padding: .1em .55em; background: var(--sun); }
+#cake { position: absolute; right: 2.2em; top: 7.4em; display: flex; align-items: center; gap: .7em; padding: .6em .9em; width: 19em; transition: transform .15s; }
+#cake.hit { animation: shake .5s; background: #FFD9D9; }
+#cake .ic { display: grid; justify-items: center; gap: .08em; }
+#cake .ic i { display: block; height: .55em; background: #fff; border: .14em solid var(--ink); border-radius: .2em; }
+#cake .ic i:nth-child(1) { width: 1.1em; } #cake .ic i:nth-child(2) { width: 1.6em; } #cake .ic i:nth-child(3) { width: 2.1em; } #cake .ic i:nth-child(4) { width: 2.6em; } #cake .ic i:nth-child(5) { width: 3.1em; background: var(--pink); }
+#cake .meter { flex: 1; } #cake small { font-weight: 800; font-size: .9em; }
+#cake .bar { height: 1.1em; border: .16em solid var(--ink); border-radius: 1em; background: #EADFD0; overflow: hidden; }
+#cake .bar span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--mint), #9BE86B); transition: width .5s cubic-bezier(.2,1.4,.4,1); }
+#cake.low .bar span { background: linear-gradient(90deg, var(--red), #FF8A3D); }
+#cake b { font-family: var(--sign); font-weight: 400; font-size: 1.9em; }
+#call { position: absolute; left: 2.2em; top: 9.5em; display: flex; gap: .8em; align-items: center; padding: .55em 1.1em .55em .55em; max-width: 30em; transform: translateX(-130%); transition: transform .45s cubic-bezier(.2,1.3,.4,1); }
+#call.on { transform: translateX(0) rotate(-1.5deg); }
+#call img { width: 6.4em; height: 6.4em; border-radius: 50%; border: .22em solid var(--ink); background: var(--pink); object-fit: cover; flex: none; }
+#call small { font-weight: 800; color: var(--pink); font-size: .95em; }
+#call p { margin: .05em 0 0; font-family: var(--sign); font-size: 1.45em; line-height: 1.1; }
+#call.ring img { animation: ring .25s ease-in-out infinite alternate; }
+#jobs { position: absolute; left: 50%; bottom: 1.6em; transform: translateX(-50%); display: flex; gap: .9em; }
+.job { display: flex; align-items: center; gap: .5em; padding: .35em .9em .35em .35em; transition: transform .12s, background .12s; }
+.job img { width: 3.3em; height: 3.3em; border-radius: 50%; border: .18em solid var(--ink); object-fit: cover; background: var(--c); }
+.job b { display: block; font-family: var(--sign); font-weight: 400; font-size: 1.25em; line-height: 1; }
+.job small { font-weight: 800; font-size: .95em; }
+.job.on { background: var(--c); transform: translateY(-.5em) scale(1.08); }
+#title { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; transition: opacity .5s, transform .5s; }
+#title h1 { margin: 0; font-family: var(--sign); font-weight: 400; font-size: 8em; line-height: .9; color: var(--sun); -webkit-text-stroke: .05em var(--ink); text-shadow: .06em .06em 0 var(--red), .1em .1em 0 var(--ink); transform: rotate(-3deg); }
+#title p { margin: .4em auto 0; font-family: var(--sign); font-size: 2.2em; background: var(--cream); border: .12em solid var(--ink); box-shadow: .18em .18em 0 var(--ink); padding: .15em .8em; border-radius: .6em; transform: rotate(1.5deg); }
+#count { font-family: var(--sign); font-size: 9em; color: #fff; -webkit-text-stroke: .05em var(--ink); text-shadow: .07em .07em 0 var(--pink); height: 1.1em; margin-top: .2em; }
+#title.gone { opacity: 0; transform: scale(1.15); }
+#pop { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%) scale(0); font-family: var(--sign); font-size: 5em; color: #fff; -webkit-text-stroke: .05em var(--ink); text-shadow: .07em .07em 0 var(--red); white-space: nowrap; }
+#pop.on { animation: pop 1.3s cubic-bezier(.2,1.6,.4,1) both; }
+#pop small { display: block; font-size: .45em; color: var(--sun); text-align: center; }
+#clear { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; opacity: 0; transform: scale(.6); transition: opacity .4s, transform .5s cubic-bezier(.2,1.5,.4,1); }
+#clear.on { opacity: 1; transform: scale(1); }
+#clear h1 { margin: 0; font-family: var(--sign); font-weight: 400; font-size: 7.5em; color: var(--mint); -webkit-text-stroke: .05em var(--ink); text-shadow: .07em .07em 0 var(--ink); transform: rotate(-3deg); }
+#clear p { font-family: var(--sign); font-size: 2.2em; background: var(--cream); border: .12em solid var(--ink); box-shadow: .18em .18em 0 var(--ink); padding: .15em .8em; border-radius: .6em; margin: .3em auto 0; }
+@keyframes shake { 20% { transform: translateX(-.5em) rotate(-2deg); } 40% { transform: translateX(.5em) rotate(2deg); } 60% { transform: translateX(-.3em); } 80% { transform: translateX(.3em); } }
+@keyframes ring { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+@keyframes pop { 0% { transform: translate(-50%, -50%) scale(0) rotate(-8deg); opacity: 1; } 25% { transform: translate(-50%, -50%) scale(1.15) rotate(-4deg); } 80% { opacity: 1; } 100% { transform: translate(-50%, -80%) scale(1) rotate(-4deg); opacity: 0; } }

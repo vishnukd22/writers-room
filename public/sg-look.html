@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shotgun: look test</title>
+<link rel="stylesheet" href="/fonts/bungee/400.css">
+<link rel="stylesheet" href="/fonts/baloo/index.css">
+<link rel="stylesheet" href="/sg/look.css">
+<script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="vig"></div>
+<div id="hud">
+  <div id="logo">SHOTGUN</div>
+  <div id="stage"><small>Stage 1 of 7</small><b>Rush Hour</b></div>
+  <div id="clock">0:45</div>
+  <div id="cake"><div class="ic"><i></i><i></i><i></i><i></i><i></i></div><div class="meter"><small>The cake</small><div class="bar"><span id="cakebar"></span></div></div><b id="cakepct">100%</b></div>
+  <div id="call"><img id="dolly" src="/assets/img/t-sg-dolly-panic.webp" alt=""><div><small>Dolly is calling</small><p id="callText"></p></div></div>
+  <div id="jobs"></div>
+  <div id="title"><h1>Rush Hour</h1><p>Horns ready.</p><div id="count"></div></div>
+  <div id="pop"></div>
+  <div id="clear"><h1>Stage clear</h1><p>The cake survived. Mostly.</p></div>
+</div>
+<script type="module" src="/sg/look.js"></script>
+</body>
+</html>

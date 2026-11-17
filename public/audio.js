@@ -217,6 +217,7 @@ window.AV = (() => {
     init, music, fx, speak, stopVoice, duck, setBed,
     toggleMusic() { musicOn = !musicOn; if (!musicOn) { if (current.el) current.el.pause(); stopSynth(); current = { key: null }; } return musicOn; },
     toggleSfx() { sfxOn = !sfxOn; return sfxOn; },
+    sfxEnabled: () => sfxOn, ctx: () => ctx,
     toggleVoice() { voiceVol = voiceVol ? 0 : 1; if (voiceEl) voiceEl.volume = voiceVol; return voiceVol > 0; },
     speakingId: () => speaking,
     // pause everything (music, voice, effects) and pick up where it left off

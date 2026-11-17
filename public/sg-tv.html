@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" class="gn-tv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shotgun</title>
+<link rel="stylesheet" href="/gn.css">
+<link rel="stylesheet" href="/fonts/bungee/400.css">
+<link rel="stylesheet" href="/fonts/baloo/index.css">
+<link rel="stylesheet" href="/sg/tv.css">
+<script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud" hidden></div>
+<div id="screen"></div>
+<div id="call"><img id="dolly" src="/assets/img/t-sg-dolly-calm.webp" alt=""><div><small>Dolly is calling</small><p id="callText"></p></div></div>
+<div id="count"></div>
+<div id="pop"></div>
+<div id="controls">
+  <button id="bMusic">Music on</button>
+  <button id="bSfx">Sounds on</button>
+  <button id="bVoice">Dolly on</button>
+  <button id="bSkip" title="Space bar">Skip</button>
+  <button id="bFull">Full screen</button>
+  <a href="/tv" id="bMenu">Games</a>
+</div>
+<div id="gate">
+  <div class="gate-in">
+    <div class="gate-title">SHOTGUN</div>
+    <p class="gate-sub">One car. One cake. Everyone drives.</p>
+    <p>This screen is the road. Everyone controls one part of the car on their phone. You need 2 to 8 players. Short of people? Add bots from the first phone.</p>
+    <button id="bOpen">Start the engine</button>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>window.__gnSocket = io({ autoConnect: false, transports: ['websocket', 'polling'] }); window.__gnTV = true;</script>
+<script src="/shared.js"></script>
+<script src="/audio.js"></script>
+<script src="/gn-controls.js"></script>
+<script type="module" src="/sg/tv.js"></script>
+</body>
+</html>

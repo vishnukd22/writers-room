@@ -10,6 +10,7 @@ const { LandGrab } = require('./landgrab');
 const { BidCoin } = require('./bidcoin');
 const { Rigged } = require('./rigged');
 const { Mansion } = require('./mansion');
+const { Shotgun } = require('./shotgun');
 const pausable = require('./pausable');
 const BCI = require('./bc-items');
 const BCP = require('./bc-photos');
@@ -85,6 +86,11 @@ app.use('/fonts/pixelify', express.static(path.join(NM, '@fontsource', 'pixelify
 app.use('/fonts/bricolage', express.static(path.join(NM, '@fontsource', 'bricolage-grotesque'), { maxAge: '30d' }));
 app.use('/fonts/fell', express.static(path.join(NM, '@fontsource', 'im-fell-english'), { maxAge: '30d' }));
 // Pictures and music can be cached for days. Code is always checked for updates, so a new upload shows up at once.
+// three.js for Shotgun's 3D world
+app.use('/vendor/three', express.static(path.join(NM, 'three'), { maxAge: '30d' }));
+app.get('/tv/shotgun', (_q, r) => r.sendFile(path.join(PUBLIC, 'sg-tv.html')));
+app.get('/sg', (_q, r) => r.sendFile(path.join(PUBLIC, 'sg-play.html')));
+app.get('/shotgun-look', (_q, r) => r.sendFile(path.join(PUBLIC, 'sg-look.html')));
 app.use('/assets', express.static(path.join(PUBLIC, 'assets'), { maxAge: '7d' }));
 app.use(express.static(PUBLIC, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
 
@@ -98,8 +104,8 @@ function originOf(socket) {
   return `${proto}://${h['x-forwarded-host'] || h.host}`;
 }
 // kind: 'wr' (Writers' Room), 'lg' (Land Grab), 'bc' (BID-COIN!) or 'rg' (RIGGED!). test: the bot buttons.
-const KINDS = ['wr', 'lg', 'bc', 'rg', 'mn'];
-const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : kind === 'mn' ? `/mn?room=${code}` : `/?room=${code}`);
+const KINDS = ['wr', 'lg', 'bc', 'rg', 'mn', 'sg'];
+const phonePath = (kind, code) => (kind === 'lg' ? `/lg?room=${code}` : kind === 'bc' ? `/bc?room=${code}` : kind === 'rg' ? `/rg?room=${code}` : kind === 'mn' ? `/mn?room=${code}` : kind === 'sg' ? `/sg?room=${code}` : `/?room=${code}`);
 async function createRoom(socket, kind = 'wr', test = false) {
   const code = newCode();
   const hooks = {
@@ -108,8 +114,9 @@ async function createRoom(socket, kind = 'wr', test = false) {
     kicked: (pid) => io.to(`p:${pid}`).emit('kicked'),
     menu: () => io.to(`host:${code}`).emit('menu'),
     blast: (ev, data) => io.to(`room:${code}`).emit(ev, data), // tiny instant messages to everyone in the room (bids)
+    host: (ev, data) => io.to(`host:${code}`).emit(ev, data), // straight to the TV (Shotgun's controls)
   };
-  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : kind === 'mn' ? new Mansion(code, hooks, { test }) : new Game(code, hooks);
+  const game = kind === 'lg' ? new LandGrab(code, hooks, { test }) : kind === 'bc' ? new BidCoin(code, hooks, { test }) : kind === 'rg' ? new Rigged(code, hooks, { test }) : kind === 'mn' ? new Mansion(code, hooks, { test }) : kind === 'sg' ? new Shotgun(code, hooks, { test }) : new Game(code, hooks);
   game.kind = kind;
   // pause, resume and quit from any phone (every game except the old Writers' Room)
   if (kind !== 'wr') pausable.install(game, { shift: (dt) => game.shiftClock?.(dt) });
@@ -134,6 +141,8 @@ io.on('connection', (socket) => {
     socket.join(`host:${g.code}`); socket.join(`room:${g.code}`); socket.data = { code: g.code, host: true }; ack(fn, { code: g.code }); g.sync();
   });
   socket.on('host:cueDone', (a) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host && a?.id) g.cueFinished(a.id); });
+  // Shotgun: the TV runs the driving and tells the server what happened
+  socket.on('sg:report', (a) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host && g.report) g.report(a); });
   socket.on('host:skip', () => { const g = rooms.get(socket.data?.code); if (g && socket.data.host) g.skip(null); });
   socket.on('host:start', (a, fn) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host) ack(fn, g.start(null, a?.genre) || {}); });
   socket.on('host:addBot', (_a, fn) => { const g = rooms.get(socket.data?.code); if (g && socket.data.host && g.addBot) ack(fn, g.addBot()); });

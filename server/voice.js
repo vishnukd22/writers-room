@@ -167,6 +167,8 @@ const RG = () => process.env.ELEVENLABS_RG_VOICE_ID || 'nPczCjzI2devNBz1zQrb'; /
 
 // Last Night in the Mansion's butler, Mortimer: an older, posh, polite British voice. Set ELEVENLABS_MN_VOICE_ID to change it.
 const MN = () => process.env.ELEVENLABS_MN_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb'; // "George"
+// Dolly, Shotgun's wedding planner: a big, bright, panicking voice. Set ELEVENLABS_SG_VOICE_ID to change it.
+const SG = () => process.env.ELEVENLABS_SG_VOICE_ID || 'AZnzlk1XvdvUeBnXmlld'; // "Domi"
 
 // what /voice-check shows: is the key there, is anything stuck, what went wrong lately, how much of the plan is used
 async function status() {
@@ -176,4 +178,4 @@ async function status() {
   }
   return out;
 }
-module.exports = { status, enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, BC_SID, RG, MN, charVoices };
+module.exports = { status, enabled, get, audio, stripTags, speakable, NARRATOR, EXEC, LG, LG_SPEED, BC, BC_SID, RG, MN, SG, charVoices };

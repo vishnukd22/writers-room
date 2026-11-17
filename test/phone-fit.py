@@ -2,7 +2,7 @@
 # (SE, 13 mini, 15, 15 Pro Max, with Safari's bars taken off the height) and fails if any screen is
 # wider than the phone, or any button or text box is off the side, cut off, covered, or can't be scrolled to.
 # Uses Safari's engine (WebKit) when it's installed, otherwise Chrome's engine with iPhone settings.
-# Usage: run the server with WR_SPEED=0.25, then  GAMES=bc,lg,rg python3 test/phone-fit.py [OUTDIR]
+# Usage: run the server with WR_SPEED=0.25, then  GAMES=bc,lg,rg,sg python3 test/phone-fit.py [OUTDIR]
 import os, sys, time, json
 from playwright.sync_api import sync_playwright
 URL = os.environ.get('URL', 'http://localhost:3100')
@@ -12,7 +12,7 @@ MAXS = float(os.environ.get('MAXS', '900'))
 # visible area in Safari with its address bar showing (the tightest case)
 PHONES = [('iPhone SE', 375, 553), ('iPhone 13 mini', 375, 629), ('iPhone 15', 393, 659), ('iPhone 15 Pro Max', 430, 739)]
 UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
-GAME = {'bc': ('/tv/bidcoin', '/bc', 3), 'lg': ('/tv/landgrab', '/lg', 2), 'rg': ('/tv/rigged', '/rg', 2), 'mn': ('/tv/mansion', '/mn', 0)}
+GAME = {'bc': ('/tv/bidcoin', '/bc', 3), 'lg': ('/tv/landgrab', '/lg', 2), 'rg': ('/tv/rigged', '/rg', 2), 'mn': ('/tv/mansion', '/mn', 0), 'sg': ('/tv/shotgun?norender&tscale=2', '/sg', 0)}
 
 # runs inside each phone: returns every problem on the screen right now
 CHECK = r"""() => {
@@ -92,9 +92,9 @@ def run(pw, game):
         b = eng.launch(); engine = eng.name
     except Exception:
         b = pw.chromium.launch(); engine = 'chromium (iPhone settings)'
-    tvb = pw.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
+    tvb = pw.chromium.launch(args=['--autoplay-policy=no-user-gesture-required', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
     tv = tvb.new_page(viewport={'width': 1600, 'height': 900})
-    tv.goto(URL + tvpath + '?test'); tv.click('#bOpen')
+    tv.goto(URL + tvpath + ('&' if '?' in tvpath else '?') + 'test'); tv.click('#bOpen')
     tv.wait_for_function('window.__S && window.__S.code'); code = tv.evaluate('window.__S.code')
     phones = []; errors = []
     for i, (label, w, h) in enumerate(PHONES):

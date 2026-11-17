@@ -11,6 +11,7 @@
   "dependencies": {
     "@fontsource-variable/baloo-2": "^5.3.0",
     "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/bricolage-grotesque": "^5.3.0",
     "@fontsource/bungee": "^5.3.0",
     "@fontsource/courier-prime": "^5.3.0",
     "@fontsource/im-fell-english": "^5.3.0",
@@ -19,7 +20,8 @@
     "@fontsource/shrikhand": "^5.3.0",
     "express": "^4.22.3",
     "qrcode": "^1.5.4",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "socket.io-client": "^4.8.4"

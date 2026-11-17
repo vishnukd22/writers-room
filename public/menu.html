@@ -35,7 +35,7 @@
   .pill { display: inline-block; margin-top: .6rem; padding: .3rem .8rem; border-radius: 8px; background: #FFB21A; color: #1A1200; font-size: .85em; font-weight: 800; }
 
   /* the games */
-  .grid { display: grid; grid-template-columns: minmax(0, min(50%, calc((100dvh - 500px) * 1.7778))) minmax(0, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.4vw, 26px); min-height: 0; }
+  .grid { display: grid; grid-template-columns: minmax(0, min(50%, calc((100dvh - 500px) * 1.7778))) minmax(0, 1fr); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: clamp(14px, 1.4vw, 26px); min-height: 0; }
   .card { --c: #888; --cd: #333; position: relative; display: flex; flex-direction: column; text-decoration: none; color: var(--ink); background: var(--panel); border: 3px solid var(--c); border-radius: 22px; overflow: hidden;
     box-shadow: 0 0 0 0 var(--c); transition: transform .3s var(--ease), box-shadow .3s var(--ease); outline: none; }
   a.card:hover, a.card:focus-visible { transform: translate(-6px, -6px); box-shadow: 10px 10px 0 0 var(--c); }
@@ -55,6 +55,7 @@
   a.card:hover .play, a.card:focus-visible .play { transform: translateY(-2px); }
   .new { font-style: normal; font: 800 .5em/1 var(--font); padding: .4em .6em; border-radius: 6px; background: var(--c); color: #120E18; }
 
+  .sg { --c: #4FB6FF; --cd: #17407A; }
   .mn { --c: #9B6BFF; --cd: #3B1C8C; }
   .bc { --c: #FFB21A; --cd: #B34A00; }
   .rg { --c: #FF3D71; --cd: #8F0A30; }
@@ -103,9 +104,13 @@
   </header>
 
   <main class="grid">
-    <a class="card mn feature" id="gMN" href="/tv/mansion">
+    <a class="card sg feature" id="gSG" href="/tv/shotgun">
+      <div class="shot" id="aSG"><div class="fallback" aria-hidden="true">🎂</div></div>
+      <div class="info"><div class="icon" id="iSG">🎂</div><div class="txt"><b>Shotgun <em class="new">New</em></b><span>One car, one wedding cake, and everyone controls one part of the car. Get it to the wedding in one piece.</span><small>2 to 8 players, about 15 minutes</small></div><span class="play">Play</span></div>
+    </a>
+    <a class="card mn" id="gMN" href="/tv/mansion">
       <div class="shot" id="aMN"><div class="fallback" aria-hidden="true">🕯️</div></div>
-      <div class="info"><div class="icon" id="iMN">🕯️</div><div class="txt"><b>Last Night in the Mansion <em class="new">New</em></b><span>Sneak, hide, shout and scream your way out of a haunted house before your one candle burns out.</span><small>2 to 8 players, about 25 minutes</small></div><span class="play">Play</span></div>
+      <div class="info"><div class="icon" id="iMN">🕯️</div><div class="txt"><b>Last Night in the Mansion</b><span>Escape a haunted house before your one candle burns out.</span><small>2 to 8 players, about 25 minutes</small></div><span class="play">Play</span></div>
     </a>
     <a class="card bc" id="gBC" href="/tv/bidcoin">
       <div class="shot" id="aBC"><div class="fallback" aria-hidden="true">💰</div></div>
@@ -134,7 +139,7 @@
 </div>
 <script>
   const q = new URLSearchParams(location.search);
-  if (q.has('test')) { ['gLG', 'gBC', 'gRG', 'gMN'].forEach((id) => { const a = document.getElementById(id); a.href += '?test'; }); document.getElementById('test').hidden = false; }
+  if (q.has('test')) { ['gLG', 'gBC', 'gRG', 'gMN', 'gSG'].forEach((id) => { const a = document.getElementById(id); a.href += '?test'; }); document.getElementById('test').hidden = false; }
   // a friendly clock in the corner
   const tick = () => { const d = new Date(); const h = d.getHours(); document.getElementById('hello').textContent = h < 5 ? 'Up late?' : h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; document.getElementById('clock').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
   tick(); setInterval(tick, 15000);
@@ -143,8 +148,8 @@
     const find = (n) => ['webp', 'png', 'jpg'].map((e) => `${n}.${e}`).find((f) => m.img.includes(f));
     const art = (id, ...names) => { for (const n of names) { const f = find(n); if (f) { document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; return; } } };
     const icon = (id, n) => { const f = find(n); if (f) document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; };
-    art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title');
-    icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn');
+    art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title'); art('aSG', 'sg-logo');
+    icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn'); icon('iSG', 'gn-icon-sg');
     const logo = find('gn-logo'); if (logo) document.getElementById('brand').innerHTML = `<img src="/assets/img/${logo}" alt="Vishnu's Game Night">`;
   }).catch(() => {});
 </script>

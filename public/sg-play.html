@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" class="gn-phone">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1B1530">
+<title>Shotgun</title>
+<link rel="stylesheet" href="/gn.css">
+<link rel="stylesheet" href="/fonts/bungee/400.css">
+<link rel="stylesheet" href="/fonts/baloo/index.css">
+<link rel="stylesheet" href="/sg/play.css">
+</head>
+<body>
+<section id="join">
+  <div class="jtitle">SHOTGUN<span>Your phone is part of the car.</span></div>
+  <form id="jform" autocomplete="off">
+    <label>Room code<input id="jcode" maxlength="4" autocapitalize="characters" spellcheck="false" placeholder="ABCD" required></label>
+    <label>Your name<input id="jname" maxlength="12" placeholder="Vishnu" required></label>
+    <button class="btn primary big" type="submit">Get in the car</button>
+    <p id="jerr" class="err" role="alert"></p>
+  </form>
+</section>
+<section id="app" hidden>
+  <header id="top"></header>
+  <main id="main"></main>
+</section>
+<div id="toasts" aria-live="polite"></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/shared.js"></script>
+<script src="/sg/play.js"></script>
+<script src="/gn-controls.js"></script>
+</body>
+</html>
