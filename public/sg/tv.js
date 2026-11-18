@@ -105,7 +105,7 @@ const absent = (id) => { const p = id && player(id); return !p || p.bot || !p.co
 function allBots() { return S && ['left', 'right', 'gas', 'brake'].every((k) => absent(S.owner?.[k])); }
 function controls() {
   const human = { edges }; edges = {};
-  for (const k of ['left', 'right', 'gas', 'brake']) human[k] = Object.values(inputs).some((st) => st[k]);
+  for (const k of ['left', 'right', 'gas', 'brake']) human[k] = Math.max(0, ...Object.values(inputs).map((st) => Number(st[k]) || 0)); // the slider sends how far, not just on or off
   const hum = S.players.filter((p) => !p.bot && p.connected);
   human.lean = hum.length ? clamp(hum.reduce((t, p) => t + (inputs[p.id]?.lean || 0), 0) / hum.length * 1.4, -1, 1) : 0;
   const mask = {}; for (const k of ['left', 'right', 'gas', 'brake', 'gear', 'nitro', 'horn', 'lights']) mask[k] = absent(S.owner?.[k]);
@@ -186,7 +186,9 @@ function onEvent(e) {
     case 'horn': fx('sg-horn', { gap: 250 }); popOut('HONK!'); break;
     case 'nitro': fx('sg-nitro'); popOut('NITRO!'); report({ type: 'say', k: 'nitro' }); break;
     case 'gear': fx('sg-msg', { gap: 100 }); popOut(e.g === 'R' ? 'REVERSE' : 'DRIVE'); break;
-    case 'lights': fx('sg-wiper', { gap: 100 }); if (e.flat) popOut('BATTERY FLAT!'); break;
+    case 'scared': popOut(e.type === 'goat' ? 'BAAA!' : 'SHOO!'); break;
+    case 'freeze': fx('sg-gasp', { gap: 1500, vol: 0.5 }); break;
+    case 'bonk': fx('sg-bump', { gap: 200 }); popOut(e.type === 'goat' ? 'BAAA!' : 'BONK!'); break;
     case 'jump': fx('sg-jump'); break;
     case 'land': fx('sg-land'); if (e.imp > 6) { fx('sg-splat'); cakeHit(); popOut('OOF!'); } else popOut('NAILED IT!'); break;
     case 'splash': fx('sg-splat'); fx('sg-gasp'); popOut('SPLASH!'); cakeHit(); break;
@@ -278,12 +280,12 @@ function screen() {
   } else if (ph === 'MAP') {
     const opts = x.opts || [];
     h = `<div class="scr mapv"><div class="art" style="background-image:url(/assets/img/sg-map.webp)"></div><div class="top"><div class="big">Which way?</div><div class="tag">Vote on your phones</div></div>
-      <div class="opts">${opts.map((o, i) => `<div class="opt card ${x.win != null ? (x.win === i ? 'win' : 'lose') : ''}"><img src="/assets/img/t-sg-stage-${o.key === 'entrance' ? 'entrance' : o.key}.webp" alt=""><div class="route">${o.route}</div><h3>${esc(o.title)}</h3><div class="votes" id="v${i}">${'<i></i>'.repeat(o.votes)}</div></div>`).join('')}</div></div>`;
+      <div class="opts">${opts.map((o, i) => `<div class="opt card ${x.win != null ? (x.win === i ? 'win' : 'lose') : ''}"><img src="/assets/img/t-sg-stage-${o.key === 'entrance' ? 'entrance' : o.key}.webp?v=2" alt=""><div class="route">${o.route}</div><h3>${esc(o.title)}</h3><div class="votes" id="v${i}">${'<i></i>'.repeat(o.votes)}</div></div>`).join('')}</div></div>`;
   } else if (ph === 'JOBS') {
     const k = S.stage?.key; const ent = k === 'entrance';
     const rows = ent ? S.players.map((p, i) => `<div class="jrow card" style="animation-delay:${i * 0.07}s">${W.bust(p, 'sm')}<div><b>${esc(p.name)}</b><small>Holds the ${S.sides?.[p.id] === 'R' ? 'right' : 'left'} side</small></div><span class="side">${S.sides?.[p.id] === 'R' ? 'RIGHT' : 'LEFT'}</span></div>`).join('')
       : (S.jobs || []).map((j, i) => { const p = player(j.pid); return `<div class="jrow card" style="animation-delay:${i * 0.07}s">${W.bust(p, 'sm')}<div><b>${esc(j.role)}</b><small>${esc(p?.name || '')}${p?.bot ? ' (bot)' : ''}</small></div>${chips(j.atoms)}</div>`; }).join('');
-    h = `<div class="scr jobs"><div class="art"><img src="/assets/img/sg-stage-${k}.webp" alt=""></div><div class="list"><h2>${ent ? 'Who holds what' : `Stage ${(S.stage?.i || 0) + 1} of ${S.stage?.total || 6}: the jobs`}</h2>${rows}</div></div>`;
+    h = `<div class="scr jobs"><div class="art"><img src="/assets/img/sg-stage-${k}.webp?v=2" alt=""></div><div class="list"><h2>${ent ? 'Who holds what' : `Stage ${(S.stage?.i || 0) + 1} of ${S.stage?.total || 6}: the jobs`}</h2>${rows}</div></div>`;
   } else if (ph === 'RESULT') {
     h = `<div class="scr result"><div class="card"><div class="lbl">${esc(S.stage?.title || '')}</div>${x.gone ? '<div class="pct">SPLAT</div><div class="lost">The cake is gone.</div>' : `<div class="lbl">The cake</div><div class="pct">${Math.round(x.cake)}%</div><div class="lost">${x.lost ? `Lost ${x.lost}% on this stage` : 'Not a scratch!'}</div>`}${x.late ? '<div class="stamp">LATE: ICING MELTED</div>' : ''}${x.pit ? `<div class="lost">Pit crew fixed ${x.pit.fix}%</div>` : ''}</div></div>`;
   } else if (ph === 'PIT') {
@@ -315,10 +317,10 @@ function hud() {
     if (k === 'park') prompt = d.parkOk ? 'HOLD IT...' : Math.abs(d.s - (cur.st.special.slot?.s || 0)) < 14 && d.gear !== 'R' && d.s > cur.st.special.slot.s ? 'GEARBOX: REVERSE!' : '';
     if (k === 'pit') prompt = d.boxOk ? 'HOLD IT...' : Math.abs(d.s - cur.st.special.pit.s) < 25 ? 'STOP IN THE BOX!' : '';
     if (k === 'jump') prompt = d.air ? 'LEAN TO LEVEL IT!' : d.s > cur.st.special.ramp.s - 60 && d.s < cur.st.special.ramp.s ? (d.v < 22 ? 'MORE SPEED!' : 'HOLD ON!') : '';
-    if (k === 'night' && !d.lights && d.battery > 30) prompt = 'LIGHTS!';
+    if (k === 'night') { const ahead = cur.st.dyn.find((o) => o.kind === 'animal' && (o.state === 'wander' || o.state === 'freeze') && o.s - d.s > 0 && o.s - d.s < 45 && Math.abs(o.lat) < 7); if (ahead) prompt = ahead.state === 'freeze' ? 'BRAKE! IT FROZE!' : `HONK! ${ahead.type === 'goat' ? 'GOAT' : 'CAMEL'} AHEAD!`; }
     if (d.off && Math.abs(d.v) > 6) prompt = 'GET BACK ON THE ROAD!';
     const nitro = [0, 1, 2].map((i) => `<i class="n ${i < d.nitro ? '' : 'used'}"></i>`).join('');
-    extra = `<div class="gauge"><div class="spd">${Math.round(Math.abs(d.v) * 4)}<small> km/h</small></div><div class="row"><span class="gear ${d.gear === 'R' ? 'r' : ''}">${d.gear}</span>${nitro}</div>${k === 'night' ? `<div class="bat"><span style="width:${Math.round(d.battery)}%"></span></div>` : ''}</div>`;
+    extra = `<div class="gauge"><div class="spd">${Math.round(Math.abs(d.v) * 4)}<small> km/h</small></div><div class="row"><span class="gear ${d.gear === 'R' ? 'r' : ''}">${d.gear}</span>${nitro}</div></div>`;
   }
   let prog = cur.drive ? cur.drive.progress : ent ? ent.progress : 0;
   if (ent && ph === 'ENTRANCE') {

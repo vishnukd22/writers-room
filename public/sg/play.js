@@ -44,18 +44,18 @@
   });
   const up = (e) => { const h = held.get(e.pointerId); if (!h) return; held.delete(e.pointerId); h.b.classList.remove('down'); if (![...held.values()].some((x) => x.k === h.k)) control(h.k, 0); };
   main.addEventListener('pointerup', up); main.addEventListener('pointercancel', up); main.addEventListener('lostpointercapture', up);
-  function releaseAll() { for (const [, h] of held) { h.b.classList.remove('down'); control(h.k, 0); } held.clear(); }
+  function releaseAll() { for (const [, h] of held) { h.b.classList.remove('down'); control(h.k, 0); } held.clear(); if (typeof letGo === 'function') letGo(); }
   main.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // ---------------------------------------------------------------- the screens
   const me = () => S.me;
   const tv = (title, sub = '', ico = '📺') => `<div class="tv"><div class="ico">${ico}</div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div>`;
   const HELP = {
-    left: 'Hold to steer left.', right: 'Hold to steer right.', gas: 'Hold to go. Let go to coast.', brake: 'Hold to slow down and stop.',
+    left: 'Slide to steer left. The further you slide, the harder it turns. Let go to straighten up.', right: 'Slide to steer right. The further you slide, the harder it turns. Let go to straighten up.', gas: 'Hold to go. Let go to coast.', brake: 'Hold to slow down and stop.',
     gear: 'Tap to switch between Drive and Reverse.', nitro: 'Three boosts per stage. Use them on straights.', horn: 'Honk and slow cars ahead pull over.',
-    lights: 'Headlights. They drain the battery, so switch them off when you can.', nav: 'You see the map. Nobody else does. Shout directions!',
+    steer: 'Slide left or right to steer. The further you slide, the harder it turns. Let go to straighten up.',
   };
-  const NAME = { left: 'Left', right: 'Right', gas: 'Gas', brake: 'Brake', gear: 'Gearbox', nitro: 'Nitro', horn: 'Horn', lights: 'Lights', nav: 'Map' };
+  const NAME = { left: 'Left', right: 'Right', steer: 'Steering', gas: 'Gas', brake: 'Brake', gear: 'Gearbox', nitro: 'Nitro', horn: 'Horn' };
   const R = {
     LOBBY() {
       const m = me(); const n = S.players.length; const bots = S.players.filter((p) => p.bot).length;
@@ -67,12 +67,12 @@
     MAP() {
       const x = S.x; const mine = me().vote;
       if (x.win != null) return [`map-res${x.win}`, tv(`${esc(x.opts[x.win].title)}`, 'That way it is.', '🗺️')];
-      return [`map|${mine}`, `<h2 class="h">Which way?</h2><div class="votes">${x.opts.map((o, i) => `<button class="vote ${mine === i ? 'on' : ''}" data-a="vote" data-i="${i}"><img src="/assets/img/t-sg-stage-${o.key}.webp" alt=""><span>${o.route}</span><b>${esc(o.title)}</b></button>`).join('')}</div>`];
+      return [`map|${mine}`, `<h2 class="h">Which way?</h2><div class="votes">${x.opts.map((o, i) => `<button class="vote ${mine === i ? 'on' : ''}" data-a="vote" data-i="${i}"><img src="/assets/img/t-sg-stage-${o.key}.webp?v=2" alt=""><span>${o.route}</span><b>${esc(o.title)}</b></button>`).join('')}</div>`];
     },
     JOBS() {
       const m = me(); const k = S.stage?.key;
       if (k === 'entrance') return ['jobs-ent', `<div class="myjob"><small>The Grand Entrance</small><h1>${m.side === 'R' ? 'Right side' : 'Left side'}</h1><p>You hold the ${m.side === 'R' ? 'right' : 'left'} side of the tray. When your side dips, hold LIFT. On the steps, everyone lifts together.</p></div>`];
-      const atoms = (m.atoms || []).filter((a) => a !== 'lights' || k === 'night');
+      const all = m.atoms || []; const atoms = all.includes('left') && all.includes('right') ? ['steer', ...all.filter((a) => a !== 'left' && a !== 'right')] : all;
       return [`jobs|${S.stage?.tok}`, `<div class="myjob"><small>${esc(S.stage?.title || '')}</small><h1>${esc(m.role || 'Passenger')}</h1>${atoms.map((a) => `<p><b>${NAME[a]}:</b> ${HELP[a]}</p>`).join('')}${k === 'jump' ? '<p><b>Everyone:</b> in the air, lean to keep the car level.</p>' : ''}<p class="hint">Starts when the TV says GO.</p></div>`];
     },
     DRIVE() { return driveScreen(); },
@@ -86,19 +86,62 @@
     },
   };
 
-  // the driving controls: laid out for whatever this phone's job is
-  function driveScreen() {
-    const m = me(); const k = S.stage?.key; const atoms = (m.atoms || []).filter((a) => a !== 'lights' || k === 'night');
-    const has = (a) => atoms.includes(a);
-    const bits = [];
-    if (k === 'jump') bits.push('<div class="lean"><button class="pad lean-l" data-k="lean" data-v="-1">◀ Lean</button><button class="pad lean-r" data-k="lean" data-v="1">Lean ▶</button></div>');
-    if (has('nav')) bits.push(`<div class="mapbox ${atoms.length === 1 ? 'full' : ''}"><canvas id="map"></canvas><div id="turn" class="turn"></div></div>`);
-    if (has('left') || has('right')) bits.push(`<div class="steer">${has('left') ? '<button class="pad left" data-k="left">◀<small>LEFT</small></button>' : ''}${has('right') ? '<button class="pad right" data-k="right">▶<small>RIGHT</small></button>' : ''}</div>`);
-    if (has('gas') || has('brake')) bits.push(`<div class="pedals">${has('brake') ? '<button class="pad brake" data-k="brake">BRAKE</button>' : ''}${has('gas') ? '<button class="pad gas" data-k="gas">GAS</button>' : ''}</div>`);
-    const small = ['gear', 'nitro', 'horn', 'lights'].filter(has);
-    if (small.length) bits.push(`<div class="smalls n${small.length}">${small.map((a) => `<button class="pad ${a}" data-k="${a}">${a === 'gear' ? 'D / R' : a === 'nitro' ? 'NITRO' : a === 'horn' ? 'HONK' : 'LIGHTS'}<small>${NAME[a]}</small></button>`).join('')}</div>`);
-    return [`drive|${S.stage?.tok}|${atoms.join(',')}`, `<div class="drive n${bits.length}">${bits.join('')}</div>`];
+  // the driving controls: laid out for whatever this phone's job is.
+  // One job: one big control, upright. Two or more: the phone goes sideways, steering on the left, everything else on the right.
+  let upright = localStorage.getItem('sg:upright') === '1';
+  function slider(mode) {
+    const lbl = mode === 'both' ? '<span class="lbl l">◀ LEFT</span><span class="lbl r">RIGHT ▶</span>' : mode === 'left' ? '<span class="lbl l">◀ LEFT</span>' : '<span class="lbl r">RIGHT ▶</span>';
+    return `<div class="slider s-${mode}" data-steer="${mode}"><div class="track">${lbl}<i class="knob"></i></div><small>Slide and hold. Let go to straighten up.</small></div>`;
   }
+  function driveScreen() {
+    const m = me(); const k = S.stage?.key; const atoms = m.atoms || [];
+    const has = (a) => atoms.includes(a);
+    const steer = has('left') && has('right') ? 'both' : has('left') ? 'left' : has('right') ? 'right' : null;
+    const lean = k === 'jump' ? '<div class="lean"><button class="pad lean-l" data-k="lean" data-v="-1">◀ Lean</button><button class="pad lean-r" data-k="lean" data-v="1">Lean ▶</button></div>' : '';
+    const pedals = has('gas') || has('brake') ? `<div class="pedals">${has('brake') ? '<button class="pad brake" data-k="brake">BRAKE</button>' : ''}${has('gas') ? '<button class="pad gas" data-k="gas">GAS</button>' : ''}</div>` : '';
+    const small = ['gear', 'nitro', 'horn'].filter(has);
+    const smalls = small.length ? `<div class="smalls n${small.length}">${small.map((a) => `<button class="pad ${a}" data-k="${a}">${a === 'gear' ? 'D / R' : a === 'nitro' ? 'NITRO' : 'HONK'}<small>${NAME[a]}</small></button>`).join('')}</div>` : '';
+    const groups = (steer ? 1 : 0) + (has('gas') ? 1 : 0) + (has('brake') ? 1 : 0) + small.length;
+    const land = groups >= 2 && !upright;
+    const key = `drive|${S.stage?.tok}|${atoms.join(',')}|${land}`;
+    if (!land) { const bits = [lean, steer ? slider(steer) : '', pedals, smalls].filter(Boolean); return [key, `<div class="drive n${bits.length}">${bits.join('')}</div>${groups >= 2 ? '' : ''}`]; }
+    const body = steer ? `<div class="drive land"><div class="lcol">${slider(steer)}</div><div class="rcol">${[lean, pedals, smalls].filter(Boolean).join('')}</div></div>` : `<div class="drive land flat">${[lean, pedals, smalls].filter(Boolean).join('')}</div>`;
+    return [key, `${body}<div class="rotate"><div class="ph">📱</div><h2>Turn your phone sideways</h2><p>You have ${groups} controls this stage. Steering goes on the left, the rest on the right.</p><button class="btn ghost" data-a="upright">My phone won't turn. Keep it upright.</button></div>`];
+  }
+  // the steering slider: where your finger is decides how hard the car turns, and letting go springs it back
+  const sl = { el: null, id: null, mode: null, v: 0, sent: { left: -1, right: -1 }, t: 0, timer: null };
+  function sendSteer(force = false) {
+    const l = sl.mode === 'right' ? 0 : Math.max(0, -sl.v); const r = sl.mode === 'left' ? 0 : Math.max(0, sl.v);
+    const now = performance.now();
+    if (!force && now - sl.t < 45) { clearTimeout(sl.timer); sl.timer = setTimeout(() => sendSteer(true), 50); return; }
+    sl.t = now;
+    const q = (x) => Math.round(x * 20) / 20;
+    if (sl.mode !== 'right' && q(l) !== sl.sent.left) { sl.sent.left = q(l); control('left', q(l)); }
+    if (sl.mode !== 'left' && q(r) !== sl.sent.right) { sl.sent.right = q(r); control('right', q(r)); }
+  }
+  function placeKnob(el, v, mode, springy) {
+    const knob = el.querySelector('.knob'); if (!knob) return;
+    const pos = mode === 'both' ? 50 + v * 50 : mode === 'left' ? 100 + v * 100 : v * 100; // v is -1..0 for left-only, 0..1 for right-only
+    knob.style.transition = springy ? 'left .18s cubic-bezier(.3,1.6,.5,1)' : 'none'; knob.style.left = `${Math.max(0, Math.min(100, pos))}%`;
+    el.style.setProperty('--amt', Math.abs(v).toFixed(2)); el.classList.toggle('turning', Math.abs(v) > 0.04);
+  }
+  function steerAt(e) {
+    const tr = sl.el.querySelector('.track').getBoundingClientRect(); const f = Math.max(0, Math.min(1, (e.clientX - tr.left) / tr.width));
+    let v = sl.mode === 'both' ? f * 2 - 1 : sl.mode === 'left' ? f - 1 : f;
+    if (Math.abs(v) < 0.06) v = 0; // a little dead zone in the middle
+    if (Math.abs(v - sl.v) > 0.18) buzz(6);
+    sl.v = v; placeKnob(sl.el, v, sl.mode, false); sendSteer();
+  }
+  main.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.slider'); if (!el || sl.id != null) return; e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
+    sl.el = el; sl.id = e.pointerId; sl.mode = el.dataset.steer; el.classList.add('down'); steerAt(e);
+  });
+  main.addEventListener('pointermove', (e) => { if (e.pointerId === sl.id && sl.el) steerAt(e); });
+  const steerUp = (e) => { if (e.pointerId !== sl.id) return; letGo(); };
+  function letGo() { if (!sl.el) { sl.id = null; return; } sl.el.classList.remove('down'); sl.v = 0; placeKnob(sl.el, 0, sl.mode, true); sendSteer(true); sl.id = null; sl.el = null; }
+  main.addEventListener('pointerup', steerUp); main.addEventListener('pointercancel', steerUp); main.addEventListener('lostpointercapture', steerUp);
+  main.addEventListener('click', (e) => { if (e.target.closest('[data-a="upright"]')) { upright = true; localStorage.setItem('sg:upright', '1'); screenKey = null; render(); } });
   function entranceScreen() {
     const m = me();
     return [`ent|${m.side}`, `<div class="ent"><div class="sidelbl">${m.side === 'R' ? 'RIGHT' : 'LEFT'} SIDE</div><div class="tmeter"><i id="tilt"></i><span>${m.side === 'R' ? '' : '◀ your side'}</span><span>${m.side === 'R' ? 'your side ▶' : ''}</span></div><p id="dip" class="dip"></p><button class="pad lift" data-k="lift">LIFT<small>hold</small></button></div>`];

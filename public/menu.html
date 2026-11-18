@@ -38,6 +38,8 @@
   .greet { text-align: right; color: var(--sub); font-weight: 600; font-size: clamp(.95rem, 1.05vw, 1.2rem); align-self: start; padding-top: 1vh; }
   .greet b { display: block; color: var(--ink); font: 800 clamp(2rem, 3vw, 3.4rem)/1.05 var(--head); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   .tune { display: inline-flex; align-items: center; gap: .45rem; margin-top: .6rem; padding: .35rem .85rem; border-radius: 99px; border: 2px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: var(--ink); font: 700 .85em var(--body, system-ui); cursor: pointer; }
+  .tunes { display: inline-flex; gap: .35rem; align-items: center; }
+  .tune.skip { padding: .35rem .65rem; }
   .tune:hover, .tune:focus-visible { border-color: #FF4FA8; outline: none; }
   .tune .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: .9em; }
   .tune .eq i { width: 3px; background: #FF4FA8; border-radius: 2px; height: 30%; }
@@ -115,7 +117,7 @@
       <h1>What are we playing tonight?</h1>
       <p class="lede">Pick a game here. Everyone else plays on their phone.</p>
     </div>
-    <div class="greet"><span id="hello">Good evening</span><b id="clock"></b><button class="tune" id="tune" type="button" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="tuneText">Music</span></button><span class="pill" id="test" hidden>Test mode: bots allowed</span></div>
+    <div class="greet"><span id="hello">Good evening</span><b id="clock"></b><span class="tunes"><button class="tune" id="tune" type="button" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span id="tuneText">Music</span></button><button class="tune skip" id="skip" type="button" title="Next song" aria-label="Next song">⏭</button></span><span class="pill" id="test" hidden>Test mode: bots allowed</span></div>
   </header>
 
   <main class="grid">
@@ -161,13 +163,30 @@
   if (q.has('test')) { ['gLG', 'gBC', 'gRG', 'gMN', 'gSG', 'gNTD'].forEach((id) => { const a = document.getElementById(id); a.href += '?test'; }); document.getElementById('test').hidden = false; }
   // music while everyone decides. Browsers only allow sound after someone has clicked or pressed a key,
   // so if it can't start straight away it starts on the first click or key press. Your on/off choice is remembered.
-  const tune = document.getElementById('tune'); const tuneText = document.getElementById('tuneText');
+  const tune = document.getElementById('tune'); const tuneText = document.getElementById('tuneText'); const skip = document.getElementById('skip');
   let VOL = 0.35; let song = null; let fadeT = null;
   let want = localStorage.getItem('gn:menuMusic') !== 'off';
   const show = () => { const on = want && song && !song.paused; tune.classList.toggle('playing', !!on); tune.setAttribute('aria-pressed', on ? 'true' : 'false'); tuneText.textContent = !want ? 'Music off' : on ? 'Music on' : 'Click anywhere for music'; };
   function fade(to, ms, done) { clearInterval(fadeT); if (!song) return done?.(); const from = song.volume; const t0 = performance.now(); fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); song.volume = Math.max(0, Math.min(1, from + (to - from) * k)); if (k >= 1) { clearInterval(fadeT); done?.(); } }, 30); }
   function play() { if (!song || !want) return show(); song.play().then(() => { fade(VOL, 2000); show(); }).catch(show); }
-  function startMusic(file) { if (!file) { tune.hidden = true; return; } if (file === 'gn-menu.mp3') VOL = 0.22; /* the menu track is mixed louder */ song = new Audio(`/assets/music/${file}`); song.loop = true; song.volume = 0; song.addEventListener('pause', show); song.addEventListener('play', show); play(); }
+  // four tracks, played one after another. Each visit starts on the next track, so it doesn't always open with the same song.
+  let list = []; let idx = 0;
+  function load(i) {
+    idx = (i + list.length) % list.length; try { localStorage.setItem('gn:menuTrack', String(idx)); } catch (e) { /* fine */ }
+    if (song) { song.pause(); song.removeAttribute('src'); }
+    song = new Audio(`/assets/music/${list[idx]}`); song.volume = 0; song.preload = 'auto';
+    song.addEventListener('pause', show); song.addEventListener('play', show);
+    // fade out over the last couple of seconds, then the next track fades in
+    song.addEventListener('timeupdate', () => { if (song.duration && song.duration - song.currentTime < 2.2 && !song.__out) { song.__out = true; fade(0, 2000); } });
+    song.addEventListener('ended', () => { load(idx + 1); play(); });
+  }
+  function startMusic(files) {
+    list = files; if (!list.length) { tune.hidden = true; return; }
+    VOL = 0.22; // the menu tracks are mixed loud
+    let last = -1; try { last = Number(localStorage.getItem('gn:menuTrack') ?? -1); } catch (e) { /* fine */ }
+    load(Number.isFinite(last) ? last + 1 : 0); play();
+  }
+  skip.addEventListener('click', (e) => { e.stopPropagation(); if (!list.length) return; want = true; localStorage.setItem('gn:menuMusic', 'on'); fade(0, 300, () => { load(idx + 1); play(); }); });
   const firstTouch = () => { if (song && want && song.paused) play(); };
   ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, firstTouch, { capture: true }));
   tune.addEventListener('click', (e) => { e.stopPropagation(); want = !want; localStorage.setItem('gn:menuMusic', want ? 'on' : 'off'); if (want) play(); else fade(0, 400, () => { song?.pause(); show(); }); show(); });
@@ -184,7 +203,8 @@
     const icon = (id, n) => { const f = find(n); if (f) document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; };
     art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title'); art('aSG', 'sg-logo'); art('aNTD', 'ntd-logo');
     icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn'); icon('iSG', 'gn-icon-sg'); icon('iNTD', 'gn-icon-ntd');
-    startMusic(['gn-menu.mp3', 'ntd-lobby.mp3'].find((f) => (m.music || []).includes(f)));
+    const tracks = ['gn-menu.mp3', 'gn-menu-2.mp3', 'gn-menu-3.mp3', 'gn-menu-4.mp3'].filter((f) => (m.music || []).includes(f));
+    startMusic(tracks.length ? tracks : ['ntd-lobby.mp3'].filter((f) => (m.music || []).includes(f)));
     const logo = find('gn-neon') || find('gn-logo'); if (logo) document.getElementById('brand').innerHTML = `<img src="/assets/img/${logo}" alt="Vishnu's Game Night">`;
   }).catch(() => {});
 </script>
