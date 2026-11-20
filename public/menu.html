@@ -169,7 +169,7 @@
   const show = () => { const on = want && song && !song.paused; tune.classList.toggle('playing', !!on); tune.setAttribute('aria-pressed', on ? 'true' : 'false'); tuneText.textContent = !want ? 'Music off' : on ? 'Music on' : 'Click anywhere for music'; };
   function fade(to, ms, done) { clearInterval(fadeT); if (!song) return done?.(); const from = song.volume; const t0 = performance.now(); fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / ms); song.volume = Math.max(0, Math.min(1, from + (to - from) * k)); if (k >= 1) { clearInterval(fadeT); done?.(); } }, 30); }
   function play() { if (!song || !want) return show(); song.play().then(() => { fade(VOL, 2000); show(); }).catch(show); }
-  // six tracks, played one after another. Each visit starts on the next track, so it doesn't always open with the same song.
+  // nine tracks, played one after another. Each visit starts on the next track, so it doesn't always open with the same song.
   let list = []; let idx = 0;
   function load(i) {
     idx = (i + list.length) % list.length; try { localStorage.setItem('gn:menuTrack', String(idx)); } catch (e) { /* fine */ }
@@ -203,7 +203,7 @@
     const icon = (id, n) => { const f = find(n); if (f) document.getElementById(id).innerHTML = `<img src="/assets/img/${f}" alt="">`; };
     art('aBC', 'bc-title'); art('aRG', 'rg-title'); art('aLG', 'lg-title'); art('aMN', 'mn-title'); art('aSG', 'sg-logo'); art('aNTD', 'ntd-logo');
     icon('iBC', 'gn-icon-bc'); icon('iRG', 'gn-icon-rg'); icon('iLG', 'gn-icon-lg'); icon('iMN', 'gn-icon-mn'); icon('iSG', 'gn-icon-sg'); icon('iNTD', 'gn-icon-ntd');
-    const tracks = ['gn-menu.mp3', 'gn-menu-2.mp3', 'gn-menu-3.mp3', 'gn-menu-4.mp3', 'gn-menu-5.mp3', 'gn-menu-6.mp3'].filter((f) => (m.music || []).includes(f));
+    const tracks = ['gn-menu.mp3', 'gn-menu-2.mp3', 'gn-menu-3.mp3', 'gn-menu-4.mp3', 'gn-menu-5.mp3', 'gn-menu-6.mp3', 'gn-menu-7.mp3', 'gn-menu-8.mp3', 'gn-menu-9.mp3'].filter((f) => (m.music || []).includes(f));
     startMusic(tracks.length ? tracks : ['ntd-lobby.mp3'].filter((f) => (m.music || []).includes(f)));
     const logo = find('gn-neon') || find('gn-logo'); if (logo) document.getElementById('brand').innerHTML = `<img src="/assets/img/${logo}" alt="Vishnu's Game Night">`;
   }).catch(() => {});
